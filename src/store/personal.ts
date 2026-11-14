@@ -12,12 +12,14 @@ export interface Habit { id: string; name: string; log: string[] }
 export interface Note { id: string; title: string; body: string; updated: string }
 export interface Expense { id: string; concept: string; amount: number; date: string; category: string; income?: boolean }
 export interface Slot { id: string; title: string; day: number; start: string; end: string; place?: string; color: string }
+/** Excepción de una semana concreta (week = lunes ISO): mover o cancelar una clase recurrente, o añadir una clase suelta. */
+export interface SlotEx { id: string; week: string; kind: 'move' | 'cancel' | 'extra'; slotId?: string; day?: number; start?: string; end?: string; place?: string; title?: string; color?: string }
 export type Repeat = 'no' | 'diario' | 'semanal' | 'mensual';
 export interface Reminder { id: string; title: string; date: string; time?: string; done: boolean; repeat: Repeat }
 export interface Goal { id: string; title: string; progress: number; due?: string }
 export interface Study { id: string; subjectId?: string; minutes: number; date: string }
-export interface PData { tasks: Task[]; events: Ev[]; subjects: Subj[]; grades: Grade[]; habits: Habit[]; notes: Note[]; expenses: Expense[]; goals: Goal[]; study: Study[]; budget: number; schedule: Slot[]; reminders: Reminder[] }
-export const EMPTY: PData = { tasks: [], events: [], subjects: [], grades: [], habits: [], notes: [], expenses: [], goals: [], study: [], budget: 0, schedule: [], reminders: [] };
+export interface PData { tasks: Task[]; events: Ev[]; subjects: Subj[]; grades: Grade[]; habits: Habit[]; notes: Note[]; expenses: Expense[]; goals: Goal[]; study: Study[]; budget: number; schedule: Slot[]; schedEx: SlotEx[]; reminders: Reminder[] }
+export const EMPTY: PData = { tasks: [], events: [], subjects: [], grades: [], habits: [], notes: [], expenses: [], goals: [], study: [], budget: 0, schedule: [], schedEx: [], reminders: [] };
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
 interface PState {

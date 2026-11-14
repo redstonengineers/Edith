@@ -8,7 +8,8 @@ import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
 import { AddForm, Bar, COLORS, Empty, F, Panel, Row, eur, todayISO } from './shared';
-import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, Schedule, SchedulePanel, AgendaCal, CalendarPanel, monthStats, useReminderAlerts } from './life';
+import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, AgendaCal, CalendarPanel, monthStats, useReminderAlerts } from './life';
+import { Schedule, SchedulePanel, classesOn, mins } from './timetable';
 import { createScene, type HudScene } from './scene';
 import { THEMES, applyTheme, clearTheme, themeOf, useHud, type Quality } from './themes';
 import { blip, hudBus } from './fx';
@@ -187,8 +188,8 @@ function Hud() {
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   }, [sound]);
   const hour = now.getHours(); const greet = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
-  const name = profile ? PROFILES[profile].name : ''; const st = monthStats(data); const nowM = hour * 60 + now.getMinutes(); const d0 = now.getDay() || 7;
-  const todayClasses = data.schedule.filter((s) => s.day === d0); const nextClass = todayClasses.filter((s) => s.start.split(':').reduce((a, x, i) => a + Number(x) * (i ? 1 : 60), 0) > nowM).sort((a, b) => a.start.localeCompare(b.start))[0];
+  const name = profile ? PROFILES[profile].name : ''; const st = monthStats(data); const nowM = hour * 60 + now.getMinutes();
+  const todayClasses = classesOn(data, todayISO()); const nextClass = todayClasses.find((s) => mins(s.start) > nowM);
   const pendingRem = data.reminders.filter((r) => !r.done).length; const pendingTasks = data.tasks.filter((x) => !x.done).length;
   const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
   const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0'); const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
@@ -234,7 +235,7 @@ function Hud() {
         <nav className="hud-dock" aria-label="Módulos">{MODS.map((m, i) => <button key={m.id} onClick={() => { setOpen(m.id); blip('open', sound); hudBus.emit('pulse'); }}><m.icon size={15} aria-hidden /><span className="hidden xl:inline">{m.label}</span><span className="hud-kbd">{i + 1}</span></button>)}</nav>
         <span className="sr-only">{status}</span>
       </div>
-      <Drawer open={open !== null} onClose={() => setOpen(null)} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className="w-full max-w-xl">
+      <Drawer open={open !== null} onClose={() => setOpen(null)} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className={open === 'schedule' ? 'w-full max-w-[min(1240px,97vw)]' : 'w-full max-w-xl'}>
         <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5"><h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
       </Drawer>
       <Drawer open={panel !== null} onClose={() => setPanel(null)} label={panel === 'settings' ? 'Ajustes' : 'Ayuda'} className="w-full max-w-md">

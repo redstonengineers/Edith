@@ -1,72 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { addDays, addMonths, differenceInCalendarDays, format, parseISO, startOfMonth, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, BellRing, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, MapPin, Plus, TrendingDown, TrendingUp, X } from 'lucide-react';
-import { uid, usePersonal, type PData, type Reminder, type Repeat, type Slot } from '@/store/personal';
-import { Bar, COLORS, Empty, F, AddForm, Row, Panel, eur, todayISO } from './shared';
+import { Bell, BellRing, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, Plus, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { uid, usePersonal, type PData, type Reminder, type Repeat } from '@/store/personal';
+import { Bar, Empty, F, AddForm, Row, Panel, eur, todayISO } from './shared';
 import { blip, hudBus } from './fx';
 import { useHud } from './themes';
+import { classesOn, mins } from './timetable';
 
 type Update = (fn: (d: PData) => PData) => void;
-const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const mins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-const hhmm = (n: number) => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
-const isoDay = (d: Date) => d.getDay() || 7;
-
-/* ───────────── Horario ───────────── */
-export function Schedule() {
-  const { data, update } = usePersonal(); const [title, setTitle] = useState(''); const [day, setDay] = useState(String(isoDay(new Date()))); const [start, setStart] = useState('09:00'); const [end, setEnd] = useState('10:00'); const [place, setPlace] = useState('');
-  const sl = data.schedule; const from = Math.floor(Math.min(8 * 60, ...sl.map((s) => mins(s.start))) / 60) * 60; const to = Math.ceil(Math.max(15 * 60, ...sl.map((s) => mins(s.end))) / 60) * 60; const span = to - from; const today = isoDay(new Date());
-  const hours = Array.from({ length: (to - from) / 60 + 1 }, (_, i) => from + i * 60);
-  const add = () => { if (!title.trim() || mins(end) <= mins(start)) return false; update((d) => ({ ...d, schedule: [...d.schedule, { id: uid(), title: title.trim(), day: Number(day), start, end, place: place.trim() || undefined, color: COLORS[new Set(d.schedule.map((x) => x.title.toLowerCase())).size % COLORS.length] }] })); setTitle(''); setPlace(''); };
-  return (<>
-    <AddForm onAdd={add} label="Añadir clase">
-      <F label="Asignatura o actividad" w="w-full"><input className="hud-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Cálculo I" /></F>
-      <F label="Día"><select className="hud-input" value={day} onChange={(e) => setDay(e.target.value)}>{DAYS.map((d, i) => <option key={d} value={i + 1}>{d}</option>)}</select></F>
-      <F label="Inicio" w="w-28"><input className="hud-input" type="time" value={start} onChange={(e) => setStart(e.target.value)} /></F><F label="Fin" w="w-28"><input className="hud-input" type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></F>
-      <F label="Aula / lugar"><input className="hud-input" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Aula 3.2" /></F>
-    </AddForm>
-    {sl.length === 0 ? <Empty text="Añade tus clases y verás aquí tu semana completa." /> : (
-      <div className="mb-5" role="img" aria-label="Horario semanal">
-        <div className="grid grid-cols-[34px_repeat(7,1fr)] gap-px text-center text-[10px]">
-          <span />{DAYS.map((d, i) => <span key={d} className={i + 1 === today ? 'hud-val' : 'text-muted'}>{d.slice(0, 1)}</span>)}
-        </div>
-        <div className="relative grid grid-cols-[34px_repeat(7,1fr)] gap-px" style={{ height: Math.max(220, span * .62) }}>
-          <div className="relative">{hours.map((h) => <span key={h} className="absolute -translate-y-1/2 text-[9px] text-muted" style={{ top: `${((h - from) / span) * 100}%` }}>{hhmm(h).slice(0, 2)}</span>)}</div>
-          {DAYS.map((_, i) => (
-            <div key={i} className="relative rounded-sm border border-line/50" style={{ background: i + 1 === today ? 'rgb(var(--h) / .07)' : 'transparent' }}>
-              {sl.filter((s) => s.day === i + 1).map((s) => <div key={s.id} title={`${s.title} ${s.start}-${s.end}`} className="absolute inset-x-px overflow-hidden rounded-sm px-0.5 text-[9px] leading-tight text-black" style={{ top: `${((mins(s.start) - from) / span) * 100}%`, height: `${((mins(s.end) - mins(s.start)) / span) * 100}%`, background: s.color }}>{s.title}</div>)}
-            </div>))}
-        </div>
-      </div>)}
-    {DAYS.map((dn, i) => { const list = sl.filter((s) => s.day === i + 1).sort((a, b) => a.start.localeCompare(b.start)); if (!list.length) return null; return (
-      <div key={dn} className="mb-3"><p className="hud-sub mb-1">{dn}</p>
-        {list.map((s) => <Row key={s.id} label={s.title} onDelete={() => update((d) => ({ ...d, schedule: d.schedule.filter((x) => x.id !== s.id) }))}><span style={{ color: s.color }}>●</span><span className="hud-val w-24 text-xs">{s.start}–{s.end}</span><span>{s.title}</span>{s.place && <span className="hud-sub">{s.place}</span>}</Row>)}</div>); })}
-  </>);
-}
-
-export function SchedulePanel({ now, onOpen }: { now: Date; onOpen: () => void }) {
-  const sl = usePersonal((s) => s.data.schedule); const nowM = now.getHours() * 60 + now.getMinutes(); const d0 = isoDay(now);
-  const today = sl.filter((s) => s.day === d0).sort((a, b) => a.start.localeCompare(b.start));
-  const cur = today.find((s) => mins(s.start) <= nowM && nowM < mins(s.end)); const next = today.find((s) => mins(s.start) > nowM);
-  let right = <span className="hud-sub">sin clases</span>;
-  const fm = (n: number) => n < 60 ? `${n} min` : `${Math.floor(n / 60)} h ${n % 60 ? `${n % 60} min` : ''}`;
-  if (cur) right = <span className="hud-val">en clase · {fm(mins(cur.end) - nowM)}</span>; else if (next) right = <span className="hud-val">siguiente en {fm(mins(next.start) - nowM)}</span>; else if (today.length) right = <span className="hud-sub">terminaste por hoy</span>;
-  let after: Slot | undefined; let afterDay = 0; if (!today.length || !next) for (let k = 1; k <= 7 && !after; k++) { const dd = ((d0 - 1 + k) % 7) + 1; after = sl.filter((s) => s.day === dd).sort((a, b) => a.start.localeCompare(b.start))[0]; afterDay = k; }
-  return (
-    <Panel title="Horario de hoy" right={right} onOpen={onOpen} grow={1.4}>
-      {sl.length === 0 ? <Empty text="Pulsa + y añade tus clases: aquí verás qué toca ahora y qué viene después." /> : <>
-        {today.length === 0 && <Empty text="Hoy no tienes clase." />}
-        {today.map((s) => { const on = s === cur; const past = mins(s.end) <= nowM; return (
-          <div key={s.id} className={`hud-row ${past ? 'opacity-40' : ''}`} style={on ? { background: 'rgb(var(--h) / .12)', borderRadius: 6, padding: '8px 6px' } : undefined}>
-            <i className="h-7 w-1 flex-none rounded" style={{ background: s.color, boxShadow: on ? `0 0 10px ${s.color}` : 'none' }} /><span className="hud-val w-[84px] flex-none text-xs">{s.start}–{s.end}</span>
-            <div className="min-w-0 flex-1"><p className="truncate">{s.title}</p>{on && <div className="mt-1"><Bar pct={((nowM - mins(s.start)) / (mins(s.end) - mins(s.start))) * 100} /></div>}</div>
-            {s.place && <span className="hud-sub flex flex-none items-center gap-1"><MapPin size={10} aria-hidden />{s.place}</span>}</div>); })}
-        {after && (!today.length || !next) && <p className="mt-2 text-xs text-muted">{afterDay === 1 ? 'Mañana' : DAYS[after.day - 1]}: <b className="text-fg">{after.title}</b> a las {after.start}</p>}
-      </>}
-    </Panel>
-  );
-}
 
 /* ───────────── Recordatorios ───────────── */
 export const dueAt = (r: Reminder) => parseISO(`${r.date}T${r.time ?? '09:00'}`);
@@ -217,7 +159,7 @@ export function dayItems(d: PData, iso: string) {
     events: d.events.filter((e) => e.date === iso).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '')),
     tasks: d.tasks.filter((x) => x.due === iso),
     reminders: d.reminders.filter((r) => r.date === iso).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '')),
-    classes: d.schedule.filter((s) => s.day === (parseISO(iso).getDay() || 7)).sort((a, b) => a.start.localeCompare(b.start)),
+    classes: classesOn(d, iso),
   };
 }
 function MonthGrid({ month, day, onDay, big }: { month: Date; day: string; onDay: (iso: string) => void; big?: boolean }) {
@@ -250,7 +192,7 @@ function DayList({ iso, compact, edit }: { iso: string; compact?: boolean; edit?
     {it.events.map((e) => <div key={e.id} className="hud-row"><CalendarDays size={13} className="flex-none text-[var(--hud)]" aria-hidden /><span className="hud-val w-16 flex-none text-xs whitespace-nowrap">{e.time ?? 'todo el día'}</span><span className="truncate">{e.title}</span>{edit && <button className="hud-ghost ml-auto" aria-label={`Eliminar ${e.title}`} onClick={() => update((d) => ({ ...d, events: d.events.filter((x) => x.id !== e.id) }))}><X size={13} aria-hidden /></button>}</div>)}
     {it.tasks.map((x) => <div key={x.id} className="hud-row"><CheckSquare size={13} className="flex-none text-warn" aria-hidden /><span className={`truncate ${x.done ? 'text-muted line-through' : ''}`}>Entrega: {x.title}</span></div>)}
     {it.reminders.map((r) => <div key={r.id} className="hud-row"><Bell size={13} className="flex-none text-info" aria-hidden /><span className="hud-val w-12 flex-none text-xs">{r.time ?? ''}</span><span className={`truncate ${r.done ? 'text-muted line-through' : ''}`}>{r.title}</span></div>)}
-    {!compact && it.classes.length > 0 && <div className="mt-2"><p className="hud-sub mb-1">Clases</p>{it.classes.map((s) => <div key={s.id} className="hud-row"><i className="h-4 w-1 rounded" style={{ background: s.color }} /><span className="hud-val w-24 text-xs">{s.start}–{s.end}</span><span>{s.title}</span></div>)}</div>}
+    {!compact && it.classes.length > 0 && <div className="mt-2"><p className="hud-sub mb-1">Clases</p>{it.classes.map((s) => <div key={s.key} className="hud-row"><i className="h-4 w-1 rounded" style={{ background: s.color }} /><span className="hud-val w-24 text-xs">{s.start}–{s.end}</span><span>{s.title}</span></div>)}</div>}
   </div>);
 }
 
