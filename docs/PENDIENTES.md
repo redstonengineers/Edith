@@ -35,3 +35,6 @@ Marca cada punto cuando esté hecho.
 - [ ] Paginación de `/api/snapshot` para academias grandes.
 - [ ] Textos con artículo fijo («este grupo», «del alumno») que aún no usan el género de la etiqueta personalizada.
 - [ ] Módulos propios de sectores: citas con profesional (estética/clínica), historia clínica con consentimiento, recursos y flota (autoescuela/náutica), fichas de jugador y partidos (clubes).
+
+## Ideas para más adelante
+- [ ] **Voz en EDITH personal**: empezar con voz del navegador (síntesis) + botón de micrófono (dictado); después, si gusta, voz neuronal (p. ej. ElevenLabs) con la clave guardada en el servidor. Descartado de momento: escucha permanente tipo «Oye EDITH» y conversación en tiempo real.
