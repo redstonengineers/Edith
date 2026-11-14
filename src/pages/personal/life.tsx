@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { addDays, addMonths, differenceInCalendarDays, format, parseISO, startOfMonth } from 'date-fns';
+import { addDays, addMonths, differenceInCalendarDays, format, parseISO, startOfMonth, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, BellRing, CalendarDays, CheckSquare, MapPin, Plus, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { Bell, BellRing, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, MapPin, Plus, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { uid, usePersonal, type PData, type Reminder, type Repeat, type Slot } from '@/store/personal';
 import { Bar, COLORS, Empty, F, AddForm, Row, Panel, eur, todayISO } from './shared';
 import { blip, hudBus } from './fx';
@@ -206,6 +206,82 @@ export function FinancePanel({ onOpen }: { onOpen: () => void }) {
       {data.budget > 0 && <div className="mt-2"><Bar pct={st.pct} tone={st.pct > 100 ? 'bad' : st.pct > 80 ? 'warn' : undefined} /><p className="mt-1 text-[11px] text-muted">{Math.round(st.pct)}% del presupuesto · quedan {eur(Math.max(0, data.budget - st.spent))}</p></div>}
       <form onSubmit={add} className="my-2 flex gap-1.5"><button type="button" className="hud-icon !h-9 !w-9 flex-none text-base" onClick={() => setInc(!inc)} aria-label={inc ? 'Ingreso (pulsa para gasto)' : 'Gasto (pulsa para ingreso)'} title={inc ? 'Ingreso' : 'Gasto'}>{inc ? '+' : '−'}</button><input className="hud-input" value={c} onChange={(e) => setC(e.target.value)} placeholder="Concepto" aria-label="Concepto del movimiento" /><input className="hud-input !w-20 flex-none" inputMode="decimal" value={a} onChange={(e) => setA(e.target.value)} placeholder="€" aria-label="Importe" /><button className="hud-btn !px-3" type="submit" aria-label="Añadir movimiento" disabled={!c.trim() || !(num(a) > 0)}><Plus size={15} aria-hidden /></button></form>
       {data.expenses.length === 0 ? <Empty text="Apunta tu primer gasto o ingreso arriba." /> : data.expenses.slice(0, 4).map((e) => <div key={e.id} className="hud-row"><span className="truncate">{e.concept}</span><span className="hud-sub">{e.category}</span><span className={`ml-auto flex-none text-xs ${e.income ? 'text-ok' : ''}`}>{e.income ? '+' : '−'}{eur(e.amount)}</span></div>)}
+    </Panel>
+  );
+}
+
+/* ───────────── Calendario mensual ───────────── */
+const WD = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+export function dayItems(d: PData, iso: string) {
+  return {
+    events: d.events.filter((e) => e.date === iso).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '')),
+    tasks: d.tasks.filter((x) => x.due === iso),
+    reminders: d.reminders.filter((r) => r.date === iso).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '')),
+    classes: d.schedule.filter((s) => s.day === (parseISO(iso).getDay() || 7)).sort((a, b) => a.start.localeCompare(b.start)),
+  };
+}
+function MonthGrid({ month, day, onDay, big }: { month: Date; day: string; onDay: (iso: string) => void; big?: boolean }) {
+  const data = usePersonal((s) => s.data); const today = todayISO(); const first = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(first, i));
+  return (
+    <div role="grid" aria-label={format(month, 'MMMM yyyy', { locale: es })}>
+      <div className="grid grid-cols-7 text-center text-[10px] text-muted" role="row">{WD.map((w) => <span key={w} role="columnheader">{w}</span>)}</div>
+      <div className="grid grid-cols-7 gap-px">
+        {cells.map((c) => {
+          const iso = format(c, 'yyyy-MM-dd'); const it = dayItems(data, iso); const inM = c.getMonth() === month.getMonth(); const sel = iso === day;
+          return (
+            <button key={iso} role="gridcell" aria-selected={sel} aria-label={`${format(c, "EEEE d 'de' MMMM", { locale: es })}${it.events.length + it.tasks.length + it.reminders.length ? `, ${it.events.length + it.tasks.length + it.reminders.length} elementos` : ''}`} onClick={() => onDay(iso)}
+              className={`cal-cell ${big ? 'big' : ''} ${inM ? '' : 'out'} ${iso === today ? 'today' : ''} ${sel ? 'sel' : ''}`}>
+              <span>{c.getDate()}</span>
+              <i className="cal-dots" aria-hidden>{it.events.length > 0 && <b style={{ background: 'var(--hud)' }} />}{it.tasks.length > 0 && <b style={{ background: 'var(--warn)' }} />}{it.reminders.length > 0 && <b style={{ background: 'var(--info)' }} />}</i>
+            </button>);
+        })}
+      </div>
+    </div>
+  );
+}
+function MonthNav({ month, setMonth }: { month: Date; setMonth: (d: Date) => void }) {
+  return <span className="flex items-center gap-1"><button className="hud-ghost" aria-label="Mes anterior" onClick={() => setMonth(addMonths(month, -1))}><ChevronLeft size={15} aria-hidden /></button><button className="hud-ghost min-w-24 text-center capitalize" onClick={() => setMonth(new Date())} aria-label="Ir a hoy">{format(month, 'MMMM yyyy', { locale: es })}</button><button className="hud-ghost" aria-label="Mes siguiente" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight size={15} aria-hidden /></button></span>;
+}
+function DayList({ iso, compact, edit }: { iso: string; compact?: boolean; edit?: boolean }) {
+  const { data, update } = usePersonal(); const it = dayItems(data, iso); const none = !it.events.length && !it.tasks.length && !it.reminders.length;
+  return (<div>
+    {none && <p className="py-1 text-xs text-muted">{it.classes.length ? `Sin eventos. ${it.classes.length} clases ese día.` : 'Nada ese día.'}</p>}
+    {it.events.map((e) => <div key={e.id} className="hud-row"><CalendarDays size={13} className="flex-none text-[var(--hud)]" aria-hidden /><span className="hud-val w-16 flex-none text-xs whitespace-nowrap">{e.time ?? 'todo el día'}</span><span className="truncate">{e.title}</span>{edit && <button className="hud-ghost ml-auto" aria-label={`Eliminar ${e.title}`} onClick={() => update((d) => ({ ...d, events: d.events.filter((x) => x.id !== e.id) }))}><X size={13} aria-hidden /></button>}</div>)}
+    {it.tasks.map((x) => <div key={x.id} className="hud-row"><CheckSquare size={13} className="flex-none text-warn" aria-hidden /><span className={`truncate ${x.done ? 'text-muted line-through' : ''}`}>Entrega: {x.title}</span></div>)}
+    {it.reminders.map((r) => <div key={r.id} className="hud-row"><Bell size={13} className="flex-none text-info" aria-hidden /><span className="hud-val w-12 flex-none text-xs">{r.time ?? ''}</span><span className={`truncate ${r.done ? 'text-muted line-through' : ''}`}>{r.title}</span></div>)}
+    {!compact && it.classes.length > 0 && <div className="mt-2"><p className="hud-sub mb-1">Clases</p>{it.classes.map((s) => <div key={s.id} className="hud-row"><i className="h-4 w-1 rounded" style={{ background: s.color }} /><span className="hud-val w-24 text-xs">{s.start}–{s.end}</span><span>{s.title}</span></div>)}</div>}
+  </div>);
+}
+
+/** Módulo Agenda: calendario del mes + alta de eventos en el día elegido. */
+export function AgendaCal({ day, setDay }: { day: string; setDay: (d: string) => void }) {
+  const { data, update } = usePersonal(); const [month, setMonth] = useState(parseISO(day)); const [title, setTitle] = useState(''); const [time, setTime] = useState('');
+  const pick = (iso: string) => { setDay(iso); const d = parseISO(iso); if (d.getMonth() !== month.getMonth()) setMonth(d); };
+  const upcoming = [...data.events].filter((e) => e.date >= todayISO()).sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')));
+  return (<>
+    <div className="mb-3 flex items-center justify-between"><MonthNav month={month} setMonth={setMonth} /><span className="flex gap-3 text-[10px] text-muted"><span><b className="cal-leg" style={{ background: 'var(--hud)' }} />evento</span><span><b className="cal-leg" style={{ background: 'var(--warn)' }} />entrega</span><span><b className="cal-leg" style={{ background: 'var(--info)' }} />recordatorio</span></span></div>
+    <MonthGrid month={month} day={day} onDay={pick} big />
+    <h3 className="hud-sub mt-4 mb-1 capitalize">{format(parseISO(day), "EEEE d 'de' MMMM", { locale: es })}</h3>
+    <DayList iso={day} edit />
+    <AddForm label="Añadir al día" onAdd={() => { if (!title.trim()) return false; update((d) => ({ ...d, events: [...d.events, { id: uid(), title: title.trim(), date: day, time: time || undefined }] })); setTitle(''); }}>
+      <F label="Evento o examen" w="w-full"><input className="hud-input mt-0" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Examen de cálculo" /></F>
+      <F label="Día"><input className="hud-input" type="date" value={day} onChange={(e) => e.target.value && pick(e.target.value)} /></F><F label="Hora" w="w-28"><input className="hud-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></F>
+    </AddForm>
+    {upcoming.length > 0 && <><h3 className="hud-sub mb-1">Próximos eventos</h3>{upcoming.slice(0, 12).map((e) => <button key={e.id} className="hud-row w-full text-left" onClick={() => pick(e.date)}><span className="hud-val w-28 flex-none text-xs">{format(parseISO(e.date), 'EEE d MMM', { locale: es })}{e.time && ` ${e.time}`}</span><span className="truncate">{e.title}</span></button>)}</>}
+  </>);
+}
+
+/** Panel de portada: mes con puntos por día, y lo del día elegido debajo. */
+export function CalendarPanel({ day, setDay, onOpen }: { day: string; setDay: (d: string) => void; onOpen: () => void }) {
+  const events = usePersonal((s) => s.data.events); const [month, setMonth] = useState(new Date());
+  const next = events.filter((e) => e.date >= todayISO()).sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')))[0];
+  const nd = next ? differenceInCalendarDays(parseISO(next.date), new Date()) : 0;
+  return (
+    <Panel title="Calendario" right={<MonthNav month={month} setMonth={setMonth} />} onOpen={onOpen} grow={1.9}>
+      <MonthGrid month={month} day={day} onDay={(iso) => { setDay(iso); if (parseISO(iso).getMonth() !== month.getMonth()) setMonth(parseISO(iso)); }} />
+      {next && <p className="mt-1 mb-1 truncate text-[11px] text-muted">Próximo: <b className="text-fg">{next.title}</b> · <span className={nd <= 2 ? 'text-warn' : ''}>{nd === 0 ? 'hoy' : nd === 1 ? 'mañana' : `en ${nd} d`}</span></p>}
+      <h3 className="hud-sub mt-1 capitalize">{format(parseISO(day), "EEEE d 'de' MMM", { locale: es })}</h3><DayList iso={day} compact />
     </Panel>
   );
 }

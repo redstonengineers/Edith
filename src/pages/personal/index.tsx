@@ -8,7 +8,7 @@ import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
 import { AddForm, Bar, COLORS, Empty, F, Panel, Row, eur, todayISO } from './shared';
-import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, Schedule, SchedulePanel, UpcomingPanel, monthStats, useReminderAlerts } from './life';
+import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, Schedule, SchedulePanel, AgendaCal, CalendarPanel, monthStats, useReminderAlerts } from './life';
 import { createScene, type HudScene } from './scene';
 import { THEMES, applyTheme, clearTheme, themeOf, useHud, type Quality } from './themes';
 import { blip, hudBus } from './fx';
@@ -100,18 +100,6 @@ function Tasks() {
       <span className={`text-[10px] uppercase ${t.priority === 'alta' ? 'text-bad' : 'text-muted'}`}>{t.priority}</span></Row>)}
   </>);
 }
-function Agenda() {
-  const { data, update } = usePersonal(); const [title, setTitle] = useState(''); const [date, setDate] = useState(todayISO()); const [time, setTime] = useState('');
-  const list = [...data.events].sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')));
-  return (<>
-    <AddForm onAdd={() => { if (!title.trim()) return; update((d) => ({ ...d, events: [...d.events, { id: uid(), title: title.trim(), date, time: time || undefined }] })); setTitle(''); }}>
-      <F label="Evento" w="w-full"><input className="hud-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Examen de cálculo" /></F>
-      <F label="Día"><input className="hud-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></F><F label="Hora" w="w-32"><input className="hud-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></F>
-    </AddForm>
-    {list.length === 0 && <Empty text="Agenda vacía." />}
-    {list.map((e) => <Row key={e.id} label={e.title} onDelete={() => update((d) => ({ ...d, events: d.events.filter((x) => x.id !== e.id) }))}><span className={`w-28 text-xs ${e.date < todayISO() ? 'text-muted' : 'hud-val'}`}>{format(parseISO(e.date), 'EEE d MMM', { locale: es })}{e.time && ` · ${e.time}`}</span><span>{e.title}</span></Row>)}
-  </>);
-}
 function Subjects() {
   const { data, update } = usePersonal(); const [name, setName] = useState(''); const [sid, setSid] = useState(''); const [t, setT] = useState(''); const [score, setScore] = useState(''); const [w, setW] = useState('1');
   return (<>
@@ -189,7 +177,7 @@ function HelpBody() {
 /* ───────────── HUD ───────────── */
 function Hud() {
   const { data, profile, logout, sync, status, switchProfile } = usePersonal(); const timer = useTimer(); const { sound } = useHud(); const alerts = useReminderAlerts();
-  const [open, setOpen] = useState<Mod | null>(null); const [panel, setPanel] = useState<'settings' | 'help' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState<Mod | null>(null); const [calDay, setCalDay] = useState(todayISO()); const [panel, setPanel] = useState<'settings' | 'help' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -204,7 +192,7 @@ function Hud() {
   const pendingRem = data.reminders.filter((r) => !r.done).length; const pendingTasks = data.tasks.filter((x) => !x.done).length;
   const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
   const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0'); const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
-  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <Agenda />, tasks: <Tasks />, money: <Money />, study: <StudyPanel timer={timer} />, notes: <Notes />, subjects: <Subjects /> };
+  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money />, study: <StudyPanel timer={timer} />, notes: <Notes />, subjects: <Subjects /> };
   const openMod = (m: Mod) => () => setOpen(m);
   return (
     <div className="hud-root" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon')) blip('tick', sound); }}>
@@ -235,7 +223,7 @@ function Hud() {
             <Chat profile={name} inputRef={chatRef} />
           </div>
           <div className="hud-col r">
-            <UpcomingPanel onAgenda={openMod('agenda')} onTasks={openMod('tasks')} />
+            <CalendarPanel day={calDay} setDay={setCalDay} onOpen={openMod('agenda')} />
             <FinancePanel onOpen={openMod('money')} />
             <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={openMod('study')} grow={.8}>
               <div className="flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>

@@ -98,3 +98,15 @@ textarea.hud-input { height: auto; }
 @keyframes alertin { from { opacity: 0; transform: translateY(-16px) scale(.94); } }
 
 .hud-h > :not(:first-child) { white-space: nowrap; flex: none; font-weight: 600; letter-spacing: .1em; }
+
+/* Calendario */
+.cal-cell { position: relative; display: grid; place-items: center; height: 26px; border-radius: 5px; font-size: 11px; color: var(--text); transition: background .15s, transform .15s var(--spring, ease), box-shadow .2s; }
+.cal-cell.big { height: 46px; font-size: 13px; align-content: center; }
+.cal-cell.out { opacity: .35; }
+.cal-cell:hover { background: rgb(var(--h) / .18); transform: scale(1.1); z-index: 1; }
+.cal-cell:active { transform: scale(.92); }
+.cal-cell.today { box-shadow: inset 0 0 0 1px var(--hud); color: var(--hud); font-weight: 700; }
+.cal-cell.sel { background: rgb(var(--h) / .3); box-shadow: inset 0 0 0 1px var(--hud), 0 0 14px rgb(var(--h) / .5); }
+.cal-dots { position: absolute; bottom: 2px; display: flex; gap: 2px; } .cal-dots b { width: 4px; height: 4px; border-radius: 50%; box-shadow: 0 0 5px currentColor; }
+.cal-cell.big .cal-dots { bottom: 5px; } .cal-cell.big .cal-dots b { width: 5px; height: 5px; }
+.cal-leg { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; }
