@@ -53,6 +53,9 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   createPractice: z.tuple([practiceSchema, z.boolean().optional()]), createPracticeSeries: z.tuple([practiceSchema, z.number().int().min(2).max(26), z.boolean().optional()]),
   updatePractice: z.tuple([id, practiceSchema, z.boolean().optional()]), cancelPractice: z.tuple([id, z.boolean().optional()]),
   completePractice: z.tuple([id, z.object({ km: z.number().int().min(0).max(1000).optional(), notes: z.string().max(500).optional(), studentSig: dataUrl.optional(), teacherSig: dataUrl.optional() })]), getPracticeSignatures: z.tuple([id]),
+  addDrivingExam: z.tuple([id, z.object({ kind: z.enum(['teorico', 'practico']), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), result: z.enum(['pendiente', 'aprobado', 'suspendido']) })]),
+  setDrivingExamResult: z.tuple([id, id, z.enum(['pendiente', 'aprobado', 'suspendido'])]), deleteDrivingExam: z.tuple([id, id]),
+  importStudents: z.tuple([z.array(studentSchema).min(1).max(500)]),
   setStudentTraining: z.tuple([id, z.object({ targetHours: z.number().min(1).max(200).optional(), permit: z.string().max(10).optional(), assignedTeacherId: id.optional() })]),
   recordExport: z.tuple([z.string().min(1).max(200)]),
 };

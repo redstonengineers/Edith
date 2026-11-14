@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { nuevo } from '@/lib/labels';
-import { Hourglass, UserPlus, Users } from 'lucide-react';
+import { Hourglass, Upload, UserPlus, Users } from 'lucide-react';
 import { AttendanceCell, PayBadge, StudentStatusBadge } from '@/components/domain/badges';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,7 @@ import { Avatar } from '@/components/ui/primitives';
 import { useCan, useLabels, usePersistentState, useSnapshot, useVisibleModules } from '@/hooks';
 import { studentRows, type StudentRow } from '@/lib/people';
 import { norm, fmtAgo } from '@/utils/format';
+import { ImportStudents } from './ImportStudents';
 import { StudentForm } from './StudentForm';
 
 type Filter = 'todos' | 'activos' | 'inactivos' | 'nuevos' | 'morosos' | 'baja_asistencia';
@@ -21,7 +22,7 @@ export default function StudentList() {
   const [filter, setFilter] = usePersistentState<Filter>('ac.students.filter', 'todos');
   const [q, setQ] = usePersistentState('ac.students.q', '');
   const [sp, setSp] = useSearchParams();
-  const rows = useMemo(() => studentRows(snap), [snap]);
+  const rows = useMemo(() => studentRows(snap), [snap]); const [importing, setImporting] = useState(false);
 
   const preds: Record<Filter, (r: StudentRow) => boolean> = {
     todos: (r) => r.student.status !== 'baja', activos: (r) => r.student.status === 'activo', inactivos: (r) => r.student.status === 'inactivo' || r.student.status === 'baja',
@@ -48,7 +49,7 @@ export default function StudentList() {
   return (
     <>
       <PageHeader title={L.student.plural} description={`${rows.filter((r) => r.student.status === 'activo' || r.student.status === 'nuevo').length} activos · ${rows.length} en total`}
-        actions={can('students:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><UserPlus size={16} />{nuevo(L.student)}</Button>} />
+        actions={can('students:write') && <><Button onClick={() => setImporting(true)}><Upload size={16} />Importar CSV</Button><Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><UserPlus size={16} />{nuevo(L.student)}</Button></>} />
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterChips<Filter> label="Filtrar" value={filter} onChange={setFilter} options={[opt('todos', 'Todos'), opt('activos', 'Activos'), opt('nuevos', 'Nuevos'), opt('inactivos', 'Inactivos'), ...(can('payments:read') ? [opt('morosos', 'Morosos')] : []), opt('baja_asistencia', 'Asistencia baja')]} />
         <div className="flex items-center gap-2">
@@ -58,6 +59,7 @@ export default function StudentList() {
       </div>
       <DataTable label={L.student.plural} rows={view} columns={cols} rowKey={(r) => r.student.id} onRowClick={(r) => nav(`/alumnos/${r.student.id}`)} defaultSort={{ key: 'name', dir: 'asc' }}
         empty={{ icon: Users, title: 'Ningún resultado', description: 'Prueba a cambiar el filtro o la búsqueda.', action: (q || filter !== 'todos') ? <Button onClick={() => { setQ(''); setFilter('todos'); }}>Limpiar filtros</Button> : undefined }} />
+      {importing && <ImportStudents onClose={() => setImporting(false)} />}
       {creating && <StudentForm open onClose={closeForm} onCreated={(id) => nav(`/alumnos/${id}`)} />}
     </>
   );

@@ -66,6 +66,10 @@ export const cancelPractice = ((_user: unknown, ...args: unknown[]) => rpc('canc
 export const completePractice = ((_user: unknown, ...args: unknown[]) => rpc('completePractice', args)) as unknown as typeof L.completePractice;
 export const setStudentTraining = ((_user: unknown, ...args: unknown[]) => rpc('setStudentTraining', args)) as unknown as typeof L.setStudentTraining;
 export const getPracticeSignatures = ((_user: unknown, ...args: unknown[]) => rpc('getPracticeSignatures', args)) as unknown as typeof L.getPracticeSignatures;
+export const addDrivingExam = ((_user: unknown, ...args: unknown[]) => rpc('addDrivingExam', args)) as unknown as typeof L.addDrivingExam;
+export const setDrivingExamResult = ((_user: unknown, ...args: unknown[]) => rpc('setDrivingExamResult', args)) as unknown as typeof L.setDrivingExamResult;
+export const deleteDrivingExam = ((_user: unknown, ...args: unknown[]) => rpc('deleteDrivingExam', args)) as unknown as typeof L.deleteDrivingExam;
+export const importStudents = ((_user: unknown, ...args: unknown[]) => rpc('importStudents', args)) as unknown as typeof L.importStudents;
 
 /** Alta pública de academia (onboarding): endpoint propio, sin sesión previa. */
 export const createAcademy = ((input: unknown) => post('/onboarding', input)) as unknown as typeof L.createAcademy;

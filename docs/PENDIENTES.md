@@ -46,3 +46,8 @@ Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/pr
 - [ ] **Firma sin conexión**: cola offline que envía las firmas al recuperar la red.
 - [ ] Alta real del tenant «Autoescuela Atlanta» desde el onboarding (la demo `@atlanta.demo` solo existe con `SEED_DEMO=1`).
 - [ ] Avisos push de clases y copias de seguridad (equivalentes a los de Volanta).
+
+## Autoescuela Atlanta — fase 3 (hecha)
+- Exámenes de conducir (teórico/práctico, resultado) en la ficha del alumno y «Exámenes del mes» con % de aprobados en el parte mensual.
+- Importar alumnos desde CSV (Excel → Guardar como CSV; coma o punto y coma; fechas dd/mm/aaaa o aaaa-mm-dd), validando fila a fila, con plantilla descargable.
+- Sigue pendiente: alta real del tenant «Autoescuela Atlanta» desde el onboarding (hoy solo existe la demo con SEED_DEMO=1), firma sin conexión, avisos push y copias de seguridad.

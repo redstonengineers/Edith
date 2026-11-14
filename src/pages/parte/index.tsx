@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/primitives';
 import { useSnapshot } from '@/hooks';
 import { fullName } from '@/lib/people';
-import { fmtHours, hoursOf } from '@/lib/practices';
+import { examStats, fmtHours, hoursOf } from '@/lib/practices';
 import { downloadCsv } from '@/lib/reports';
 import { fmtDate } from '@/utils/format';
 
@@ -20,6 +20,7 @@ export default function ParteMensualPage() {
   const veh = (id?: string) => snap.vehicles.find((x) => x.id === id);
   const agg = <K extends string>(key: (p: (typeof rows)[number]) => K) => { const m = new Map<K, { h: number; km: number; n: number }>(); rows.forEach((p) => { const c = m.get(key(p)) ?? { h: 0, km: 0, n: 0 }; c.h += hoursOf(p); c.km += p.km ?? 0; c.n++; m.set(key(p), c); }); return [...m.entries()].sort((a, b) => b[1].h - a[1].h); };
   const byTeacher = agg((p) => p.teacherId); const byCar = agg((p) => (p.vehicleId ?? '') as string); const total = rows.reduce((a, p) => a + hoursOf(p), 0); const km = rows.reduce((a, p) => a + (p.km ?? 0), 0);
+  const exMonth = snap.students.flatMap((st) => (st.driving ?? []).filter((e) => e.date.startsWith(month)).map((e) => ({ ...e, who: `${st.firstName} ${st.lastName}` }))).sort((a, b) => a.date.localeCompare(b.date)); const exs = examStats(exMonth);
   const unsigned = rows.filter((p) => !p.signed).length; const title = format(base, 'LLLL yyyy', { locale: es });
   const csv = () => downloadCsv(`parte-${month}`, { columns: ['Fecha', 'Inicio', 'Fin', 'Horas', 'Alumno', 'Profesor', 'Coche', 'Matrícula', 'Km', 'Firmada'], rows: rows.map((p) => [p.date, p.start, p.end, hoursOf(p), stu(p.studentId), tea(p.teacherId), veh(p.vehicleId)?.model ?? '', veh(p.vehicleId)?.plate ?? '', p.km ?? 0, p.signed ? 'sí' : 'no']) });
   return (
@@ -39,6 +40,9 @@ export default function ParteMensualPage() {
           <Panel title="Por profesor">{byTeacher.length === 0 ? <p className="py-3 text-sm text-muted">Sin prácticas hechas este mes.</p> : <ul className="divide-y divide-line text-sm">{byTeacher.map(([id, c]) => <li key={id} className="flex justify-between py-2"><span>{tea(id)}</span><span className="tnum text-muted">{c.n} prácticas · {fmtHours(c.h)} · {c.km} km</span></li>)}</ul>}</Panel>
           <Panel title="Por coche">{byCar.length === 0 ? <p className="py-3 text-sm text-muted">Sin prácticas hechas este mes.</p> : <ul className="divide-y divide-line text-sm">{byCar.map(([id, c]) => <li key={id || 'none'} className="flex justify-between py-2"><span>{veh(id)?.model ?? 'Sin coche'} <span className="text-muted">{veh(id)?.plate}</span></span><span className="tnum text-muted">{c.n} prácticas · {fmtHours(c.h)} · {c.km} km</span></li>)}</ul>}</Panel>
         </div>
+        <Panel title="Exámenes del mes" action={exs.pct !== null ? <span className="tnum text-sm text-muted">{exs.pct}% aprobados ({exs.ok}/{exs.done})</span> : undefined}>
+          {exMonth.length === 0 ? <p className="py-3 text-sm text-muted">Sin exámenes este mes.</p> : <ul className="divide-y divide-line text-sm">{exMonth.map((e) => <li key={e.id} className="flex justify-between py-2"><span>{e.who} <span className="text-muted">· {e.kind === 'teorico' ? 'teórico' : 'práctico'} · {fmtDate(e.date, 'd MMM')}</span></span><span className={e.result === 'aprobado' ? 'text-ok' : e.result === 'suspendido' ? 'text-bad' : 'text-muted'}>{e.result}</span></li>)}</ul>}
+        </Panel>
         <Panel title={`Prácticas de ${title}`}>
           {rows.length === 0 ? <p className="py-6 text-center text-sm text-muted">No hay prácticas hechas en este mes.</p> : (
             <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs tracking-[0.1em] text-muted uppercase"><tr><th className="py-2 pr-3">Fecha</th><th className="pr-3">Hora</th><th className="pr-3">Alumno</th><th className="pr-3">Profesor</th><th className="pr-3">Coche</th><th className="pr-3 text-right">Km</th><th>Firma</th></tr></thead>

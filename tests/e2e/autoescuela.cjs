@@ -38,6 +38,16 @@ const nextDow = (dow, skip = 0) => { const d = new Date(); d.setDate(d.getDate()
   await go('/alumnos'); await p.getByText('Lucía Fernández').first().click(); await p.waitForSelector('text=Prácticas'); ok(await p.getByRole('progressbar', { name: /horas de prácticas/ }).count() === 1, 'ficha del alumno con barra de horas');
   await p.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + '/atlanta-alumno.png' });
   await go('/practicas'); await p.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + '/atlanta-practicas.png' });
+  // Fase 3: exámenes de conducir e importar alumnos
+  await go('/alumnos'); await p.getByText('Lucía Fernández').first().click(); await p.waitForSelector('text=Exámenes');
+  await p.getByLabel('Fecha del examen').fill(iso(new Date())); await p.getByRole('button', { name: 'Anotar' }).click(); await p.waitForSelector('text=Examen anotado');
+  await p.getByLabel('Resultado del examen teorico').selectOption('aprobado'); await p.waitForSelector('text=Resultado guardado'); ok(await p.getByText('1/1 aprobados').count() === 1, 'examen teórico anotado y aprobado (1/1)');
+  await go('/parte'); ok(await p.getByText(/100% aprobados/).count() === 1, 'el parte mensual muestra el porcentaje de aprobados');
+  await go('/alumnos'); await p.getByRole('button', { name: /Importar CSV/ }).click();
+  await dlg.getByLabel('Contenido CSV').fill('Nombre;Apellidos;Fecha de nacimiento;Correo;Teléfono\nÁlex;Importado Uno;14/03/2004;alex@correo.es;600111222\nMala;Fila;no-fecha;x;1\nEva;Importada Dos;2003-07-01;eva@correo.es;600333444');
+  ok(await dlg.getByText(/2 filas válidas/).count() === 1 && await dlg.getByText(/1 con errores/).count() === 1, 'la importación valida fila a fila (2 válidas, 1 con error)');
+  await dlg.getByRole('button', { name: 'Importar 2' }).click(); await p.waitForSelector('text=2 alumnos importados'); await p.waitForTimeout(500);
+  ok(await p.getByText('Álex Importado Uno').count() >= 1 && await p.getByText('Eva Importada Dos').count() >= 1, 'los alumnos importados aparecen en la lista');
   // Profesor: ve solo lo suyo y no gestiona coches
   const t = await login('David Ruiz'); await t.goto(U + '/alumnos'); await t.waitForTimeout(700); const mine = await t.locator('tbody tr').count(); ok(mine > 0 && mine < 14, `el profesor ve solo sus alumnos (${mine} de 14)`);
   await t.goto(U + '/coches'); await t.waitForTimeout(600); ok(await t.getByRole('button', { name: /Añadir coche/ }).count() === 0, 'el profesor no puede añadir coches');

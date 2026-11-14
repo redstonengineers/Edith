@@ -82,7 +82,11 @@ export interface Student extends Tenant {
   permit?: string;
   /** Autoescuela: profesor asignado (el profesor solo ve a sus alumnos). */
   assignedTeacherId?: ID;
+  /** Autoescuela: exámenes de la DGT (teórico/práctico) con su resultado. */
+  driving?: DrivingExam[];
 }
+
+export interface DrivingExam { id: ID; kind: 'teorico' | 'practico'; date: ISODate; result: 'pendiente' | 'aprobado' | 'suspendido' }
 
 export interface Teacher extends Tenant {
   id: ID; firstName: string; lastName: string; email: string; phone: string;

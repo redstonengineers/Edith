@@ -719,3 +719,27 @@ export function getPracticeSignatures(user: User, id: ID): { studentSig?: string
   if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes ver tus prácticas.');
   return { studentSig: p.studentSig, teacherSig: p.teacherSig };
 }
+
+/** Exámenes de conducir (teórico/práctico) en la ficha del alumno. */
+export function addDrivingExam(user: User, studentId: ID, input: { kind: 'teorico' | 'practico'; date: string; result: 'pendiente' | 'aprobado' | 'suspendido' }) {
+  need(user, 'students:write'); const s = own(user, getDatabase().students.find((x) => x.id === studentId), 'Alumno');
+  (s.driving ??= []).push({ id: newId(user, 'exd'), ...input });
+  logActivity(user, 'creó', 'student', `${user.name} anotó un examen ${input.kind} de ${s.firstName} ${s.lastName} (${input.result})`, s.id);
+  return done(s);
+}
+export function setDrivingExamResult(user: User, studentId: ID, examId: ID, result: 'pendiente' | 'aprobado' | 'suspendido') {
+  need(user, 'students:write'); const s = own(user, getDatabase().students.find((x) => x.id === studentId), 'Alumno');
+  const e = (s.driving ?? []).find((x) => x.id === examId); if (!e) throw new Error('Examen no encontrado');
+  e.result = result; logActivity(user, 'modificó', 'student', `${user.name} marcó el examen ${e.kind} de ${s.firstName} ${s.lastName} como ${result}`, s.id);
+  return done(s);
+}
+export function deleteDrivingExam(user: User, studentId: ID, examId: ID) {
+  need(user, 'students:write'); const s = own(user, getDatabase().students.find((x) => x.id === studentId), 'Alumno');
+  s.driving = (s.driving ?? []).filter((x) => x.id !== examId); return done(s);
+}
+/** Importación masiva de alumnos (CSV/Excel ya parseado en el cliente). Cada fila se valida por separado. */
+export function importStudents(user: User, rows: StudentInput[]): { created: number } {
+  need(user, 'students:write');
+  for (const r of rows) createStudent(user, r);
+  return { created: rows.length };
+}

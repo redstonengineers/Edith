@@ -34,3 +34,31 @@ export const fmtHours = (h: number) => `${(Math.round(h * 10) / 10).toString().r
 
 /** Aviso de vencimiento: días hasta la fecha (negativo = vencido). */
 export const daysTo = (iso: string | undefined, today = new Date()) => iso ? Math.round((new Date(iso + 'T00:00:00').getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86_400_000) : null;
+
+/** Exámenes de conducir: aprobados / presentados (los pendientes no cuentan). */
+export function examStats(exams: { result: string }[]) {
+  const done = exams.filter((e) => e.result !== 'pendiente'); const ok = done.filter((e) => e.result === 'aprobado').length;
+  return { total: exams.length, done: done.length, ok, pct: done.length ? Math.round((ok / done.length) * 100) : null };
+}
+
+/** CSV sencillo (coma o punto y coma, comillas dobles). Devuelve filas de celdas. */
+export function parseCsv(text: string): string[][] {
+  const t = text.replace(/^﻿/, ''); const first = t.split(/\r?\n/, 1)[0] ?? ''; const sep = (first.match(/;/g)?.length ?? 0) > (first.match(/,/g)?.length ?? 0) ? ';' : ',';
+  const rows: string[][] = []; let row: string[] = []; let cell = ''; let q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === sep) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cell); cell = ''; if (row.some((x) => x.trim())) rows.push(row); row = []; }
+    else cell += c;
+  }
+  row.push(cell); if (row.some((x) => x.trim())) rows.push(row);
+  return rows.map((r) => r.map((x) => x.trim()));
+}
+
+/** dd/mm/aaaa o aaaa-mm-dd → aaaa-mm-dd ('' si no es válida). */
+export function normDate(s: string): string {
+  const m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/); const iso = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : s;
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) && !Number.isNaN(Date.parse(iso)) ? iso : '';
+}
