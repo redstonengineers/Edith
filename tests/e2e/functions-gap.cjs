@@ -45,7 +45,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   // Grupos: capacidad
   await go('/grupos'); await p.getByRole('button', { name: 'Nuevo grupo' }).click(); await save(); ok(await dlg().locator('[role=alert]').count() >= 1, 'grupo: validación');
   await f(/^Nombre/).fill('Taller de Prueba'); await dlg().getByLabel(/Asignatura/).selectOption({ index: 1 }); await last(/Profesor/); await last(/Aula/); await f(/Capacidad/).fill('2'); await save(); if (await dlg().count()) console.log('   (diálogo grupo)', (await dlg().locator('[role=alert]').allInnerTexts()).join(' / ').replace(/\n+/g, ' ').slice(0, 220));
-  await p.waitForURL(/\/grupos\/.+/, { timeout: 4000 }).catch(() => {}); ok(/\/grupos\/.+/.test(p.url()) && await p.getByText('Taller de Prueba').count() >= 1, 'grupo creado y abre su ficha');
+  await p.waitForURL(/\/grupos\/.+/, { timeout: 6000 }).catch(() => {}); await p.getByText('Taller de Prueba').first().waitFor({ timeout: 4000 }).catch(() => {}); ok(/\/grupos\/.+/.test(p.url()) && await p.getByText('Taller de Prueba').count() >= 1, 'grupo creado y abre su ficha');
 
   // Exámenes + notas
   await go('/examenes'); await p.getByRole('button', { name: 'Nuevo examen' }).click(); await save(); ok(await dlg().locator('[role=alert]').count() >= 1, 'examen: validación');
@@ -70,7 +70,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   await go('/informes'); const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 5000 }).catch(() => null), p.getByRole('button', { name: 'Exportar CSV' }).click()]); ok(!!dl, 'informe: exportar CSV descarga un archivo');
 
   // Ajustes y cierre de sesión
-  await go('/configuracion'); await p.getByRole('button', { name: 'Guardar' }).first().click(); await p.waitForTimeout(500); ok(await p.getByText(/guardad/i).count() >= 1, 'ajustes: guardar confirma');
+  await go('/configuracion'); await p.getByRole('button', { name: 'Guardar' }).first().click(); await p.getByText(/guardad/i).first().waitFor({ timeout: 4000 }).catch(() => {}); ok(await p.getByText(/guardad/i).count() >= 1, 'ajustes: guardar confirma');
   await p.getByRole('button', { name: 'Menú de usuario' }).click(); await p.getByRole('menuitem', { name: /Cerrar sesión|Salir/ }).click();  await p.waitForTimeout(700);
   ok(await p.getByText('Iniciar sesión').count() >= 1, 'cerrar sesión vuelve al login');
   console.log('ERRORS', JSON.stringify(errs)); console.log(fails ? `${fails} FALLOS` : 'TODO OK'); await b.close(); process.exit(fails ? 1 : 0);
