@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type PointerEvent as RPE } from 'react';
 import { addDays, format, parseISO, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, MapPin, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { Modal } from '@/components/ui/Overlay';
 import { uid, usePersonal, type PData, type SlotEx } from '@/store/personal';
-import { Bar, COLORS, Empty, F, Panel, todayISO } from './shared';
+import { COLORS, Empty, F, Panel, todayISO } from './shared';
 
 /** Una clase concreta de una semana: viene del horario recurrente (con su posible excepción) o es una clase suelta. */
 export interface Occ { key: string; slotId?: string; exId?: string; title: string; color: string; day: number; start: string; end: string; place?: string; cancelled?: boolean; moved?: boolean; extra?: boolean }
@@ -43,6 +43,9 @@ const delSlot = (d: PData, slotId: string): PData => ({ ...d, schedule: d.schedu
 const delEx = dropEx;
 const nextColor = (d: PData) => COLORS[new Set(d.schedule.map((x) => x.title.toLowerCase())).size % COLORS.length];
 
+/** Reparte en carriles las clases que se solapan en un mismo día. */
+function laneMap(list: Occ[]) { const l = [...list].sort(byStart); const ends: number[] = []; const out = new Map<string, number>(); l.forEach((o) => { let i = ends.findIndex((e) => e <= mins(o.start)); if (i < 0) { i = ends.length; ends.push(0); } ends[i] = mins(o.end); out.set(o.key, i); }); return { out, n: Math.max(1, ends.length) }; }
+
 /* ── Cuadrícula semanal ── */
 const HOUR = 54; const SNAP = 15;
 type Dlg = { kind: 'new'; day: number; start: string } | { kind: 'edit'; occ: Occ } | null;
@@ -73,7 +76,7 @@ export function Schedule() {
   const apply = (scope: 'week' | 'all') => { if (!pending?.occ.slotId) return; const { occ, day, start, end } = pending; const f = { day, start, end, place: occ.place }; update((d) => scope === 'week' ? setWeek(d, occ.slotId!, week, f) : setAll(d, occ.slotId!, f, week)); setPending(null); };
   const emptyClick = (e: React.MouseEvent<HTMLDivElement>, day: number) => { if (e.target !== e.currentTarget) return; const r = e.currentTarget.getBoundingClientRect(); const m = Math.round((((e.clientY - r.top) / HOUR) * 60 + H0 * 60) / 30) * 30; setDlg({ kind: 'new', day, start: hhmm(Math.min(m, 22 * 60)) }); };
 
-  const lanes = (day: number) => { const l = occs.filter((o) => o.day === day).sort(byStart); const ends: number[] = []; const out = new Map<string, number>(); l.forEach((o) => { let i = ends.findIndex((e) => e <= mins(o.start)); if (i < 0) { i = ends.length; ends.push(0); } ends[i] = mins(o.end); out.set(o.key, i); }); return { out, n: Math.max(1, ends.length) }; };
+  const lanes = (day: number) => laneMap(occs.filter((o) => o.day === day));
   const label = `${format(wk, 'd', { locale: es })}–${format(addDays(wk, 6), 'd MMM yyyy', { locale: es })}`; const thisWeek = week === weekOf(new Date());
   const nowTop = ((nowD.getHours() * 60 + nowD.getMinutes() - H0 * 60) / 60) * HOUR;
 
@@ -168,25 +171,32 @@ function ClassDialog({ dlg, week, onClose }: { dlg: NonNullable<Dlg>; week: stri
   );
 }
 
-/* ── Panel de portada: lo de hoy ── */
+/* ── Panel de portada: el horario de la semana en miniatura ── */
 export function SchedulePanel({ now, onOpen }: { now: Date; onOpen: () => void }) {
-  const data = usePersonal((s) => s.data); const nowM = now.getHours() * 60 + now.getMinutes(); const today = classesOn(data, format(now, 'yyyy-MM-dd'));
-  const cur = today.find((s) => mins(s.start) <= nowM && nowM < mins(s.end)); const next = today.find((s) => mins(s.start) > nowM); const fm = (n: number) => n < 60 ? `${n} min` : `${Math.floor(n / 60)} h ${n % 60 ? `${n % 60} min` : ''}`;
-  let right = <span className="hud-sub">sin clases</span>;
-  if (cur) right = <span className="hud-val">en clase · {fm(mins(cur.end) - nowM)}</span>; else if (next) right = <span className="hud-val">siguiente en {fm(mins(next.start) - nowM)}</span>; else if (today.length) right = <span className="hud-sub">terminaste por hoy</span>;
-  let after: { o: Occ; k: number } | undefined; if (!next && !cur) for (let k = 1; k <= 14 && !after; k++) { const c = classesOn(data, format(addDays(now, k), 'yyyy-MM-dd'))[0]; if (c) after = { o: c, k }; }
-  const any = data.schedule.length + data.schedEx.length > 0;
+  const data = usePersonal((s) => s.data); const nowM = now.getHours() * 60 + now.getMinutes(); const iso = format(now, 'yyyy-MM-dd'); const week = weekOf(now); const wk = parseISO(week); const today = now.getDay() || 7;
+  const occs = weekOccs(data, week); const todays = classesOn(data, iso); const cur = todays.find((s) => mins(s.start) <= nowM && nowM < mins(s.end)); const next = todays.find((s) => mins(s.start) > nowM);
+  const fm = (n: number) => n < 60 ? `${n} min` : `${Math.floor(n / 60)} h ${n % 60 ? `${n % 60} min` : ''}`;
+  let right = <span className="hud-sub">sin clases hoy</span>;
+  if (cur) right = <span className="hud-val">en clase · {fm(mins(cur.end) - nowM)}</span>; else if (next) right = <span className="hud-val">siguiente en {fm(mins(next.start) - nowM)}</span>; else if (todays.length) right = <span className="hud-sub">terminaste por hoy</span>;
+  const H0 = Math.min(8, ...occs.map((o) => Math.floor(mins(o.start) / 60))); const H1 = Math.max(18, ...occs.map((o) => Math.ceil(mins(o.end) / 60))); const span = (H1 - H0) * 60; const any = data.schedule.length + data.schedEx.length > 0;
+  const nowTop = ((nowM - H0 * 60) / span) * 100;
   return (
-    <Panel title="Horario de hoy" right={right} onOpen={onOpen} grow={1.4}>
-      {!any ? <Empty text="Pulsa + y crea tu horario semanal: se repetirá cada semana y podrás mover las clases con el ratón." /> : <>
-        {today.length === 0 && <Empty text="Hoy no tienes clase." />}
-        {today.map((s) => { const on = s === cur; const past = mins(s.end) <= nowM; return (
-          <div key={s.key} className={`hud-row ${past ? 'opacity-40' : ''}`} style={on ? { background: 'rgb(var(--h) / .12)', borderRadius: 6, padding: '8px 6px' } : undefined}>
-            <i className="h-7 w-1 flex-none rounded" style={{ background: s.color, boxShadow: on ? `0 0 10px ${s.color}` : 'none' }} /><span className="hud-val w-[84px] flex-none text-xs">{s.start}–{s.end}</span>
-            <div className="min-w-0 flex-1"><p className="truncate">{s.title}{(s.moved || s.extra) && <em className="ml-2 text-[10px] text-warn not-italic">esta semana</em>}</p>{on && <div className="mt-1"><Bar pct={((nowM - mins(s.start)) / (mins(s.end) - mins(s.start))) * 100} /></div>}</div>
-            {s.place && <span className="hud-sub flex flex-none items-center gap-1"><MapPin size={10} aria-hidden />{s.place}</span>}</div>); })}
-        {after && <p className="mt-2 text-xs text-muted">{after.k === 1 ? 'Mañana' : DAYS[after.o.day - 1]}: <b className="text-fg">{after.o.title}</b> a las {after.o.start}</p>}
-      </>}
+    <Panel title="Mi horario" right={right} onOpen={onOpen} grow={1.4}>
+      <div className="mini-tt" role="button" tabIndex={0} aria-label="Horario semanal en miniatura. Pulsa para abrirlo y editarlo" onClick={onOpen} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
+        <div className="mini-head"><span />{DAYS.map((n, i) => <span key={n} className={i + 1 === today ? 'on' : ''}>{n[0] === 'M' && n[1] === 'i' ? 'X' : n[0]}<small>{format(addDays(wk, i), 'd')}</small></span>)}</div>
+        <div className="mini-body">
+          <div className="mini-hours">{Array.from({ length: Math.floor(span / 60) }, (_, i) => i).filter((i) => i % 2 === 0).map((i) => <span key={i} style={{ top: `${(i * 60 / span) * 100}%` }}>{String(H0 + i).padStart(2, '0')}</span>)}</div>
+          <div className="mini-cols">
+            {DAYS.map((_, di) => { const list = occs.filter((o) => o.day === di + 1); const ln = laneMap(list); return (
+              <div key={di} className={`mini-col ${di + 1 === today ? 'today' : ''}`}>
+                {di + 1 === today && nowTop > 0 && nowTop < 100 && <i className="mini-now" style={{ top: `${nowTop}%` }} aria-hidden />}
+                {list.map((o) => <div key={o.key} className={`mini-blk ${o === cur || (cur && o.key === cur.key) ? 'cur' : ''} ${o.moved || o.extra ? 'ex' : ''} ${o.cancelled ? 'off' : ''}`} title={`${o.cancelled ? '(cancelada) ' : ''}${o.title} ${o.start}–${o.end}${o.place ? ` · ${o.place}` : ''}`}
+                  style={{ top: `${((mins(o.start) - H0 * 60) / span) * 100}%`, height: `${((mins(o.end) - mins(o.start)) / span) * 100}%`, left: `${(ln.out.get(o.key) ?? 0) * (100 / ln.n)}%`, width: `${100 / ln.n}%`, ['--c' as string]: o.color }}><b>{o.title}</b></div>)}
+              </div>); })}
+          </div>
+        </div>
+      </div>
+      {!any ? <Empty text="Pulsa el horario y crea tu semana: se repite cada semana y mueves las clases con el ratón." /> : <p className="mt-1.5 truncate text-[11px] text-muted">{cur ? <>Ahora: <b className="text-fg">{cur.title}</b>{cur.place ? ` · ${cur.place}` : ''}</> : next ? <>Siguiente: <b className="text-fg">{next.title}</b> a las {next.start}{next.place ? ` · ${next.place}` : ''}</> : 'Sin más clases hoy.'}</p>}
     </Panel>
   );
 }

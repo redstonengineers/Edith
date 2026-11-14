@@ -126,3 +126,15 @@ textarea.hud-input { height: auto; }
 .tt-block.ex { border-style: dashed; } .tt-block.off { opacity: .4; border-style: dotted; text-decoration: line-through; cursor: pointer; } .tt-block.ghost { opacity: .85; border-style: dashed; z-index: 6; box-shadow: 0 0 26px var(--c); }
 .tt-grip { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; cursor: ns-resize; } .tt-grip::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 22px; height: 2px; margin-left: -11px; border-radius: 2px; background: rgb(255 255 255 / .45); }
 .tt-block.dim { opacity: .25; }
+
+/* Horario en miniatura (portada) */
+.mini-tt { display: flex; flex-direction: column; height: calc(100% - 22px); min-height: 130px; cursor: pointer; border-radius: 6px; transition: box-shadow .2s; } .mini-tt:hover, .mini-tt:focus-visible { box-shadow: 0 0 0 1px rgb(var(--h) / .45), 0 0 18px rgb(var(--h) / .2); outline: none; }
+.mini-head { display: grid; grid-template-columns: 22px repeat(7, 1fr); text-align: center; font-size: 10px; color: var(--muted); letter-spacing: .08em; } .mini-head small { display: block; font-size: 9px; opacity: .7; } .mini-head .on { color: var(--hud); font-weight: 700; text-shadow: 0 0 8px rgb(var(--h) / .6); }
+.mini-body { position: relative; flex: 1; display: grid; grid-template-columns: 22px 1fr; min-height: 0; }
+.mini-hours { position: relative; } .mini-hours span { position: absolute; right: 3px; transform: translateY(-50%); font-size: 8px; color: var(--muted); } .mini-hours span:first-child { transform: none; }
+.mini-cols { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid rgb(var(--h) / .2); background-image: linear-gradient(rgb(var(--h) / .08) 1px, transparent 1px); background-size: 100% 12.5%; }
+.mini-col { position: relative; border-left: 1px solid rgb(var(--h) / .12); } .mini-col.today { background: rgb(var(--h) / .07); }
+.mini-blk { position: absolute; overflow: hidden; border-radius: 3px; padding: 1px 2px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 35%, rgb(4 12 24 / .9)); font-size: 8px; line-height: 1.1; color: #fff; box-shadow: 0 0 6px color-mix(in srgb, var(--c) 40%, transparent); }
+.mini-blk b { font-weight: 600; } .mini-blk.ex { border-style: dashed; } .mini-blk.cur { box-shadow: 0 0 12px var(--c); outline: 1px solid #fff; z-index: 2; }
+.mini-now { position: absolute; left: 0; right: 0; height: 1px; background: var(--bad); box-shadow: 0 0 5px var(--bad); z-index: 3; }
+.mini-blk.off { opacity: .35; border-style: dotted; text-decoration: line-through; box-shadow: none; }

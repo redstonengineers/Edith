@@ -117,17 +117,30 @@ function Subjects() {
         {data.grades.filter((g) => g.subjectId === s.id).map((g) => <div key={g.id} className="flex items-center gap-2 pl-6 text-xs text-muted"><span>{g.title}</span><span className="hud-val">{g.score}</span><span>×{g.weight}</span><button className="hud-ghost ml-auto" aria-label={`Eliminar nota ${g.title}`} onClick={() => update((d) => ({ ...d, grades: d.grades.filter((x) => x.id !== g.id) }))}><X size={12} aria-hidden /></button></div>)}</div>); })}
   </>);
 }
+/** Nombre y duración del temporizador, editables (con atajos de duración). */
+function TimerControls({ timer, presets }: { timer: Timer; presets?: boolean }) {
+  const [draft, setDraft] = useState(String(timer.total)); useEffect(() => setDraft(String(timer.total)), [timer.total]);
+  const commit = () => { const n = Math.round(Number(draft.replace(',', '.'))); if (n >= 1) timer.setTotal(n); else setDraft(String(timer.total)); };
+  return (<div className="flex flex-wrap items-center gap-2">
+    <input className="hud-input min-w-0 flex-1" value={timer.name} onChange={(e) => timer.setName(e.target.value)} maxLength={40} placeholder="Nombre (ej. Repaso de cálculo)" aria-label="Nombre del temporizador" />
+    <label className="flex flex-none items-center gap-1.5 text-xs text-muted"><input className="hud-input !w-16 text-center" inputMode="numeric" value={draft} disabled={timer.running} onChange={(e) => setDraft(e.target.value.replace(/[^\d.,]/g, ''))} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }} aria-label="Minutos del temporizador" />min</label>
+    {presets && <div className="flex w-full flex-wrap gap-1.5">{[15, 25, 45, 60, 90, 120].map((m) => <button key={m} className="hud-chip hover:!border-[var(--hud)] hover:!text-white disabled:opacity-40" disabled={timer.running} aria-pressed={timer.total === m} onClick={() => timer.setTotal(m)}>{m} min</button>)}</div>}
+  </div>);
+}
 function StudyPanel({ timer }: { timer: Timer }) {
-  const { data } = usePersonal(); const week = data.study.filter((s) => s.date >= format(addDays(new Date(), -6), 'yyyy-MM-dd')); const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0');
+  const { data, update } = usePersonal(); const week = data.study.filter((s) => s.date >= format(addDays(new Date(), -6), 'yyyy-MM-dd')); const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0');
+  const recent = [...data.study].reverse().slice(0, 8);
   return (<>
-    <div className="mb-5 text-center"><p className="hud-title text-5xl" aria-live="off">{mm}:{ss}</p>
-      <div className="mt-3 flex flex-wrap justify-center gap-2"><select className="hud-input w-48" value={timer.subjectId} onChange={(e) => timer.setSubjectId(e.target.value)} aria-label="Asignatura de la sesión"><option value="">Sin asignatura</option>{data.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-        <select className="hud-input w-28" value={timer.total} disabled={timer.running} onChange={(e) => timer.setTotal(Number(e.target.value))} aria-label="Duración"><option value={25}>25 min</option><option value={45}>45 min</option><option value={50}>50 min</option><option value={5}>5 min</option></select>
+    <div className="mb-5"><p className="hud-title mb-3 text-center text-5xl" aria-live="off">{mm}:{ss}</p>
+      <TimerControls timer={timer} presets />
+      <div className="mt-3 flex flex-wrap items-center gap-2"><select className="hud-input w-48" value={timer.subjectId} onChange={(e) => timer.setSubjectId(e.target.value)} aria-label="Asignatura de la sesión"><option value="">Sin asignatura</option>{data.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
         <button className="hud-btn" onClick={timer.toggle}>{timer.running ? 'Pausar' : 'Iniciar'}</button><button className="hud-btn" onClick={timer.reset}>Reiniciar</button></div></div>
     <p className="hud-sub mb-2">Últimos 7 días · {week.reduce((a, s) => a + s.minutes, 0)} min</p>
     {data.subjects.map((s) => { const m = week.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.minutes, 0); return <div key={s.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span>{s.name}</span><span className="hud-val">{m} min</span></div><Bar pct={Math.min(100, m / 3)} /></div>; })}
+    {recent.length > 0 && <><p className="hud-sub mt-4 mb-1">Últimas sesiones</p>{recent.map((r) => <Row key={r.id} label={r.name ?? 'sesión'} onDelete={() => update((d) => ({ ...d, study: d.study.filter((x) => x.id !== r.id) }))}><span className="w-12 flex-none text-xs text-muted">{r.date.slice(5)}</span><span className="truncate">{r.name || 'Estudio'}</span><span className="hud-sub">{data.subjects.find((x) => x.id === r.subjectId)?.name}</span><span className="hud-val ml-auto flex-none">{r.minutes} min</span></Row>)}</>}
   </>);
 }
+
 function Notes() {
   const { data, update } = usePersonal(); const [title, setTitle] = useState(''); const [body, setBody] = useState('');
   return (<>
@@ -137,16 +150,23 @@ function Notes() {
     {data.notes.map((n) => <div key={n.id} className="mb-3 border-l-2 border-line-strong pl-3"><Row label={n.title} onDelete={() => update((d) => ({ ...d, notes: d.notes.filter((x) => x.id !== n.id) }))}><b>{n.title}</b><span className="hud-sub">{n.updated}</span></Row><p className="whitespace-pre-wrap text-sm text-muted">{n.body}</p></div>)}
   </>);
 }
-/* ───────────── Temporizador de estudio (vive en el HUD, no en el cajón) ───────────── */
-interface Timer { left: number; total: number; running: boolean; subjectId: string; setSubjectId: (s: string) => void; setTotal: (m: number) => void; toggle: () => void; reset: () => void }
-function useTimer(): Timer {
-  const update = usePersonal((s) => s.update); const [total, setTotal] = useState(25); const [left, setLeft] = useState(25 * 60); const [running, setRunning] = useState(false); const [subjectId, setSubjectId] = useState('');
-  const ref = useRef({ total, subjectId }); ref.current = { total, subjectId };
-  useEffect(() => { if (!running) return; const id = setInterval(() => setLeft((l) => l - 1), 1000); return () => clearInterval(id); }, [running]);
-  useEffect(() => { if (left > 0 || !running) return; setRunning(false); update((d) => ({ ...d, study: [...d.study, { id: uid(), subjectId: ref.current.subjectId || undefined, minutes: ref.current.total, date: todayISO() }] })); setLeft(ref.current.total * 60); }, [left, running, update]);
-  return { left, total, running, subjectId, setSubjectId, setTotal: (m) => { setTotal(m); setLeft(m * 60); }, toggle: () => setRunning((r) => !r), reset: () => { setRunning(false); setLeft(total * 60); } };
-}
 
+/* ───────────── Temporizador de estudio (nombre y duración libres) ───────────── */
+const TKEY = 'edith.timer.v1'; const clampMin = (n: number) => Math.max(1, Math.min(600, Math.round(n) || 25));
+interface Timer { left: number; total: number; name: string; running: boolean; subjectId: string; setSubjectId: (s: string) => void; setName: (n: string) => void; setTotal: (m: number) => void; toggle: () => void; reset: () => void }
+function useTimer(): Timer {
+  const update = usePersonal((s) => s.update); const sound = useHud((s) => s.sound);
+  const saved = useRef((() => { try { return JSON.parse(localStorage.getItem(TKEY) ?? '{}') as { name?: string; total?: number }; } catch { return {}; } })()).current;
+  const [total, setTot] = useState(clampMin(saved.total ?? 25)); const [name, setNameS] = useState(saved.name ?? 'Estudio'); const [left, setLeft] = useState(clampMin(saved.total ?? 25) * 60); const [running, setRunning] = useState(false); const [subjectId, setSubjectId] = useState('');
+  const endAt = useRef(0); const leftRef = useRef(left); leftRef.current = left; const ref = useRef({ total, name, subjectId }); ref.current = { total, name, subjectId };
+  const persist = (n: string, t: number) => { try { localStorage.setItem(TKEY, JSON.stringify({ name: n, total: t })); } catch { /* sin almacenamiento */ } };
+  useEffect(() => { if (!running) return; endAt.current = Date.now() + leftRef.current * 1000; const id = setInterval(() => setLeft(Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000))), 250); return () => clearInterval(id); }, [running]);
+  useEffect(() => { if (left > 0 || !running) return; setRunning(false); const r = ref.current; update((d) => ({ ...d, study: [...d.study, { id: uid(), subjectId: r.subjectId || undefined, minutes: r.total, date: todayISO(), name: r.name.trim() || undefined }] })); setLeft(r.total * 60); blip('ok', sound); hudBus.emit('success'); try { if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('EDITH', { body: `${r.name || 'Sesión'} completada (${r.total} min)` }); } catch { /* sin permiso */ } }, [left, running, update, sound]);
+  useEffect(() => { if (running) document.title = `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')} · ${name || 'Estudio'}`; else document.title = 'EDITH · Personal'; }, [left, running, name]);
+  return { left, total, name, running, subjectId, setSubjectId,
+    setName: (n) => { setNameS(n); persist(n, total); }, setTotal: (m) => { const t = clampMin(m); setTot(t); setLeft(t * 60); persist(name, t); },
+    toggle: () => setRunning((r) => !r), reset: () => { setRunning(false); setLeft(total * 60); } };
+}
 
 /* ───────────── Ajustes y ayuda ───────────── */
 function SettingsBody({ onSwitch }: { onSwitch: () => void }) {
@@ -226,8 +246,9 @@ function Hud() {
           <div className="hud-col r">
             <CalendarPanel day={calDay} setDay={setCalDay} onOpen={openMod('agenda')} />
             <FinancePanel onOpen={openMod('money')} />
-            <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={openMod('study')} grow={.8}>
-              <div className="flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>
+            <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={openMod('study')} grow={.95}>
+              <TimerControls timer={timer} />
+              <div className="mt-2 flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>
               <div className="mt-2"><Bar pct={100 - (timer.left / (timer.total * 60)) * 100} /></div>
             </Panel>
           </div>
