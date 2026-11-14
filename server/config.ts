@@ -5,6 +5,10 @@ export const config = {
   port: Number(process.env.PORT ?? 4000),
   host: process.env.HOST ?? '127.0.0.1',
   dbPath: resolve(process.env.DB_PATH ?? './data/academy.db'),
+  /** Copias automáticas de la base: cada BACKUP_HOURS h (0 = desactivadas) en BACKUP_DIR, conservando BACKUP_KEEP. */
+  backupHours: Number(process.env.BACKUP_HOURS ?? 24),
+  backupKeep: Number(process.env.BACKUP_KEEP ?? 7),
+  backupDir: resolve(process.env.BACKUP_DIR ?? resolve(process.env.DB_PATH ?? './data/academy.db', '..', 'backups')),
   production: process.env.NODE_ENV === 'production',
   seedDemo: bool(process.env.SEED_DEMO),
   reseed: bool(process.env.RESEED),

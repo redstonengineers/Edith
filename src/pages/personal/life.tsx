@@ -6,6 +6,7 @@ import { uid, usePersonal, type PData, type Reminder, type Repeat, type WalletKi
 import { Bar, Empty, F, AddForm, Row, Panel, eur, todayISO } from './shared';
 import { blip, hudBus } from './fx';
 import { useHud } from './themes';
+import { speak } from './voice';
 import { classesOn, mins } from './timetable';
 
 type Update = (fn: (d: PData) => PData) => void;
@@ -79,7 +80,7 @@ export function useReminderAlerts() {
   useEffect(() => {
     const tick = () => { const fresh = ref.current.reminders.filter((r) => !r.done && dueAt(r).getTime() <= Date.now() && !seen.current.has(`${r.id}|${r.date}|${r.time}`)); if (!fresh.length) return;
       fresh.forEach((r) => { seen.current.add(`${r.id}|${r.date}|${r.time}`); if (typeof Notification !== 'undefined' && Notification.permission === 'granted') try { new Notification('EDITH · Recordatorio', { body: r.title }); } catch { /* sin permiso */ } });
-      setAlerts((a) => [...a, ...fresh].slice(-4)); blip('ok', sound); hudBus.emit('success'); };
+      setAlerts((a) => [...a, ...fresh].slice(-4)); blip('ok', sound); { const hs = useHud.getState(); if (hs.voice) speak(fresh.length === 1 ? `Recordatorio: ${fresh[0].title}` : `Tienes ${fresh.length} recordatorios: ${fresh.map((r) => r.title).join(', ')}`, { voiceURI: hs.voiceURI, rate: hs.voiceRate }); } hudBus.emit('success'); };
     tickRef.current = tick; tick(); const id = setInterval(tick, 15_000); return () => clearInterval(id);
   }, [sound]);
   useEffect(() => { tickRef.current(); }, [data.reminders]);

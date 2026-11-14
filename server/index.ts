@@ -37,4 +37,8 @@ store.flush(db);
 if (mailEnabled()) registerChannel(emailChannel);
 const app = buildApp(store);
 await app.listen({ port: config.port, host: config.host });
+if (config.backupHours > 0) {
+  const snap = () => { try { const f = store.backup(config.backupDir, config.backupKeep); console.warn(`Copia de seguridad: ${f}`); } catch (e) { console.error('Copia de seguridad fallida', e); } };
+  setTimeout(snap, 30_000).unref(); setInterval(snap, config.backupHours * 3_600_000).unref();
+}
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => void app.close().then(() => process.exit(0)));

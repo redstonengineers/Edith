@@ -11,16 +11,18 @@ export const THEMES: HudTheme[] = [
   { id: 'hielo', name: 'Hielo', hex: '#e2f1ff', hex2: '#8fb8ff', rgb: '226 241 255', rgb2: '143 184 255', text: '#f4faff', onBrand: '#07101c' },
 ];
 export type Quality = 'alta' | 'media' | 'baja';
-interface HudSettings { theme: string; quality: Quality; sound: boolean; motion: boolean; setTheme: (t: string) => void; setQuality: (q: Quality) => void; setSound: (b: boolean) => void; setMotion: (b: boolean) => void }
+interface HudSettings { theme: string; quality: Quality; sound: boolean; motion: boolean; voice: boolean; voiceURI: string; voiceRate: number; setVoice: (b: boolean) => void; setVoiceURI: (u: string) => void; setVoiceRate: (n: number) => void; setTheme: (t: string) => void; setQuality: (q: Quality) => void; setSound: (b: boolean) => void; setMotion: (b: boolean) => void }
 
 const KEY = 'edith.hud.v1';
 const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<HudSettings>; } catch { return {}; } })();
 const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export const useHud = create<HudSettings>((set, get) => {
-  const persist = () => { const { theme, quality, sound, motion } = get(); try { localStorage.setItem(KEY, JSON.stringify({ theme, quality, sound, motion })); } catch { /* sin almacenamiento */ } };
+  const persist = () => { const { theme, quality, sound, motion, voice, voiceURI, voiceRate } = get(); try { localStorage.setItem(KEY, JSON.stringify({ theme, quality, sound, motion, voice, voiceURI, voiceRate })); } catch { /* sin almacenamiento */ } };
   return {
     theme: THEMES.some((t) => t.id === saved.theme) ? saved.theme! : 'stark', quality: saved.quality ?? (typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 600 ? 'media' : 'alta'), sound: saved.sound ?? true, motion: saved.motion ?? !reduced,
+    voice: saved.voice ?? false, voiceURI: saved.voiceURI ?? '', voiceRate: saved.voiceRate ?? 1,
+    setVoice: (voice) => { set({ voice }); persist(); }, setVoiceURI: (voiceURI) => { set({ voiceURI }); persist(); }, setVoiceRate: (voiceRate) => { set({ voiceRate }); persist(); },
     setTheme: (theme) => { set({ theme }); persist(); }, setQuality: (quality) => { set({ quality }); persist(); },
     setSound: (sound) => { set({ sound }); persist(); }, setMotion: (motion) => { set({ motion }); persist(); },
   };

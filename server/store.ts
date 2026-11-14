@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { Database } from '../src/data/db';
 
 type Row = { academyId?: string; id?: string };
@@ -32,6 +32,16 @@ export class Store {
   personalPut(profile: string, body: string, baseRev: number): number | null {
     const cur = this.personalGet(profile); const rev = cur?.rev ?? 0; if (baseRev !== rev) return null;
     this.db.prepare('INSERT INTO personal (profile, rev, body) VALUES (?, ?, ?) ON CONFLICT(profile) DO UPDATE SET rev = excluded.rev, body = excluded.body').run(profile, rev + 1, body); return rev + 1;
+  }
+
+  /** Copia consistente de toda la base (VACUUM INTO) en `dir`; conserva solo las últimas `keep`. Devuelve la ruta creada. */
+  backup(dir: string, keep = 7): string {
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, `academy-${new Date().toISOString().replace(/[:.]/g, '-')}.db`);
+    this.db.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);
+    const old = readdirSync(dir).filter((f) => /^academy-.*\.db$/.test(f)).sort().slice(0, -keep);
+    for (const f of old) rmSync(join(dir, f), { force: true });
+    return file;
   }
 
   isEmpty() { return (this.db.prepare('SELECT COUNT(*) AS n FROM entities').get() as { n: number }).n === 0; }

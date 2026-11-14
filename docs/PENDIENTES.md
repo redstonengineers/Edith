@@ -6,7 +6,7 @@ Marca cada punto cuando esté hecho.
 ## 1. Despliegue y dominio
 - [ ] **Comprobar en un navegador `https://edith.redstonengineers.com`** (la única app: servidor y modo personal EDITH). Desde la sesión el proxy bloquea el dominio, así que solo he podido confirmar el estado en Coolify. Verificar DNS y certificado.
 - [ ] **Decidir si se despliega el modo servidor.** Ahora está publicada la demo estática (datos en el navegador de cada visitante). Para datos compartidos hay que desplegar el `Dockerfile` de la raíz en Coolify (app aparte, volumen persistente `/data`) con `BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_PASSWORD` (o `SEED_DEMO=1` solo para una demo). Pasar el frontend a `VITE_DATA_MODE=api`.
-- [ ] **Copias de seguridad** del volumen `/data` hacia almacenamiento externo (Coolify → Backups o S3).
+- [~] **Copias de seguridad**: el servidor ya hace una copia consistente de la base cada 24 h en `/app/data/backups` (últimas 7; variables `BACKUP_HOURS`, `BACKUP_KEEP`, `BACKUP_DIR`). Falta sacarlas fuera del volumen (Coolify → Backups o S3), porque si se pierde el volumen se pierden también.
 - [ ] Token de GitHub con permisos de creación de repos si quieres que la sesión cree repos nuevos por sí sola (hoy hay que crearlos a mano).
 
 ## 2. Servicios externos (cada uno necesita una cuenta o clave tuya)
@@ -37,7 +37,7 @@ Marca cada punto cuando esté hecho.
 - [ ] Módulos propios de sectores: citas con profesional (estética/clínica), historia clínica con consentimiento, recursos y flota (autoescuela/náutica), fichas de jugador y partidos (clubes).
 
 ## Ideas para más adelante
-- [ ] **Voz en EDITH personal**: empezar con voz del navegador (síntesis) + botón de micrófono (dictado); después, si gusta, voz neuronal (p. ej. ElevenLabs) con la clave guardada en el servidor. Descartado de momento: escucha permanente tipo «Oye EDITH» y conversación en tiempo real.
+- [~] **Voz en EDITH personal**: HECHO la síntesis con la voz del sistema (Ajustes → Voz de EDITH: activar, elegir voz y velocidad; lee respuestas y recordatorios; altavoz en cada respuesta). Falta el botón de micrófono (dictado); después, si gusta, voz neuronal (p. ej. ElevenLabs) con la clave guardada en el servidor. Descartado de momento: escucha permanente tipo «Oye EDITH» y conversación en tiempo real.
 
 ## Autoescuela Atlanta (híbrido EDITH + gestión de prácticas)
 Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/profesor/alumno y series semanales, horas del alumno frente a su objetivo, profesor asignado, portada propia, firma táctil, parte mensual (CSV/impresión) y avisos por WhatsApp.

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { addDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BellRing, CalendarDays, Home, MoreHorizontal, ChevronLeft, CheckSquare, Clock, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Wallet, X } from 'lucide-react';
+import { BellRing, CalendarDays, Home, MoreHorizontal, ChevronLeft, CheckSquare, Clock, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Volume2, VolumeX, Wallet, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
@@ -13,6 +13,7 @@ import { Schedule, SchedulePanel, classesOn, mins } from './timetable';
 import { createScene, type HudScene } from './scene';
 import { THEMES, applyTheme, clearTheme, themeOf, useHud, type Quality } from './themes';
 import { blip, hudBus } from './fx';
+import { listVoices, speak, stopSpeaking, voiceSupported } from './voice';
 import './hud.css';
 
 const gradeAvg = (d: PData, id: string) => { const g = d.grades.filter((x) => x.subjectId === id); const w = g.reduce((a, x) => a + x.weight, 0); return w ? g.reduce((a, x) => a + x.score * x.weight, 0) / w : null; };
@@ -182,8 +183,23 @@ function SettingsBody({ onSwitch }: { onSwitch: () => void }) {
         <p className="mt-2 text-xs text-muted">Si va lento en tu equipo o móvil, baja la calidad.</p></section>
       <section><h3 className="hud-sub mb-3">Animación y movimiento</h3><Toggle on={h.motion} set={h.setMotion} label="Animación" /><p className="mt-2 text-xs text-muted">Desactívala para reducir el movimiento (parallax y giro).</p></section>
       <section><h3 className="hud-sub mb-3">Sonidos de interfaz</h3><Toggle on={h.sound} set={h.setSound} label="Sonido" /></section>
+      {voiceSupported() && <VoiceSettings />}
       <section><h3 className="hud-sub mb-3">Perfil</h3><button className="hud-btn" onClick={onSwitch}><Users size={14} className="mr-2 inline" aria-hidden />Cambiar de perfil</button></section>
     </div>
+  );
+}
+function VoiceSettings() {
+  const h = useHud(); const [voices, setVoices] = useState(listVoices);
+  useEffect(() => { const f = () => setVoices(listVoices()); f(); speechSynthesis.addEventListener('voiceschanged', f); return () => speechSynthesis.removeEventListener('voiceschanged', f); }, []);
+  return (
+    <section><h3 className="hud-sub mb-3">Voz de EDITH</h3>
+      <div className="hud-seg" role="group" aria-label="Voz de EDITH"><button aria-pressed={h.voice} onClick={() => { h.setVoice(true); speak('Hola, soy EDITH.', { voiceURI: h.voiceURI, rate: h.voiceRate }); }}>Sí</button><button aria-pressed={!h.voice} onClick={() => { h.setVoice(false); stopSpeaking(); }}>No</button></div>
+      <p className="mt-2 text-xs text-muted">Lee en voz alta sus respuestas y tus recordatorios con la voz de tu dispositivo. También puedes pulsar el altavoz de cada respuesta.</p>
+      {h.voice && <div className="mt-3 space-y-3">
+        <label className="block text-xs text-muted">Voz<select className="hud-input mt-1" aria-label="Voz del sistema" value={h.voiceURI} onChange={(e) => { h.setVoiceURI(e.target.value); speak('Así sueno.', { voiceURI: e.target.value, rate: h.voiceRate }); }}><option value="">Automática (español)</option>{voices.map((v) => <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>)}</select></label>
+        <label className="block text-xs text-muted">Velocidad: {h.voiceRate.toFixed(1)}×<input type="range" aria-label="Velocidad de la voz" min={0.7} max={1.4} step={0.1} value={h.voiceRate} onChange={(e) => h.setVoiceRate(Number(e.target.value))} onPointerUp={() => speak('Así de rápido hablo.', { voiceURI: h.voiceURI, rate: h.voiceRate })} className="mt-1 w-full" /></label>
+      </div>}
+    </section>
   );
 }
 function HelpBody() {
@@ -321,9 +337,11 @@ const SUGGEST = ['¿Qué tengo hoy?', '¿Cuándo es mi próximo examen?', 'Resum
 function Chat({ profile, inputRef, tall }: { profile: string; inputRef: React.RefObject<HTMLInputElement | null>; tall?: boolean }) {
   const sound = useHud((s) => s.sound); const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([]); const [q, setQ] = useState(''); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [msgs]);
+  const voiceOn = useHud((x) => x.voice); const voiceURI = useHud((x) => x.voiceURI); const rate = useHud((x) => x.voiceRate); const [talking, setTalking] = useState(false);
+  const say = (t: string) => { setTalking(true); if (!speak(t, { voiceURI, rate, onEnd: () => setTalking(false) })) setTalking(false); }; useEffect(() => () => stopSpeaking(), []);
   const ask = async (text: string) => {
-    if (!text || busy) return; setQ(''); const hist = msgs.slice(-8); setMsgs((m) => [...m, { role: 'user', text }]); setBusy(true); blip('tick', sound); hudBus.emit('think-on');
-    try { const r = await personalApi.ask(text, hist); setMsgs((m) => [...m, { role: 'ai', text: r.text }]); blip('ok', sound); } catch (err) { setMsgs((m) => [...m, { role: 'ai', text: (err as Error).message }]); } finally { setBusy(false); hudBus.emit('think-off'); hudBus.emit('pulse'); }
+    if (!text || busy) return; stopSpeaking(); setTalking(false); setQ(''); const hist = msgs.slice(-8); setMsgs((m) => [...m, { role: 'user', text }]); setBusy(true); blip('tick', sound); hudBus.emit('think-on');
+    try { const r = await personalApi.ask(text, hist); setMsgs((m) => [...m, { role: 'ai', text: r.text }]); blip('ok', sound); if (voiceOn) say(r.text); } catch (err) { setMsgs((m) => [...m, { role: 'ai', text: (err as Error).message }]); } finally { setBusy(false); hudBus.emit('think-off'); hudBus.emit('pulse'); }
   };
   return (
     <section className="hud-panel !flex-none" aria-label="Conversación con EDITH">
@@ -331,7 +349,7 @@ function Chat({ profile, inputRef, tall }: { profile: string; inputRef: React.Re
       <h2 className="hud-h"><span>Habla con EDITH</span><span className="hud-kbd">/</span></h2>
       <div className={`mb-2 space-y-2 overflow-y-auto text-sm ${tall ? 'max-h-[58dvh] min-h-40' : 'max-h-28 min-h-10'}`} aria-live="polite">
         {msgs.length === 0 && <div className="flex flex-wrap gap-2">{SUGGEST.map((s) => <button key={s} className="hud-chip hover:!border-[var(--hud)] hover:!text-white" onClick={() => void ask(s)}>{s}</button>)}</div>}
-        {msgs.map((m, i) => <p key={i} className={m.role === 'user' ? 'text-right text-muted' : 'whitespace-pre-wrap'}><span className="hud-sub mr-2">{m.role === 'user' ? profile : 'EDITH'}</span>{m.text}</p>)}
+        {msgs.map((m, i) => <p key={i} className={m.role === 'user' ? 'text-right text-muted' : 'whitespace-pre-wrap'}><span className="hud-sub mr-2">{m.role === 'user' ? profile : 'EDITH'}</span>{m.text}{m.role === 'ai' && voiceSupported() && <button className="hud-ghost ml-2 !inline-flex !h-6 !w-6 align-middle" aria-label={talking ? 'Parar la voz' : 'Escuchar respuesta'} title={talking ? 'Parar' : 'Escuchar'} onClick={() => (talking ? (stopSpeaking(), setTalking(false)) : say(m.text))}>{talking ? <VolumeX size={13} /> : <Volume2 size={13} />}</button>}</p>)}
         {busy && <p className="hud-sub"><Loader2 size={12} className="mr-1 inline animate-spin" aria-hidden />Procesando…</p>}<div ref={end} />
       </div>
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); void ask(q.trim()); }} className="flex gap-2"><input ref={inputRef} className="hud-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Pregúntame lo que quieras, ${profile}…`} aria-label="Pregunta para EDITH" maxLength={400} /><button className="hud-btn" type="submit" disabled={busy || !q.trim()} aria-label="Enviar"><Send size={14} aria-hidden /></button></form>
