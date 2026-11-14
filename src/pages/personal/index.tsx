@@ -1,49 +1,28 @@
-import { useEffect, useRef, useState, type FormEvent, type PointerEvent as RPE, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { addDays, format, parseISO, startOfMonth } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarDays, CheckSquare, Flame, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, Plus, RotateCcw, Send, Settings, Target, Timer as TimerIcon, Trash2, Users, Wallet, X } from 'lucide-react';
+import { BellRing, CalendarDays, CheckSquare, Clock, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Wallet, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
+import { AddForm, Bar, COLORS, Empty, F, Panel, Row, eur, todayISO } from './shared';
+import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, Schedule, SchedulePanel, UpcomingPanel, monthStats, useReminderAlerts } from './life';
 import { createScene, type HudScene } from './scene';
 import { THEMES, applyTheme, clearTheme, themeOf, useHud, type Quality } from './themes';
 import { blip, hudBus } from './fx';
 import './hud.css';
 
-const todayISO = () => format(new Date(), 'yyyy-MM-dd');
-const COLORS = ['#22c8ff', '#a78bfa', '#34d399', '#fbbf24', '#f472b6', '#fb923c'];
-const eur = (n: number) => `${n.toLocaleString('es-ES', { maximumFractionDigits: 2 })} €`;
 const gradeAvg = (d: PData, id: string) => { const g = d.grades.filter((x) => x.subjectId === id); const w = g.reduce((a, x) => a + x.weight, 0); return w ? g.reduce((a, x) => a + x.score * x.weight, 0) / w : null; };
-const streak = (log: string[]) => { let n = 0; let d = new Date(); if (!log.includes(format(d, 'yyyy-MM-dd'))) d = addDays(d, -1); while (log.includes(format(d, 'yyyy-MM-dd'))) { n++; d = addDays(d, -1); } return n; };
 
-function Bar({ pct, tone }: { pct: number; tone?: 'warn' | 'bad' }) { return <div className={`hud-bar ${tone ?? ''}`} role="progressbar" aria-label="Progreso" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>; }
-const Empty = ({ text }: { text: string }) => <p className="py-2 text-xs text-muted">{text}</p>;
 
-/** Panel de cristal que se inclina hacia el puntero y refleja luz. */
-function Panel({ title, right, children, className = '', onOpen }: { title: string; right?: ReactNode; children: ReactNode; className?: string; onOpen?: () => void }) {
-  const ref = useRef<HTMLElement>(null);
-  const move = (e: RPE<HTMLElement>) => {
-    if (e.pointerType === 'touch') return; const el = ref.current!; const r = el.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width; const py = (e.clientY - r.top) / r.height;
-    el.classList.add('tilting'); el.style.setProperty('--ry', `${(px - .5) * 8}deg`); el.style.setProperty('--rx', `${-(py - .5) * 8}deg`); el.style.setProperty('--gx', `${px * 100}%`); el.style.setProperty('--gy', `${py * 100}%`);
-  };
-  const leave = () => { const el = ref.current!; el.classList.remove('tilting'); el.style.setProperty('--ry', '0deg'); el.style.setProperty('--rx', '0deg'); };
-  return (
-    <section ref={ref} className={`hud-panel ${className}`} onPointerMove={move} onPointerLeave={leave}>
-      <i className="hud-glare" aria-hidden />
-      <h2 className="hud-h"><span>{title}</span>{right}{onOpen && <button className="hud-ghost" onClick={onOpen} aria-label={`Abrir ${title}`}><Plus size={14} aria-hidden /></button>}</h2>
-      <div className="hud-body">{children}</div>
-    </section>
-  );
-}
 
 /* ───────────── Módulos ───────────── */
-type Mod = 'tasks' | 'agenda' | 'subjects' | 'habits' | 'study' | 'notes' | 'money' | 'goals';
+type Mod = 'schedule' | 'reminders' | 'agenda' | 'tasks' | 'money' | 'study' | 'notes' | 'subjects';
 const MODS: { id: Mod; label: string; icon: typeof CheckSquare }[] = [
-  { id: 'tasks', label: 'Tareas', icon: CheckSquare }, { id: 'agenda', label: 'Agenda', icon: CalendarDays }, { id: 'subjects', label: 'Notas', icon: GraduationCap },
-  { id: 'habits', label: 'Hábitos', icon: Flame }, { id: 'study', label: 'Estudio', icon: TimerIcon }, { id: 'notes', label: 'Apuntes', icon: NotebookPen },
-  { id: 'money', label: 'Gastos', icon: Wallet }, { id: 'goals', label: 'Objetivos', icon: Target },
+  { id: 'schedule', label: 'Horario', icon: Clock }, { id: 'reminders', label: 'Recordatorios', icon: BellRing }, { id: 'agenda', label: 'Agenda', icon: CalendarDays }, { id: 'tasks', label: 'Tareas', icon: CheckSquare },
+  { id: 'money', label: 'Finanzas', icon: Wallet }, { id: 'study', label: 'Estudio', icon: TimerIcon }, { id: 'notes', label: 'Apuntes', icon: NotebookPen }, { id: 'subjects', label: 'Notas', icon: GraduationCap },
 ];
 
 /* ───────────── Escena 3D de fondo + nodos orbitales ───────────── */
@@ -101,11 +80,6 @@ function Choose() {
   );
 }
 
-const Row = ({ children, onDelete, label }: { children: ReactNode; onDelete: () => void; label: string }) => <div className="hud-row">{children}<button onClick={onDelete} className="hud-ghost ml-auto" aria-label={`Eliminar ${label}`}><Trash2 size={14} aria-hidden /></button></div>;
-function AddForm({ onAdd, children, label = 'Añadir' }: { onAdd: () => boolean | void; children: ReactNode; label?: string }) {
-  return <form onSubmit={(e: FormEvent) => { e.preventDefault(); onAdd(); }} className="mb-4 flex flex-wrap items-end gap-2">{children}<button className="hud-btn" type="submit"><Plus size={14} className="mr-1 inline" aria-hidden />{label}</button></form>;
-}
-const F = ({ label, children, w = 'flex-1 min-w-32' }: { label: string; children: ReactNode; w?: string }) => <label className={`block ${w}`}><span className="hud-sub mb-1 block">{label}</span>{children}</label>;
 
 function Tasks() {
   const { data, update } = usePersonal(); const [title, setTitle] = useState(''); const [due, setDue] = useState(''); const [subj, setSubj] = useState(''); const [pr, setPr] = useState<'alta' | 'media' | 'baja'>('media');
@@ -154,16 +128,6 @@ function Subjects() {
         {data.grades.filter((g) => g.subjectId === s.id).map((g) => <div key={g.id} className="flex items-center gap-2 pl-6 text-xs text-muted"><span>{g.title}</span><span className="hud-val">{g.score}</span><span>×{g.weight}</span><button className="hud-ghost ml-auto" aria-label={`Eliminar nota ${g.title}`} onClick={() => update((d) => ({ ...d, grades: d.grades.filter((x) => x.id !== g.id) }))}><X size={12} aria-hidden /></button></div>)}</div>); })}
   </>);
 }
-function Habits() {
-  const { data, update } = usePersonal(); const [name, setName] = useState(''); const t = todayISO();
-  return (<>
-    <AddForm onAdd={() => { if (!name.trim()) return; update((d) => ({ ...d, habits: [...d.habits, { id: uid(), name: name.trim(), log: [] }] })); setName(''); }}><F label="Nuevo hábito" w="w-full"><input className="hud-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Leer 20 minutos" /></F></AddForm>
-    {data.habits.length === 0 && <Empty text="Sin hábitos todavía." />}
-    {data.habits.map((h) => <Row key={h.id} label={h.name} onDelete={() => update((d) => ({ ...d, habits: d.habits.filter((x) => x.id !== h.id) }))}>
-      <input type="checkbox" className="hud-check" checked={h.log.includes(t)} aria-label={`Hoy: ${h.name}`} onChange={() => update((d) => ({ ...d, habits: d.habits.map((x) => x.id === h.id ? { ...x, log: x.log.includes(t) ? x.log.filter((l) => l !== t) : [...x.log, t] } : x) }))} />
-      <span>{h.name}</span><span className="hud-val ml-auto text-xs"><Flame size={12} className="mr-1 inline" aria-hidden />{streak(h.log)} días</span></Row>)}
-  </>);
-}
 function StudyPanel({ timer }: { timer: Timer }) {
   const { data } = usePersonal(); const week = data.study.filter((s) => s.date >= format(addDays(new Date(), -6), 'yyyy-MM-dd')); const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0');
   return (<>
@@ -184,28 +148,6 @@ function Notes() {
     {data.notes.map((n) => <div key={n.id} className="mb-3 border-l-2 border-line-strong pl-3"><Row label={n.title} onDelete={() => update((d) => ({ ...d, notes: d.notes.filter((x) => x.id !== n.id) }))}><b>{n.title}</b><span className="hud-sub">{n.updated}</span></Row><p className="whitespace-pre-wrap text-sm text-muted">{n.body}</p></div>)}
   </>);
 }
-const monthSpend = (d: PData) => d.expenses.filter((e) => e.date >= format(startOfMonth(new Date()), 'yyyy-MM-dd')).reduce((a, e) => a + e.amount, 0);
-function Money() {
-  const { data, update } = usePersonal(); const [c, setC] = useState(''); const [a, setA] = useState(''); const [cat, setCat] = useState('Ocio');
-  return (<>
-    <F label="Presupuesto mensual (€)" w="w-48"><input className="hud-input mb-4" inputMode="decimal" value={data.budget || ''} onChange={(e) => update((d) => ({ ...d, budget: Math.max(0, Number(e.target.value.replace(',', '.')) || 0) }))} /></F>
-    <AddForm onAdd={() => { const n = Number(a.replace(',', '.')); if (!c.trim() || !(n > 0)) return; update((d) => ({ ...d, expenses: [{ id: uid(), concept: c.trim(), amount: n, date: todayISO(), category: cat }, ...d.expenses] })); setC(''); setA(''); }}>
-      <F label="Concepto"><input className="hud-input" value={c} onChange={(e) => setC(e.target.value)} /></F><F label="Importe (€)" w="w-28"><input className="hud-input" inputMode="decimal" value={a} onChange={(e) => setA(e.target.value)} /></F>
-      <F label="Categoría" w="w-32"><select className="hud-input" value={cat} onChange={(e) => setCat(e.target.value)}>{['Comida', 'Transporte', 'Estudios', 'Ocio', 'Casa', 'Otros'].map((x) => <option key={x}>{x}</option>)}</select></F></AddForm>
-    <p className="mb-2 text-sm">Este mes: <b className="hud-val">{eur(monthSpend(data))}</b>{data.budget > 0 && <> de {eur(data.budget)}</>}</p>
-    {data.expenses.slice(0, 40).map((e) => <Row key={e.id} label={e.concept} onDelete={() => update((d) => ({ ...d, expenses: d.expenses.filter((x) => x.id !== e.id) }))}><span className="w-20 text-xs text-muted">{e.date.slice(5)}</span><span>{e.concept}</span><span className="hud-sub">{e.category}</span><span className="hud-val ml-auto">{eur(e.amount)}</span></Row>)}
-  </>);
-}
-function Goals() {
-  const { data, update } = usePersonal(); const [t, setT] = useState(''); const [due, setDue] = useState('');
-  return (<>
-    <AddForm onAdd={() => { if (!t.trim()) return; update((d) => ({ ...d, goals: [...d.goals, { id: uid(), title: t.trim(), progress: 0, due: due || undefined }] })); setT(''); }}><F label="Objetivo" w="w-full"><input className="hud-input" value={t} onChange={(e) => setT(e.target.value)} placeholder="Aprobar el curso con media de 8" /></F><F label="Para el"><input className="hud-input" type="date" value={due} onChange={(e) => setDue(e.target.value)} /></F></AddForm>
-    {data.goals.length === 0 && <Empty text="Sin objetivos." />}
-    {data.goals.map((g) => <div key={g.id} className="mb-3"><Row label={g.title} onDelete={() => update((d) => ({ ...d, goals: d.goals.filter((x) => x.id !== g.id) }))}><b>{g.title}</b>{g.due && <span className="hud-sub">{g.due}</span>}<span className="hud-val ml-auto">{g.progress}%</span></Row>
-      <input type="range" min={0} max={100} step={5} value={g.progress} aria-label={`Progreso de ${g.title}`} className="w-full accent-[var(--hud)]" onChange={(e) => update((d) => ({ ...d, goals: d.goals.map((x) => x.id === g.id ? { ...x, progress: Number(e.target.value) } : x) }))} /></div>)}
-  </>);
-}
-
 /* ───────────── Temporizador de estudio (vive en el HUD, no en el cajón) ───────────── */
 interface Timer { left: number; total: number; running: boolean; subjectId: string; setSubjectId: (s: string) => void; setTotal: (m: number) => void; toggle: () => void; reset: () => void }
 function useTimer(): Timer {
@@ -239,20 +181,14 @@ function HelpBody() {
   const rows: [string, string][] = [['1 – 8', 'Abrir un módulo'], ['/', 'Hablar con EDITH'], [',', 'Ajustes (paleta, calidad)'], ['?', 'Esta ayuda'], ['Esc', 'Cerrar paneles']];
   return (<div className="space-y-5 text-sm">
     <p>Tu sistema personal en una sola pantalla: lo importante está a la vista y los <b>nodos que orbitan</b> el núcleo abren cada módulo.</p>
-    <ul className="space-y-2 text-muted"><li>• <b className="text-fg">Misiones</b>: escribe y pulsa Intro para añadir; marca el cuadro para completar.</li><li>• <b className="text-fg">Hábitos</b>: pulsa el hábito para marcar hoy.</li><li>• <b className="text-fg">Estudio</b>: inicia el temporizador en el panel; al acabar se guarda solo.</li><li>• Todo se guarda automáticamente y se sincroniza entre dispositivos.</li></ul>
+    <ul className="space-y-2 text-muted"><li>• <b className="text-fg">Horario</b>: añade tus clases y verás qué toca ahora y qué viene después.</li><li>• <b className="text-fg">Recordatorios</b>: escribe «llamar al médico mañana 10:30» y Intro; te avisará a su hora.</li><li>• <b className="text-fg">Finanzas</b>: apunta gastos e ingresos desde el propio panel.</li><li>• Todo se guarda automáticamente y se sincroniza entre dispositivos.</li></ul>
     <div className="hud-panel !flex-none">{rows.map(([k, v]) => <div key={k} className="hud-row"><span className="hud-kbd w-12 text-center">{k}</span><span>{v}</span></div>)}</div>
   </div>);
 }
 
 /* ───────────── HUD ───────────── */
-function QuickAdd() {
-  const update = usePersonal((s) => s.update); const sound = useHud((s) => s.sound); const [t, setT] = useState('');
-  const go = (e: FormEvent) => { e.preventDefault(); const title = t.trim(); if (!title) return; update((d) => ({ ...d, tasks: [...d.tasks, { id: uid(), title, priority: 'media', done: false }] })); setT(''); blip('tick', sound); hudBus.emit('pulse'); };
-  return <form onSubmit={go} className="mb-2 flex gap-2"><input className="hud-input" value={t} onChange={(e) => setT(e.target.value)} placeholder="Nueva misión… (Intro)" aria-label="Nueva misión" maxLength={140} /><button className="hud-btn !px-3" type="submit" aria-label="Añadir misión" disabled={!t.trim()}><Plus size={15} aria-hidden /></button></form>;
-}
-
 function Hud() {
-  const { data, update, profile, logout, sync, status, switchProfile } = usePersonal(); const timer = useTimer(); const { sound } = useHud();
+  const { data, profile, logout, sync, status, switchProfile } = usePersonal(); const timer = useTimer(); const { sound } = useHud(); const alerts = useReminderAlerts();
   const [open, setOpen] = useState<Mod | null>(null); const [panel, setPanel] = useState<'settings' | 'help' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
   useEffect(() => {
@@ -262,24 +198,22 @@ function Hud() {
     };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   }, [sound]);
-  const t = todayISO(); const pending = data.tasks.filter((x) => !x.done); const done = data.tasks.length - pending.length; const taskPct = data.tasks.length ? (done / data.tasks.length) * 100 : 0;
-  const upcoming = data.events.filter((e) => e.date >= t).sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')));
-  const spend = monthSpend(data); const spendPct = data.budget ? (spend / data.budget) * 100 : 0; const hour = now.getHours();
-  const greet = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
-  const studyToday = data.study.filter((s) => s.date === t).reduce((a, s) => a + s.minutes, 0); const name = profile ? PROFILES[profile].name : '';
+  const hour = now.getHours(); const greet = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
+  const name = profile ? PROFILES[profile].name : ''; const st = monthStats(data); const nowM = hour * 60 + now.getMinutes(); const d0 = now.getDay() || 7;
+  const todayClasses = data.schedule.filter((s) => s.day === d0); const nextClass = todayClasses.filter((s) => s.start.split(':').reduce((a, x, i) => a + Number(x) * (i ? 1 : 60), 0) > nowM).sort((a, b) => a.start.localeCompare(b.start))[0];
+  const pendingRem = data.reminders.filter((r) => !r.done).length; const pendingTasks = data.tasks.filter((x) => !x.done).length;
   const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
-  const bestStreak = Math.max(0, ...data.habits.map((h) => streak(h.log)));
-  const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0');
-  const ModBody = { tasks: <Tasks />, agenda: <Agenda />, subjects: <Subjects />, habits: <Habits />, study: <StudyPanel timer={timer} />, notes: <Notes />, money: <Money />, goals: <Goals /> };
-  const toggleTask = (id: string) => { update((d) => ({ ...d, tasks: d.tasks.map((y) => y.id === id ? { ...y, done: true } : y) })); blip('ok', sound); hudBus.emit('success'); };
-  const toggleHabit = (id: string) => { update((d) => ({ ...d, habits: d.habits.map((x) => x.id === id ? { ...x, log: x.log.includes(t) ? x.log.filter((l) => l !== t) : [...x.log, t] } : x) })); blip('tick', sound); hudBus.emit('pulse'); };
+  const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0'); const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
+  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <Agenda />, tasks: <Tasks />, money: <Money />, study: <StudyPanel timer={timer} />, notes: <Notes />, subjects: <Subjects /> };
+  const openMod = (m: Mod) => () => setOpen(m);
   return (
     <div className="hud-root" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon')) blip('tick', sound); }}>
       <Stage orbit onOpen={setOpen} />
       <div className="hud-hero" aria-live="off" style={{ top: '19%' }}>
         <div className="mb-2 flex justify-center"><Logo size={40} /></div><p className="hud-sub">{greet}</p><p className="hud-title text-2xl">{name.toUpperCase()}</p>
-        <p className="mt-1 text-[11px] text-muted">{pending.length} misiones · {upcoming.length} citas · racha {bestStreak} d</p>
+        <p className="mt-1 text-[11px] text-muted">{todayClasses.length} clases hoy · {pendingRem} recordatorios · saldo {eur(st.balance)}</p>
       </div>
+      <AlertStack ctl={alerts} />
       <div className="hud-stage">
         <header className="hud-top">
           <div className="flex items-center gap-3"><Logo size={30} /><span className="hud-title text-lg">E.D.I.T.H.</span><span className="hud-chip hidden md:inline-flex">{name} · {format(now, "EEE d 'de' MMM", { locale: es })}</span></div>
@@ -293,33 +227,20 @@ function Hud() {
         </header>
         {sync === 'conflict' && <p role="alert" className="pointer-events-auto absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded border border-warn bg-black/70 px-3 py-2 text-sm text-warn">Datos modificados desde otro dispositivo. Recarga la página para no perder cambios.</p>}
         <div className="hud-cols">
-          <div className="hud-col l">
-            <Panel title="Misiones de hoy" right={<span className="hud-val">{done}/{data.tasks.length}</span>} onOpen={() => setOpen('tasks')}>
-              <QuickAdd /><Bar pct={taskPct} />
-              {pending.length === 0 ? <Empty text={data.tasks.length ? 'Todo completado. Buen trabajo.' : 'Escribe arriba tu primera misión.'} /> : [...pending].sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9')).slice(0, 8).map((x) => (
-                <div key={x.id} className="hud-row"><input type="checkbox" className="hud-check" aria-label={`Completar ${x.title}`} checked={false} onChange={() => toggleTask(x.id)} /><span className="truncate">{x.title}</span>{x.due && <span className={`ml-auto text-xs ${x.due < t ? 'text-bad' : 'text-muted'}`}>{x.due.slice(5)}</span>}</div>))}
-            </Panel>
-            <Panel title="Agenda" right={<span className="hud-sub">{upcoming.length} próximas</span>} onOpen={() => setOpen('agenda')}>
-              {upcoming.length === 0 ? <Empty text="Nada próximo. Pulsa + para añadir un examen o cita." /> : upcoming.slice(0, 6).map((e) => <div key={e.id} className="hud-row"><span className="hud-val w-24 flex-none text-xs">{e.date === t ? 'Hoy' : format(parseISO(e.date), 'EEE d MMM', { locale: es })}{e.time && ` ${e.time}`}</span><span className="truncate">{e.title}</span></div>)}
-            </Panel>
-            <Panel title="Hábitos" right={<span className="hud-sub">{data.habits.filter((h) => h.log.includes(t)).length}/{data.habits.length} hoy</span>} onOpen={() => setOpen('habits')}>
-              {data.habits.length === 0 ? <Empty text="Crea hábitos con +. Luego pulsa para marcar el día." /> : data.habits.slice(0, 6).map((h) => <button key={h.id} className="hud-row w-full text-left" onClick={() => toggleHabit(h.id)} aria-pressed={h.log.includes(t)} aria-label={`Hábito ${h.name}`}><span className={`hud-check ${h.log.includes(t) ? '!bg-[var(--hud)]' : ''}`} aria-hidden /><span className="truncate">{h.name}</span><span className="hud-val ml-auto text-xs"><Flame size={11} className="mr-1 inline" aria-hidden />{streak(h.log)}</span></button>)}
-            </Panel>
-          </div>
+          <div className="hud-col l"><SchedulePanel now={now} onOpen={openMod('schedule')} /><RemindersPanel onOpen={openMod('reminders')} /></div>
           <div className="hud-mid">
             <div className="pointer-events-auto flex flex-wrap justify-center gap-2" aria-label="Resumen">
-              <span className="hud-chip"><CheckSquare size={11} aria-hidden />{pending.length} pendientes</span><span className="hud-chip"><Flame size={11} aria-hidden />racha {bestStreak} d</span><span className="hud-chip"><TimerIcon size={11} aria-hidden />{studyToday} min hoy</span>{data.budget > 0 && <span className="hud-chip"><Wallet size={11} aria-hidden />{Math.round(spendPct)}% presupuesto</span>}
+              <span className="hud-chip"><Clock size={11} aria-hidden />{nextClass ? `${nextClass.title} · ${nextClass.start}` : 'sin más clases hoy'}</span><span className="hud-chip"><BellRing size={11} aria-hidden />{pendingRem} recordatorios</span><span className="hud-chip"><CheckSquare size={11} aria-hidden />{pendingTasks} tareas</span>
             </div>
             <Chat profile={name} inputRef={chatRef} />
           </div>
           <div className="hud-col r">
-            <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={() => setOpen('study')}>
+            <UpcomingPanel onAgenda={openMod('agenda')} onTasks={openMod('tasks')} />
+            <FinancePanel onOpen={openMod('money')} />
+            <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={openMod('study')} grow={.8}>
               <div className="flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>
               <div className="mt-2"><Bar pct={100 - (timer.left / (timer.total * 60)) * 100} /></div>
             </Panel>
-            <Panel title="Rendimiento académico" onOpen={() => setOpen('subjects')}>{data.subjects.length === 0 ? <Empty text="Pulsa + para añadir asignaturas y notas." /> : data.subjects.slice(0, 6).map((s) => { const a = gradeAvg(data, s.id); return <div key={s.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span><i style={{ color: s.color }}>●</i> {s.name}</span><span className="hud-val">{a === null ? '—' : a.toFixed(1)}</span></div><Bar pct={(a ?? 0) * 10} tone={a !== null && a < 5 ? 'bad' : a !== null && a < 6 ? 'warn' : undefined} /></div>; })}</Panel>
-            <Panel title="Finanzas del mes" right={<span className="hud-val">{eur(spend)}</span>} onOpen={() => setOpen('money')}>{data.budget ? <><Bar pct={spendPct} tone={spendPct > 100 ? 'bad' : spendPct > 80 ? 'warn' : undefined} /><p className="mt-1 text-xs text-muted">{eur(Math.max(0, data.budget - spend))} disponibles de {eur(data.budget)}</p></> : <Empty text="Define un presupuesto con +." />}</Panel>
-            <Panel title="Objetivos" onOpen={() => setOpen('goals')}>{data.goals.length === 0 ? <Empty text="Pulsa + para fijar tu primer objetivo." /> : data.goals.slice(0, 4).map((g) => <div key={g.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span className="truncate">{g.title}</span><span className="hud-val">{g.progress}%</span></div><Bar pct={g.progress} /></div>)}</Panel>
           </div>
         </div>
         <nav className="hud-dock" aria-label="Módulos">{MODS.map((m, i) => <button key={m.id} onClick={() => { setOpen(m.id); blip('open', sound); hudBus.emit('pulse'); }}><m.icon size={15} aria-hidden /><span className="hidden xl:inline">{m.label}</span><span className="hud-kbd">{i + 1}</span></button>)}</nav>
@@ -336,7 +257,7 @@ function Hud() {
 }
 
 /* ───────────── Chat con EDITH ───────────── */
-const SUGGEST = ['¿Qué tengo pendiente hoy?', 'Hazme un plan de estudio para esta semana', '¿Cómo voy de notas?'];
+const SUGGEST = ['¿Qué tengo hoy?', '¿Cuándo es mi próximo examen?', 'Resume mis finanzas del mes', 'Hazme un plan de estudio para esta semana'];
 function Chat({ profile, inputRef }: { profile: string; inputRef: React.RefObject<HTMLInputElement | null> }) {
   const sound = useHud((s) => s.sound); const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([]); const [q, setQ] = useState(''); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [msgs]);
