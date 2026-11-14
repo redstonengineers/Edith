@@ -18,7 +18,7 @@ import type { Store } from './store';
 const COOKIE = 'ac_session';
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const publicUser = (u: User) => { const { pwd: _p, ...rest } = u; return rest; };
-const DEMO_EMAIL = /@(horizonte|atlas)\.demo$|@academycontrol\.demo$/;
+const DEMO_EMAIL = /@(horizonte|atlas|atlanta)\.demo$|@academycontrol\.demo$/;
 
 /** Limitador en memoria por clave (ventana deslizante simple). Sustituible por Redis al escalar horizontalmente. */
 function limiter(max: number, windowMs: number) {

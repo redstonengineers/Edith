@@ -17,6 +17,7 @@ function scopeSnapshot(db: Database, user: User) {
   let classes = byTenant(db.classes);
   let exams = byTenant(db.exams);
   let students = byTenant(db.students);
+  let practices = byTenant(db.practices);
 
   // Alcance por rol: un profesor solo ve sus grupos y los alumnos de esos grupos.
   if (user.role === 'PROFESOR' && user.teacherId) {
@@ -24,13 +25,15 @@ function scopeSnapshot(db: Database, user: User) {
     const gids = new Set(groups.map((g) => g.id));
     classes = classes.filter((c) => gids.has(c.groupId));
     exams = exams.filter((e) => gids.has(e.groupId));
-    students = students.filter((s) => s.groupIds.some((g) => gids.has(g)));
+    practices = practices.filter((p) => p.teacherId === user.teacherId);
+    const mineStu = new Set(practices.map((p) => p.studentId));
+    students = students.filter((s) => s.groupIds.some((g) => gids.has(g)) || s.assignedTeacherId === user.teacherId || mineStu.has(s.id));
   }
   // Portal: alumno y tutor solo ven su propia información.
   const portal = user.role === 'ALUMNO' || user.role === 'TUTOR';
   if (portal) {
     const mine = new Set(user.role === 'ALUMNO' ? (user.studentId ? [user.studentId] : []) : user.guardianOf ?? []);
-    students = students.filter((s) => mine.has(s.id));
+    students = students.filter((s) => mine.has(s.id)); practices = practices.filter((p) => mine.has(p.studentId));
     const gids = new Set(students.flatMap((s) => s.groupIds));
     groups = groups.filter((g) => gids.has(g.id)); classes = classes.filter((c) => gids.has(c.groupId)); exams = exams.filter((e) => gids.has(e.groupId));
   }
@@ -59,6 +62,8 @@ function scopeSnapshot(db: Database, user: User) {
     notifications: byTenant(db.notifications),
     messages: byTenant(db.messages).filter((m) => m.kind === 'announcement' || m.fromUserId === user.id || m.toUserIds.includes(user.id)),
     activity: byTenant(db.activity),
+    vehicles: portal ? [] : byTenant(db.vehicles),
+    practices,
   };
 }
 

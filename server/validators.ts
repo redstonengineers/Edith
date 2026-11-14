@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { MODULES } from '../src/config/modules';
 import { DEFAULT_LABELS } from '../src/config/presets';
-import { announcementSchema as _a, applicationSchema, brandingSchema, classSchema, convertSchema, examSchema, generalSchema, groupSchema, incidentSchema, labelSchema, markPaidSchema, paymentSchema, studentSchema, subjectSchema, teacherSchema, userSchema, waitlistSchema, onboardingSchema } from '../src/lib/schemas';
+import { announcementSchema as _a, practiceSchema, vehicleSchema, applicationSchema, brandingSchema, classSchema, convertSchema, examSchema, generalSchema, groupSchema, incidentSchema, labelSchema, markPaidSchema, paymentSchema, studentSchema, subjectSchema, teacherSchema, userSchema, waitlistSchema, onboardingSchema } from '../src/lib/schemas';
 void _a;
 
 const id = z.string().min(1).max(100);
@@ -49,6 +49,11 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   updateUser: z.tuple([id, z.object({ role: role.optional(), disabled: z.boolean().optional(), teacherId: id.optional() })]),
   setRolePermission: z.tuple([roleAny, z.string().regex(/^[a-z]{3,20}:(read|write)$/), z.boolean()]), resetRolePermissions: z.tuple([roleAny]),
   platformOverview: z.tuple([]), setAcademyStatus: z.tuple([id, z.enum(['active', 'suspended'])]), setAcademyPlan: z.tuple([id, z.enum(['trial', 'basic', 'pro'])]),
+  createVehicle: z.tuple([vehicleSchema]), updateVehicle: z.tuple([id, vehicleSchema.partial()]),
+  createPractice: z.tuple([practiceSchema, z.boolean().optional()]), createPracticeSeries: z.tuple([practiceSchema, z.number().int().min(2).max(26), z.boolean().optional()]),
+  updatePractice: z.tuple([id, practiceSchema, z.boolean().optional()]), cancelPractice: z.tuple([id, z.boolean().optional()]),
+  completePractice: z.tuple([id, z.object({ km: z.number().int().min(0).max(1000).optional(), notes: z.string().max(500).optional() })]),
+  setStudentTraining: z.tuple([id, z.object({ targetHours: z.number().min(1).max(200).optional(), permit: z.string().max(10).optional(), assignedTeacherId: id.optional() })]),
   recordExport: z.tuple([z.string().min(1).max(200)]),
 };
 

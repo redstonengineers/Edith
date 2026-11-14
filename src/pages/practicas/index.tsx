@@ -1,34 +1,51 @@
-import { Car, ExternalLink, FileSignature, PenLine, Wrench, FileBarChart, Smartphone } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Calendar, CalendarToolbar, type CalEvent, type CalView } from '@/components/calendar/Calendar';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Panel } from '@/components/ui/primitives';
-import { useLabels } from '@/hooks';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/form';
+import { ConfirmDialog } from '@/components/ui/Overlay';
+import { useAction, useCan, usePersistentState, useSnapshot, useUser } from '@/hooks';
+import { fullName } from '@/lib/people';
+import { practiceConflicts } from '@/lib/practices';
+import { updatePractice } from '@/services/mutations';
+import { hhmmToMin } from '@/utils/format';
+import { PracticeForm, usePracticeNames, type PracticeDefaults } from './PracticeForm';
 
-/** URL de la aplicación de prácticas (Volanta). Configurable en el build: VITE_VOLANTA_URL. */
-const VOLANTA_URL = import.meta.env.VITE_VOLANTA_URL ?? 'https://volanta.redstonengineers.com';
-
-const FEATURES = [
-  { icon: Car, title: 'Calendario de prácticas', text: 'Vista de día en móvil y de semana en pantalla grande, con franja de color por profesor, clases repetidas y aviso de choques.' },
-  { icon: PenLine, title: 'Firma táctil sin conexión', text: 'El alumno y el profesor firman en el móvil tras cada clase; si no hay cobertura, se guarda y se envía al volver.' },
-  { icon: Wrench, title: 'Vehículos', text: 'Kilómetros y gasto por coche, ITV, seguro y revisiones con aviso a 30 y 7 días, y coche en taller bloqueado.' },
-  { icon: FileBarChart, title: 'Parte mensual', text: 'Informe del mes por profesor y por coche, con exámenes y porcentaje de aprobados; exporta a CSV o PDF.' },
-  { icon: FileSignature, title: 'Ficha y exámenes', text: 'Historial de horas y kilómetros, barra de progreso hacia las horas objetivo y avisos de examen por WhatsApp.' },
-  { icon: Smartphone, title: 'App instalable y avisos', text: 'Se instala en el móvil como una app y envía avisos push de las clases de mañana.' },
-];
+const addMin = (t: string, m: number) => { const x = hhmmToMin(t) + m; return `${String(Math.floor(x / 60) % 24).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
 
 export default function PracticasPage() {
-  const L = useLabels();
+  const snap = useSnapshot(); const can = useCan(); const user = useUser(); const run = useAction(); const names = usePracticeNames(); const write = can('practicas:write');
+  const [view, setView] = usePersistentState<CalView>('ac.prc.view', typeof window !== 'undefined' && window.innerWidth < 768 ? 'day' : 'week'); const [cursor, setCursor] = useState(new Date());
+  const [fTeacher, setFTeacher] = usePersistentState('ac.prc.teacher', ''); const [sp, setSp] = useSearchParams(); const [open, setOpenRaw] = useState<{ id?: string; defaults?: PracticeDefaults } | null>(sp.get('nueva') === '1' ? {} : null);
+  const setOpen = (v: { id?: string; defaults?: PracticeDefaults } | null) => { setOpenRaw(v); if (!v && sp.has('nueva')) { sp.delete('nueva'); setSp(sp, { replace: true }); } };
+  const [move, setMove] = useState<{ id: string; date: string; start: string; msg: string } | null>(null);
+  const hue = (id: string) => snap.teachers.find((t) => t.id === id)?.avatarHue ?? 220;
+  const events: CalEvent[] = useMemo(() => snap.practices.filter((p) => !fTeacher || p.teacherId === fTeacher).map((p) => {
+    const t = snap.teachers.find((x) => x.id === p.teacherId); const v = snap.vehicles.find((x) => x.id === p.vehicleId);
+    return { id: p.id, date: p.date, start: p.start, end: p.end, title: names.student(p.studentId), subtitle: `${t ? t.firstName : ''}${v ? ` · ${v.plate}` : ''}${p.status === 'hecha' ? ' · ✓ hecha' : ''}`, color: `hsl(${hue(p.teacherId)} 70% 58%)`, cancelled: p.status === 'cancelada', draggable: write && p.status === 'programada' };
+  }), [snap, fTeacher, names, write]);
+  const cancelled = snap.practices.filter((p) => p.status === 'cancelada').length;
+
+  const doMove = (id: string, date: string, start: string, force: boolean) => {
+    const p = snap.practices.find((x) => x.id === id); if (!p) return; const len = hhmmToMin(p.end) - hhmmToMin(p.start);
+    void run(() => updatePractice(user, id, { studentId: p.studentId, teacherId: p.teacherId, vehicleId: p.vehicleId, date, start, end: addMin(start, len), notes: p.notes }, force), `Práctica movida al ${date} a las ${start}`);
+  };
+  const onMove = (id: string, date: string, start: string) => {
+    const p = snap.practices.find((x) => x.id === id); if (!p || (p.date === date && p.start === start)) return; const len = hhmmToMin(p.end) - hhmmToMin(p.start);
+    const cs = practiceConflicts({ ...p, date, start, end: addMin(start, len) }, snap.practices, snap.vehicles, names);
+    if (cs.length) setMove({ id, date, start, msg: cs.map((c) => c.message).join(' ') }); else doMove(id, date, start, false);
+  };
   return (
     <>
-      <PageHeader title="Prácticas y vehículos" description={`Gestión diaria de ${L.class.plural.toLowerCase()} en carretera: firma, coches y parte mensual.`}
-        actions={<a href={VOLANTA_URL} target="_blank" rel="noopener noreferrer" className="press inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-on-brand hover:brightness-110">Abrir prácticas <ExternalLink size={15} aria-hidden /></a>} />
-      <Panel title="Qué incluye">
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, text }) => (
-            <li key={title} className="flex gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-surface-2 text-brand-text"><Icon size={17} aria-hidden /></span>
-              <div><h3 className="text-sm font-semibold">{title}</h3><p className="mt-0.5 text-sm text-muted">{text}</p></div></li>))}
-        </ul>
-      </Panel>
-      <p className="mt-4 text-xs text-muted">Se abre en una pestaña nueva. La primera vez, entra con el correo y la contraseña de tu centro y pulsa «Instalar la app» desde el icono de perfil.</p>
+      <PageHeader title="Prácticas" description={write ? 'Arrastra una práctica para moverla. Toca un hueco para apuntar una nueva.' : 'Calendario de prácticas.'} actions={write && <Button variant="primary" onClick={() => setOpen({})}><Plus size={16} />Apuntar práctica</Button>} />
+      <CalendarToolbar view={view} setView={setView} cursor={cursor} setCursor={setCursor} extra={snap.teachers.length > 1 && user.role !== 'PROFESOR' ? <Select aria-label="Filtrar por profesor" value={fTeacher} onChange={(e) => setFTeacher(e.target.value)} className="h-9 w-52"><option value="">Todos los profesores</option>{snap.teachers.map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}</Select> : undefined} />
+      <Calendar view={view} cursor={cursor} events={events} onSelect={(id) => setOpen({ id })} onCreate={write ? (date, start) => setOpen({ defaults: { date, start } }) : undefined} onMove={write ? onMove : undefined}
+        onPickDay={(d) => { const [y, m, dd] = d.split('-').map(Number); setCursor(new Date(y, m - 1, dd)); setView('day'); }} />
+      {cancelled > 0 && <p className="mt-3 text-xs text-muted">{cancelled} {cancelled === 1 ? 'práctica cancelada' : 'prácticas canceladas'} (aparecen atenuadas en el calendario).</p>}
+      {open && <PracticeForm key={open.id ?? 'new'} open practice={open.id ? snap.practices.find((p) => p.id === open.id) : undefined} defaults={open.defaults} onClose={() => setOpen(null)} />}
+      <ConfirmDialog open={!!move} title="Hay un choque" description={`${move?.msg ?? ''} ¿Mover igualmente?`} confirmLabel="Mover igualmente" onClose={() => setMove(null)} onConfirm={() => move && doMove(move.id, move.date, move.start, true)} />
     </>
   );
 }

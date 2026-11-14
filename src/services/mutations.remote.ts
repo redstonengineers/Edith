@@ -57,6 +57,14 @@ export const platformOverview = ((_user: unknown, ...args: unknown[]) => rpc('pl
 export const setAcademyStatus = ((_user: unknown, ...args: unknown[]) => rpc('setAcademyStatus', args)) as unknown as typeof L.setAcademyStatus;
 export const setAcademyPlan = ((_user: unknown, ...args: unknown[]) => rpc('setAcademyPlan', args)) as unknown as typeof L.setAcademyPlan;
 export const recordExport = ((_user: unknown, ...args: unknown[]) => rpc('recordExport', args)) as unknown as typeof L.recordExport;
+export const createVehicle = ((_user: unknown, ...args: unknown[]) => rpc('createVehicle', args)) as unknown as typeof L.createVehicle;
+export const updateVehicle = ((_user: unknown, ...args: unknown[]) => rpc('updateVehicle', args)) as unknown as typeof L.updateVehicle;
+export const createPractice = ((_user: unknown, ...args: unknown[]) => rpc('createPractice', args)) as unknown as typeof L.createPractice;
+export const createPracticeSeries = ((_user: unknown, ...args: unknown[]) => rpc('createPracticeSeries', args)) as unknown as typeof L.createPracticeSeries;
+export const updatePractice = ((_user: unknown, ...args: unknown[]) => rpc('updatePractice', args)) as unknown as typeof L.updatePractice;
+export const cancelPractice = ((_user: unknown, ...args: unknown[]) => rpc('cancelPractice', args)) as unknown as typeof L.cancelPractice;
+export const completePractice = ((_user: unknown, ...args: unknown[]) => rpc('completePractice', args)) as unknown as typeof L.completePractice;
+export const setStudentTraining = ((_user: unknown, ...args: unknown[]) => rpc('setStudentTraining', args)) as unknown as typeof L.setStudentTraining;
 
 /** Alta pública de academia (onboarding): endpoint propio, sin sesión previa. */
 export const createAcademy = ((input: unknown) => post('/onboarding', input)) as unknown as typeof L.createAcademy;

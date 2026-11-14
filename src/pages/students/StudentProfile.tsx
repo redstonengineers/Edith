@@ -15,6 +15,7 @@ import { addStudentToGroup, removeStudentFromGroup, setStudentStatus, updateStud
 import { fmtMoney, fmtDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { StudentForm } from './StudentForm';
+import { Training } from './Training';
 import { ForbiddenPage } from '../Status';
 
 const toneDot = { neutral: 'bg-line-strong', ok: 'bg-ok', warn: 'bg-warn', bad: 'bg-bad' } as const;
@@ -58,7 +59,8 @@ export default function StudentProfile() {
                 <p className="font-medium">{guardian.name} <span className="font-normal text-muted">· {guardian.relation}</span></p><p className="text-muted">{guardian.phone}</p><p className="text-muted">{guardian.email}</p></div>
             ) : row.age < 18 && <p className="mt-4 flex items-center gap-2 border-t border-line pt-4 text-[13px] text-warn"><ShieldAlert size={15} aria-hidden />Menor sin tutor registrado</p>}
           </Panel>
-          <Panel title={`${L.group.plural} y ${L.teacher.plural.toLowerCase()}`}>
+          {snap.settings.modules.practicas && <Training student={s} />}
+          {snap.settings.modules.groups !== false && !(snap.settings.modules.practicas && !snap.settings.modules.groups) && <Panel title={`${L.group.plural} y ${L.teacher.plural.toLowerCase()}`}>
             {row.groups.length === 0 ? <p className="text-sm text-muted">Sin {L.group.plural.toLowerCase()} asignados.</p> : (
               <ul className="space-y-3">{row.groups.map((g) => { const t = snap.teachers.find((x) => x.id === g.teacherId); return (
                 <li key={g.id} className="flex items-start justify-between gap-2 text-sm">
@@ -70,7 +72,7 @@ export default function StudentProfile() {
                 <div className="flex-1"><Field label={`Añadir a ${L.group.singular.toLowerCase()}`}>{(p) => <Select {...p} value={pick} onChange={(e) => setPick(e.target.value)}><option value="">Seleccionar…</option>{free.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select>}</Field></div>
                 <Button type="submit" variant="primary" className="mt-[26px]" disabled={!pick}>Añadir</Button>
               </form>)}
-          </Panel>
+          </Panel>}
           <Panel title="Notas internas">
             <label htmlFor="notes" className="sr-only">Notas internas</label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!write} placeholder="Solo visibles para el equipo." />

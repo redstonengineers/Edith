@@ -5,7 +5,7 @@ import { registerPermissionOverrides } from '@/lib/permissions';
 
 function syncOverrides(d: Database) { for (const st of d.settings) registerPermissionOverrides(st.academyId, st.permissionOverrides); }
 
-const KEY = 'ac.db.v3';
+const KEY = 'ac.db.v4';
 let db: Database | null = null;
 let persistHook: (() => void) | null = null;
 

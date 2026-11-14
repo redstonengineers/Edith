@@ -1,8 +1,10 @@
-import type { Group, ID, Student, StudentStatus, Subject, Teacher } from '@/types';
+import type { Group, ID, Practice, Student, StudentStatus, Subject, Teacher, Vehicle } from '@/types';
 import type { User } from '@/types';
 import { can, type Permission } from '@/lib/permissions';
 import { groupConflicts } from '@/lib/conflicts';
-import type { GroupInput, StudentInput, SubjectInput, TeacherInput } from '@/lib/schemas';
+import type { GroupInput, PracticeInput, StudentInput, SubjectInput, TeacherInput, VehicleInput } from '@/lib/schemas';
+import { practiceConflicts, type PracticeConflict } from '@/lib/practices';
+import { addDays, format, parseISO } from 'date-fns';
 import { logActivity } from './activity';
 import { getDatabase, persist } from './database';
 
@@ -619,4 +621,95 @@ export async function createAcademy(input: { academyName: string; type: AcademyT
 export function recordExport(user: User, title: string) {
   logActivity(user, 'exportó', 'report', `${user.name} exportó el informe «${title}»`);
   return done(true);
+}
+
+// ───────── Autoescuela: coches y prácticas 1 a 1 ─────────
+const VEHICLE_COLORS = ['#22c8ff', '#a78bfa', '#34d399', '#fbbf24', '#f472b6', '#fb923c'];
+export function createVehicle(user: User, input: VehicleInput): Vehicle {
+  need(user, 'vehiculos:write'); const db = getDatabase();
+  if (db.vehicles.some((v) => v.academyId === user.academyId && v.plate === input.plate)) throw new DomainError(`Ya existe un coche con la matrícula ${input.plate}.`);
+  const mine = db.vehicles.filter((v) => v.academyId === user.academyId);
+  const v: Vehicle = { academyId: user.academyId, id: newId(user, 'veh'), ...input, color: VEHICLE_COLORS[mine.length % VEHICLE_COLORS.length] };
+  db.vehicles.push(v); logActivity(user, 'creó', 'vehicle', `${user.name} dio de alta el coche ${v.model} (${v.plate})`, v.id);
+  return done(v);
+}
+export function updateVehicle(user: User, id: ID, patch: Partial<VehicleInput>) {
+  need(user, 'vehiculos:write'); const db = getDatabase(); const v = own(user, db.vehicles.find((x) => x.id === id), 'Coche');
+  if (patch.plate && patch.plate !== v.plate && db.vehicles.some((x) => x.academyId === user.academyId && x.plate === patch.plate)) throw new DomainError(`Ya existe un coche con la matrícula ${patch.plate}.`);
+  Object.assign(v, patch); logActivity(user, 'modificó', 'vehicle', `${user.name} modificó el coche ${v.model} (${v.plate})`, v.id);
+  return done(v);
+}
+
+function practiceNames(user: User) {
+  const db = getDatabase();
+  return {
+    student: (id: ID) => { const s = db.students.find((x) => x.id === id && x.academyId === user.academyId); return s ? `${s.firstName} ${s.lastName}` : 'El alumno'; },
+    teacher: (id: ID) => { const t = db.teachers.find((x) => x.id === id && x.academyId === user.academyId); return t ? `${t.firstName} ${t.lastName}` : 'El profesor'; },
+    vehicle: (id: ID) => { const v = db.vehicles.find((x) => x.id === id && x.academyId === user.academyId); return v ? `${v.model} (${v.plate})` : 'El coche'; },
+  };
+}
+/** Valida referencias del tenant y devuelve los choques. Los bloqueantes (coche en taller) nunca se pueden saltar. */
+function checkPractice(user: User, p: { id: ID; studentId: ID; teacherId: ID; vehicleId?: ID; date: string; start: string; end: string }): PracticeConflict[] {
+  const db = getDatabase(); own(user, db.students.find((x) => x.id === p.studentId), 'Alumno'); own(user, db.teachers.find((x) => x.id === p.teacherId), 'Profesor'); if (p.vehicleId) own(user, db.vehicles.find((x) => x.id === p.vehicleId), 'Coche');
+  const all = db.practices.filter((x) => x.academyId === user.academyId); const vs = db.vehicles.filter((x) => x.academyId === user.academyId);
+  return practiceConflicts(p, all, vs, practiceNames(user));
+}
+const enforce = (cs: PracticeConflict[], force: boolean) => {
+  const hard = cs.find((c) => c.hard); if (hard) throw new DomainError(hard.message);
+  if (cs.length && !force) throw new DomainError(`Hay choques: ${cs.map((c) => c.message).join(' ')}`);
+};
+/** Un profesor solo gestiona sus propias prácticas. */
+const scopeTeacher = (user: User, teacherId: ID) => (user.role === 'PROFESOR' ? (user.teacherId ?? teacherId) : teacherId);
+
+export function createPractice(user: User, input: PracticeInput, force = false): Practice {
+  need(user, 'practicas:write'); const teacherId = scopeTeacher(user, input.teacherId); const id = newId(user, 'prc');
+  enforce(checkPractice(user, { ...input, teacherId, id }), force);
+  const p: Practice = { academyId: user.academyId, id, status: 'programada', ...input, teacherId };
+  getDatabase().practices.push(p); logActivity(user, 'creó', 'practice', `${user.name} apuntó una práctica de ${practiceNames(user).student(p.studentId)} el ${p.date} a las ${p.start}`, p.id);
+  return done(p);
+}
+/** «Repetir cada semana»: crea N prácticas (2–26). Si alguna choca no se crea nada, salvo que se pida saltar las ocupadas. */
+export function createPracticeSeries(user: User, input: PracticeInput, weeks: number, skipBusy = false): { created: number; skipped: string[] } {
+  need(user, 'practicas:write'); if (!Number.isInteger(weeks) || weeks < 2 || weeks > 26) throw new DomainError('La repetición es de 2 a 26 semanas.');
+  const teacherId = scopeTeacher(user, input.teacherId); const seriesId = newId(user, 'ser'); const free: Practice[] = []; const skipped: string[] = [];
+  for (let i = 0; i < weeks; i++) {
+    const date = format(addDays(parseISO(input.date), 7 * i), 'yyyy-MM-dd'); const id = newId(user, 'prc'); const cand = { ...input, teacherId, date, id };
+    const cs = checkPractice(user, cand).concat(free.flatMap((o) => practiceConflicts(cand, [o], getDatabase().vehicles.filter((v) => v.academyId === user.academyId), practiceNames(user))));
+    const hard = cs.find((c) => c.hard); if (hard) throw new DomainError(hard.message);
+    if (cs.length) { if (!skipBusy) throw new DomainError(`El ${date} choca: ${cs[0].message} No se ha creado nada; puedes «apuntar solo las libres».`); skipped.push(date); continue; }
+    free.push({ academyId: user.academyId, id, status: 'programada', ...input, teacherId, date, seriesId });
+  }
+  getDatabase().practices.push(...free); logActivity(user, 'creó', 'practice', `${user.name} apuntó ${free.length} prácticas semanales de ${practiceNames(user).student(input.studentId)}`, seriesId);
+  return done({ created: free.length, skipped });
+}
+export function updatePractice(user: User, id: ID, input: PracticeInput, force = false) {
+  need(user, 'practicas:write'); const p = own(user, getDatabase().practices.find((x) => x.id === id), 'Práctica');
+  if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes modificar tus prácticas.');
+  const teacherId = scopeTeacher(user, input.teacherId); enforce(checkPractice(user, { ...input, teacherId, id }), force);
+  Object.assign(p, input, { teacherId }); logActivity(user, 'modificó', 'practice', `${user.name} modificó la práctica de ${practiceNames(user).student(p.studentId)} (${p.date} ${p.start})`, p.id);
+  return done(p);
+}
+export function cancelPractice(user: User, id: ID, cancelled = true) {
+  need(user, 'practicas:write'); const p = own(user, getDatabase().practices.find((x) => x.id === id), 'Práctica');
+  if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes modificar tus prácticas.');
+  if (p.status === 'hecha') throw new DomainError('Una práctica ya hecha no se puede cancelar.');
+  if (!cancelled) enforce(checkPractice(user, p), false);
+  p.status = cancelled ? 'cancelada' : 'programada'; logActivity(user, 'modificó', 'practice', `${user.name} ${cancelled ? 'canceló' : 'restauró'} la práctica de ${practiceNames(user).student(p.studentId)} (${p.date})`, p.id);
+  return done(p);
+}
+/** Marca la práctica como hecha, anota los kilómetros y los suma al cuentakilómetros del coche. */
+export function completePractice(user: User, id: ID, data: { km?: number; notes?: string }) {
+  need(user, 'practicas:write'); const db = getDatabase(); const p = own(user, db.practices.find((x) => x.id === id), 'Práctica');
+  if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes cerrar tus prácticas.');
+  if (p.status === 'cancelada') throw new DomainError('La práctica está cancelada.');
+  const wasDone = p.status === 'hecha'; const prevKm = p.km ?? 0; p.status = 'hecha'; p.km = data.km ?? p.km; if (data.notes !== undefined) p.notes = data.notes;
+  const v = p.vehicleId ? db.vehicles.find((x) => x.id === p.vehicleId && x.academyId === user.academyId) : undefined; if (v) v.km = Math.max(0, v.km + (p.km ?? 0) - (wasDone ? prevKm : 0));
+  logActivity(user, 'registró', 'practice', `${user.name} cerró la práctica de ${practiceNames(user).student(p.studentId)} (${p.date})`, p.id);
+  return done(p);
+}
+export function setStudentTraining(user: User, id: ID, data: { targetHours?: number; permit?: string; assignedTeacherId?: ID }) {
+  need(user, 'students:write'); const db = getDatabase(); const s = own(user, db.students.find((x) => x.id === id), 'Alumno');
+  if (data.assignedTeacherId) own(user, db.teachers.find((x) => x.id === data.assignedTeacherId), 'Profesor');
+  Object.assign(s, data); logActivity(user, 'modificó', 'student', `${user.name} actualizó la formación de ${s.firstName} ${s.lastName}`, s.id);
+  return done(s);
 }

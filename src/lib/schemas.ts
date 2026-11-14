@@ -82,3 +82,16 @@ export const generalSchema = z.object({ currency: z.enum(['EUR', 'USD', 'GBP', '
 export const passwordSchema = z.string().min(8, 'Mínimo 8 caracteres').max(72, 'Máximo 72 caracteres').refine((p) => /[A-Za-z]/.test(p) && /\d/.test(p), 'Debe incluir letras y números');
 export const userSchema = z.object({ name: text('Nombre', 3), email, role: z.enum(['ADMIN', 'SECRETARIA', 'PROFESOR', 'ALUMNO', 'TUTOR']), teacherId: z.string().optional(), studentId: z.string().optional(), password: passwordSchema });
 export const onboardingSchema = z.object({ academyName: text('Nombre de la academia', 2), adminName: text('Tu nombre', 3), adminEmail: email, adminPassword: passwordSchema });
+
+/* ── Autoescuela ── */
+const optDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha no válida').optional().or(z.literal('').transform(() => undefined));
+export const vehicleSchema = z.object({
+  plate: text('Matrícula', 4).transform((s) => s.toUpperCase()), model: text('Modelo'), km: z.coerce.number().int().min(0, 'No puede ser negativo').max(2_000_000),
+  status: z.enum(['activo', 'taller', 'baja']).default('activo'), itvDue: optDate, insuranceDue: optDate, notes: z.string().max(500).optional(),
+});
+export type VehicleInput = z.infer<typeof vehicleSchema>;
+export const practiceSchema = z.object({
+  studentId: z.string().min(1, 'Elige al alumno'), teacherId: z.string().min(1, 'Elige al profesor'), vehicleId: z.string().optional().or(z.literal('').transform(() => undefined)),
+  date, start: z.string().regex(/^\d{2}:\d{2}$/, 'Hora no válida'), end: z.string().regex(/^\d{2}:\d{2}$/, 'Hora no válida'), notes: z.string().max(500).optional(),
+}).refine((v) => v.start < v.end, { path: ['end'], message: 'El fin debe ser posterior al inicio' });
+export type PracticeInput = z.infer<typeof practiceSchema>;

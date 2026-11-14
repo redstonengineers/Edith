@@ -1,6 +1,6 @@
 import type {
   Academy, ActivityLog, Attendance, ClassSession, Classroom, DocumentFile, Enrollment, Exam, Grade, Group,
-  Guardian, Incident, Message, Notification, Payment, Settings, Student, Subject, Teacher, User, WaitlistEntry,
+  Guardian, Incident, Message, Notification, Payment, Practice, Settings, Student, Subject, Teacher, User, Vehicle, WaitlistEntry,
 } from '@/types';
 
 /** Forma de la "base de datos". Cada tabla (salvo `academies`) lleva `academyId`. */
@@ -26,4 +26,6 @@ export interface Database {
   notifications: Notification[];
   messages: Message[];
   activity: ActivityLog[];
+  vehicles: Vehicle[];
+  practices: Practice[];
 }

@@ -1,0 +1,40 @@
+// Autoescuela Atlanta (híbrido EDITH + prácticas): coches, prácticas 1 a 1, choques, series, horas del alumno y alcance del profesor.
+const { chromium } = require('playwright');
+const U = process.env.APP_URL || 'http://127.0.0.1:4010';
+let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!c) fails++; };
+const iso = (d) => d.toISOString().slice(0, 10);
+const nextDow = (dow, skip = 0) => { const d = new Date(); d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7 || 7) + 7 * skip); return iso(d); };
+(async () => {
+  const b = await chromium.launch(); const errs = [];
+  const login = async (name) => { const p = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage(); p.on('pageerror', (e) => errs.push(e.message)); await p.goto(U + '/login'); await p.locator('button').filter({ hasText: name }).first().click(); await p.waitForSelector('main h1'); return p; };
+  const p = await login('Director Atlanta'); const dlg = p.locator('[role=dialog]');
+  const go = async (r) => { await p.goto(U + r); await p.locator('main h1').first().waitFor(); await p.waitForTimeout(300); };
+  ok(await p.getByRole('link', { name: 'Prácticas' }).count() >= 1 && await p.getByRole('link', { name: 'Coches' }).count() >= 1, 'el menú de la autoescuela tiene Prácticas y Coches');
+  await go('/practicas'); ok(await p.locator('[draggable]').count() > 0, 'el calendario muestra prácticas programadas');
+  const sat = nextDow(6);
+  const fill = async (date, start) => { await dlg.getByLabel('Día').fill(date); await dlg.getByLabel('Hora').fill(start); };
+  await p.getByRole('button', { name: /Apuntar práctica/ }).click(); await dlg.getByLabel(/Alumno/).fill('Lucía'); await dlg.getByRole('button', { name: /Lucía Fernández/ }).click(); await fill(sat, '10:00'); await dlg.getByRole('button', { name: 'Guardar' }).click();
+  await p.waitForSelector('text=Práctica apuntada'); ok(true, 'apuntar una práctica');
+  // Choque: mismo profesor y coche a la misma hora con otro alumno
+  await p.waitForTimeout(500); await p.getByRole('button', { name: /Apuntar práctica/ }).click(); await dlg.getByLabel(/Alumno/).fill('Carmen'); await dlg.getByRole('button', { name: /Carmen Ortiz/ }).click(); await fill(sat, '10:30');
+  await dlg.getByLabel('Profesor').selectOption({ label: 'David Ruiz' }); await dlg.getByLabel('Coche').selectOption({ index: 1 }); await p.waitForTimeout(300);
+  ok(await dlg.getByText('Hay un choque').count() === 1 && await dlg.getByRole('button', { name: 'Guardar igualmente' }).count() === 1, 'avisa del choque y ofrece «Guardar igualmente»'); await dlg.getByRole('button', { name: 'Cancelar' }).click();
+  // Serie semanal
+  await p.getByRole('button', { name: /Apuntar práctica/ }).click(); await dlg.getByLabel(/Alumno/).fill('Pablo'); await dlg.getByRole('button', { name: /Pablo Jiménez/ }).click(); const sun = nextDow(0); await fill(sun, '09:00');
+  await dlg.getByLabel('Repetir cada semana').check(); await dlg.getByLabel('Semanas').fill('3'); await dlg.getByRole('button', { name: 'Guardar' }).click(); await p.waitForSelector('text=Prácticas apuntadas'); ok(true, 'serie semanal (3 semanas)');
+  // Coches
+  await go('/coches'); ok(await p.locator('tbody tr').count() >= 3 && await p.getByText(/ITV de Seat Ibiza/).count() === 1, 'coches con aviso de ITV próxima');
+  ok(await p.getByText('En el taller').count() >= 1, 'un coche en el taller');
+  await p.getByRole('button', { name: /Añadir coche/ }).click(); await dlg.getByLabel(/Matrícula/).fill('0000 AAA'); await dlg.getByLabel(/Modelo/).fill('Test Car'); await dlg.getByRole('button', { name: 'Guardar' }).click(); await p.waitForSelector('text=Coche añadido'); ok(true, 'añadir un coche');
+  // Coche en taller: no seleccionable
+  await go('/practicas'); await p.getByRole('button', { name: /Apuntar práctica/ }).click(); ok(await dlg.getByLabel('Coche').locator('option[disabled]').count() >= 1, 'el coche del taller no se puede elegir'); await dlg.getByRole('button', { name: 'Cancelar' }).click();
+  // Ficha del alumno
+  await go('/alumnos'); await p.getByText('Lucía Fernández').first().click(); await p.waitForSelector('text=Prácticas'); ok(await p.getByRole('progressbar', { name: /horas de prácticas/ }).count() === 1, 'ficha del alumno con barra de horas');
+  await p.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + '/atlanta-alumno.png' });
+  await go('/practicas'); await p.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + '/atlanta-practicas.png' });
+  // Profesor: ve solo lo suyo y no gestiona coches
+  const t = await login('David Ruiz'); await t.goto(U + '/alumnos'); await t.waitForTimeout(700); const mine = await t.locator('tbody tr').count(); ok(mine > 0 && mine < 14, `el profesor ve solo sus alumnos (${mine} de 14)`);
+  await t.goto(U + '/coches'); await t.waitForTimeout(600); ok(await t.getByRole('button', { name: /Añadir coche/ }).count() === 0, 'el profesor no puede añadir coches');
+  await t.goto(U + '/practicas'); await t.waitForTimeout(600); ok(await t.locator('[draggable]').count() > 0, 'el profesor ve sus prácticas');
+  console.log('ERRORS', JSON.stringify(errs)); console.log(fails ? `${fails} FALLOS` : 'TODO OK'); await b.close(); process.exit(fails ? 1 : 0);
+})().catch((e) => { console.log('CRASH', e.message.split('\n')[0]); process.exit(1); });

@@ -41,7 +41,7 @@ export type LabelKey =
 export type ModuleId =
   | 'dashboard' | 'students' | 'teachers' | 'groups' | 'classes' | 'subjects' | 'schedule'
   | 'exams' | 'grades' | 'attendance' | 'applications' | 'waitlist' | 'enrollments'
-  | 'payments' | 'billing' | 'documents' | 'practicas' | 'incidents' | 'messages' | 'announcements'
+  | 'payments' | 'billing' | 'documents' | 'practicas' | 'vehiculos' | 'incidents' | 'messages' | 'announcements'
   | 'notifications' | 'statistics' | 'reports' | 'ai' | 'settings' | 'users' | 'permissions'
   | 'customization' | 'platform';
 
@@ -77,6 +77,11 @@ export interface Student extends Tenant {
   lastActivityAt: ISODateTime;
   notes: string;
   avatarHue: number;
+  /** Autoescuela: horas de prácticas objetivo y permiso que prepara (p. ej. B). */
+  targetHours?: number;
+  permit?: string;
+  /** Autoescuela: profesor asignado (el profesor solo ve a sus alumnos). */
+  assignedTeacherId?: ID;
 }
 
 export interface Teacher extends Tenant {
@@ -153,3 +158,10 @@ export interface Message extends Tenant {
 export interface ActivityLog extends Tenant {
   id: ID; at: ISODateTime; actorId: ID; actorName: string; action: string; entityType: string; entityId?: ID; summary: string;
 }
+
+/** Autoescuela: coche de prácticas. */
+export type VehicleStatus = 'activo' | 'taller' | 'baja';
+export interface Vehicle extends Tenant { id: ID; plate: string; model: string; km: number; status: VehicleStatus; itvDue?: ISODate; insuranceDue?: ISODate; notes?: string; color: string }
+/** Autoescuela: práctica 1 a 1 (alumno + profesor + coche). */
+export type PracticeStatus = 'programada' | 'hecha' | 'cancelada';
+export interface Practice extends Tenant { id: ID; studentId: ID; teacherId: ID; vehicleId?: ID; date: ISODate; start: string; end: string; status: PracticeStatus; km?: number; notes?: string; seriesId?: ID }

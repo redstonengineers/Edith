@@ -8,6 +8,7 @@ import { DEFAULT_LABELS, PRESETS } from '@/config/presets';
 import type { Database } from './db';
 import { FIRST_NAMES, LAST_NAMES } from './names';
 import { createRng, type Rng } from './rng';
+import { buildAtlanta } from './seed.atlanta';
 
 const d = (date: Date) => format(date, 'yyyy-MM-dd');
 const dt = (date: Date) => date.toISOString();
@@ -342,9 +343,10 @@ function buildAcademy(spec: AcademySpec, today: Date, db: Database) {
 export function generateDatabase(today: Date = new Date()): Database {
   const db: Database = {
     academies: [], settings: [], users: [], students: [], guardians: [], teachers: [], subjects: [], classrooms: [], groups: [], classes: [],
-    enrollments: [], waitlist: [], attendance: [], exams: [], grades: [], payments: [], incidents: [], documents: [], notifications: [], messages: [], activity: [],
+    enrollments: [], waitlist: [], attendance: [], exams: [], grades: [], payments: [], incidents: [], documents: [], notifications: [], messages: [], activity: [], vehicles: [], practices: [],
   };
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   for (const spec of SPECS) buildAcademy(spec, t, db);
+  buildAtlanta(db, t);
   return db;
 }
