@@ -13,7 +13,7 @@ import type { AcademyType, ModuleId } from '@/types';
 import { cn } from '@/utils/cn';
 
 const STEPS = ['Academia', 'Logo y color', 'Tipo', 'Módulos', 'Administrador'] as const;
-const COLORS = ['#38bdf8', '#818cf8', '#34d399', '#f59e0b', '#f472b6', '#ef4444'];
+const COLORS = ['#8b7bff', '#f472b6', '#34d399', '#f59e0b', '#f472b6', '#ef4444'];
 
 export default function OnboardingPage() {
   const nav = useNavigate(); const signIn = useSession((s) => s.signIn); const toast = useUi((s) => s.toast);
@@ -47,7 +47,7 @@ export default function OnboardingPage() {
           {step === 0 && <div className="space-y-4"><h1 className="text-2xl font-semibold tracking-tight">¿Cómo se llama tu academia?</h1><p className="text-sm text-muted">Aparecerá en la barra lateral, el acceso y los documentos.</p>
             <Field label="Nombre de la academia" required error={err.academyName}>{(p) => <Input {...p} autoFocus value={f.academyName} onChange={set('academyName')} placeholder="Nombre de tu centro" />}</Field></div>}
           {step === 1 && <div className="space-y-5"><h1 className="text-2xl font-semibold tracking-tight">Logo y color</h1><p className="text-sm text-muted">Opcional. Podrás cambiarlos cuando quieras en Personalización.</p>
-            <div className="flex items-center gap-4">{logo ? <img src={logo} alt="Logo" className="h-14 w-14 rounded-xl border border-line object-contain" /> : <span aria-hidden className="grid h-14 w-14 place-items-center rounded-xl text-xl font-bold text-on-brand" style={{ background: color, color: '#04121c' }}>{f.academyName.trim()[0]?.toUpperCase() ?? 'A'}</span>}
+            <div className="flex items-center gap-4">{logo ? <img src={logo} alt="Logo" className="h-14 w-14 rounded-xl border border-line object-contain" /> : <span aria-hidden className="grid h-14 w-14 place-items-center rounded-xl text-xl font-bold text-on-brand" style={{ background: color, color: '#0d0a24' }}>{f.academyName.trim()[0]?.toUpperCase() ?? 'A'}</span>}
               <input ref={file} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={(e) => pickLogo(e.target.files?.[0])} /><button type="button" onClick={() => file.current?.click()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-line px-3 text-sm hover:bg-surface-2"><ImageUp size={15} />Subir logo</button></div>
             <fieldset><legend className="mb-2 text-[13px] font-medium">Color principal</legend><div className="flex flex-wrap gap-2.5">{COLORS.map((c) => <button type="button" key={c} onClick={() => setColor(c)} aria-label={`Color ${c}`} aria-pressed={color === c} className="h-9 w-9 rounded-full ring-offset-2 ring-offset-surface aria-pressed:ring-2 aria-pressed:ring-fg" style={{ background: c }} />)}</div>{low && <p className="mt-2 text-xs text-warn">Poco contraste con el fondo oscuro.</p>}</fieldset></div>}
           {step === 2 && <div className="space-y-4"><h1 className="text-2xl font-semibold tracking-tight">¿Qué tipo de centro es?</h1><p className="text-sm text-muted">Adaptamos el vocabulario y los módulos iniciales.</p>

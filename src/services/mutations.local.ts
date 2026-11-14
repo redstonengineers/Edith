@@ -607,7 +607,7 @@ export async function createAcademy(input: { academyName: string; type: AcademyT
   for (const m of input.modules) modules[m] = true;
   for (const m of MODULES) if (m.core) modules[m.id] = true;
   db.academies.push({ id, name: input.academyName, type: input.type, plan: 'trial', status: 'active', createdAt: new Date().toISOString().slice(0, 10) });
-  db.settings.push({ academyId: id, branding: { name: input.academyName, tagline: '', logoUrl: input.logoUrl, primary: input.primary ?? '#38bdf8', secondary: '#818cf8', theme: 'dark' }, labels: { ...DEFAULT_LABELS, ...preset.labels }, modules, locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
+  db.settings.push({ academyId: id, branding: { name: input.academyName, tagline: '', logoUrl: input.logoUrl, primary: input.primary ?? '#8b7bff', secondary: '#f472b6', theme: 'dark' }, labels: { ...DEFAULT_LABELS, ...preset.labels }, modules, locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
   const admin: User = { academyId: id, id: `${id}_usr_001`, name: input.adminName, email: input.adminEmail, role: 'ADMIN', avatarHue: Math.floor(Math.random() * 360), pwd: await hashPassword(input.adminPassword) };
   db.users.push(admin);
   db.activity.unshift({ academyId: id, id: `${id}_log_1`, at: new Date().toISOString(), actorId: admin.id, actorName: admin.name, action: 'creó', entityType: 'academy', summary: `${admin.name} creó la academia ${input.academyName}` });

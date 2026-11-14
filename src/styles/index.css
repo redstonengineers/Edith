@@ -4,33 +4,33 @@
    Los colores de marca (--brand, --brand-2) se inyectan en runtime desde Settings (lib/branding.ts).
    El resto del sistema deriva de ellos, así cambiar la marca recolorea toda la app. */
 :root {
-  --brand: #38bdf8;
-  --brand-2: #818cf8;
-  --on-brand: #04121c;
+  --brand: #8b7bff;
+  --brand-2: #f472b6;
+  --on-brand: #0d0a24;
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #070b13;
-  --surface: #0d1320;
-  --surface-2: #131b2b;
-  --line: #1f2a3d;
-  --line-strong: #2c3a52;
-  --text: #e8edf6;
-  --muted: #94a3bc;
+  --bg: #08070f;
+  --surface: #100e1b;
+  --surface-2: #181526;
+  --line: #251f3a;
+  --line-strong: #362e52;
+  --text: #eeeaf8;
+  --muted: #a39cbd;
   --brand-text: color-mix(in oklab, var(--brand) 82%, white);
   --ok: #34d399; --warn: #fbbf24; --bad: #f87171; --info: #60a5fa;
   --glow: color-mix(in oklab, var(--brand) 22%, transparent);
 }
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f4f6fb;
+  --bg: #f6f4fc;
   --surface: #ffffff;
-  --surface-2: #f0f3f9;
-  --line: #e2e7f0;
-  --line-strong: #cdd5e3;
-  --text: #0f172a;
-  --muted: #48566f;
+  --surface-2: #f1eef9;
+  --line: #e6e1f3;
+  --line-strong: #d0c8e6;
+  --text: #17122b;
+  --muted: #4f4670;
   --brand-text: color-mix(in oklab, var(--brand) 62%, black);
   --ok: #05603f; --warn: #824008; --bad: #a61b1b; --info: #1d4ed8;
   --glow: color-mix(in oklab, var(--brand) 14%, transparent);
@@ -125,3 +125,43 @@ body {
 /* Paleta categórica de gráficos (slots 1-3 validados en todas las parejas). Un solo color = marca. */
 :root[data-theme='light'] { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; }
 :root[data-theme='dark'] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; }
+
+/* ───────── Interacción: respuesta táctil y movimiento con intención ─────────
+   Curva con ligero rebote (spring) solo en transform; el resto, transiciones cortas. */
+:root { --spring: cubic-bezier(.3, 1.5, .5, 1); --ease-out: cubic-bezier(.2, .7, .2, 1); }
+
+button:not(:disabled), [role='button'], [role='tab'], [role='menuitem'], [role='checkbox'], [role='switch'], a.press {
+  transition: transform .22s var(--spring), background-color .15s, color .15s, border-color .15s, box-shadow .2s, filter .15s;
+}
+button:not(:disabled):active, [role='button']:active, [role='tab']:active, [role='switch']:active, a.press:active { transform: scale(.965); transition-duration: .08s; }
+
+/* Tarjetas e ítems clicables: se elevan y el borde gana presencia */
+a.panel, button.panel, .panel[role='button'], .panel.hoverable {
+  transition: transform .25s var(--spring), border-color .18s, box-shadow .25s, background-color .18s;
+}
+a.panel:hover, button.panel:hover, .panel[role='button']:hover, .panel.hoverable:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--brand) 45%, var(--line-strong));
+  box-shadow: 0 10px 30px -14px var(--glow), 0 0 0 1px color-mix(in oklab, var(--brand) 18%, transparent);
+}
+a.panel:active, button.panel:active, .panel[role='button']:active { transform: translateY(0) scale(.99); }
+
+/* Filas de tabla y enlaces de navegación */
+tbody tr { transition: background-color .12s; }
+tbody tr:hover { background: color-mix(in oklab, var(--brand) 6%, transparent); }
+nav a { transition: background-color .15s, color .15s, transform .2s var(--spring); }
+nav a:hover { transform: translateX(2px); }
+
+/* Aparición escalonada de bloques hermanos */
+.anim-rise:nth-child(2) { animation-delay: .04s; } .anim-rise:nth-child(3) { animation-delay: .08s; }
+.anim-rise:nth-child(4) { animation-delay: .12s; } .anim-rise:nth-child(5) { animation-delay: .16s; }
+.anim-rise:nth-child(6) { animation-delay: .2s; } .anim-rise:nth-child(n+7) { animation-delay: .24s; }
+
+/* Mensajes y diálogos entran con rebote suave */
+@keyframes pop-spring { from { opacity: 0; transform: translateY(-6px) scale(.94); } to { opacity: 1; transform: none; } }
+.anim-pop { animation: pop-spring .26s var(--spring) both; }
+[role='dialog'] { animation: pop-spring .28s var(--spring) both; }
+
+/* Casillas e interruptores: el cambio de estado "asienta" */
+input[type='checkbox']:checked { animation: tick .26s var(--spring); }
+@keyframes tick { 0% { transform: scale(.82); } 100% { transform: scale(1); } }

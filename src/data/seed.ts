@@ -32,10 +32,10 @@ const V = (start: string, end: string): ScheduleSlot[] => [{ weekday: 5, start, 
 const SPECS: AcademySpec[] = [
   {
     id: 'acad_001', name: 'Academia Horizonte', tagline: 'Refuerzo, idiomas y preparación académica', type: 'educativa',
-    primary: '#38bdf8', secondary: '#818cf8', theme: 'dark', seed: 1001, students: 44, waitlist: 7,
+    primary: '#8b7bff', secondary: '#f472b6', theme: 'dark', seed: 1001, students: 44, waitlist: 7,
     fixedNames: ['María García Ruiz', 'Daniel Moreno Gil', 'Laura García Prieto', 'María Sánchez Vidal', 'Carlos Fernández Cano', 'Juan Pérez Ortega'],
     subjects: [
-      { name: 'Matemáticas', code: 'MAT', color: '#38bdf8', level: 'ESO' }, { name: 'Inglés', code: 'ING', color: '#a78bfa' },
+      { name: 'Matemáticas', code: 'MAT', color: '#8b7bff', level: 'ESO' }, { name: 'Inglés', code: 'ING', color: '#a78bfa' },
       { name: 'Lengua y Literatura', code: 'LEN', color: '#f472b6' }, { name: 'Física y Química', code: 'FYQ', color: '#34d399' },
       { name: 'Francés', code: 'FRA', color: '#fbbf24' }, { name: 'Alemán', code: 'ALE', color: '#fb923c' },
       { name: 'Biología', code: 'BIO', color: '#4ade80' }, { name: 'Historia', code: 'HIS', color: '#f87171' },

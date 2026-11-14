@@ -24,7 +24,7 @@ else if (config.seedDemo) {
   db = Object.fromEntries(['academies', 'settings', 'users', 'students', 'guardians', 'teachers', 'subjects', 'classrooms', 'groups', 'classes', 'enrollments', 'waitlist', 'attendance', 'exams', 'grades', 'payments', 'incidents', 'documents', 'notifications', 'messages', 'activity'].map((t) => [t, []])) as unknown as Database;
   if (config.bootstrapEmail && config.bootstrapPassword) {
     db.academies.push({ id: 'acad_platform', name: 'Plataforma', type: 'otro', plan: 'pro', status: 'active', createdAt: new Date().toISOString().slice(0, 10) });
-    db.settings.push({ academyId: 'acad_platform', branding: { name: 'Plataforma', tagline: '', primary: '#38bdf8', secondary: '#818cf8', theme: 'dark' }, labels: DEFAULT_LABELS, modules: Object.fromEntries(MODULES.map((m) => [m.id, true])), locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
+    db.settings.push({ academyId: 'acad_platform', branding: { name: 'Plataforma', tagline: '', primary: '#8b7bff', secondary: '#f472b6', theme: 'dark' }, labels: DEFAULT_LABELS, modules: Object.fromEntries(MODULES.map((m) => [m.id, true])), locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
     db.users.push({ academyId: 'acad_platform', id: 'acad_platform_usr_001', name: 'Propietario', email: config.bootstrapEmail, role: 'SUPER_ADMIN', avatarHue: 200, pwd: await hashPassword(config.bootstrapPassword) });
     console.warn('Super Admin creado a partir de BOOTSTRAP_ADMIN_*.');
   } else console.warn('Base vacía y sin BOOTSTRAP_ADMIN_EMAIL/PASSWORD ni SEED_DEMO: solo se podrán crear academias desde el onboarding.');
