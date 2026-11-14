@@ -38,3 +38,11 @@ Marca cada punto cuando esté hecho.
 
 ## Ideas para más adelante
 - [ ] **Voz en EDITH personal**: empezar con voz del navegador (síntesis) + botón de micrófono (dictado); después, si gusta, voz neuronal (p. ej. ElevenLabs) con la clave guardada en el servidor. Descartado de momento: escucha permanente tipo «Oye EDITH» y conversación en tiempo real.
+
+## Autoescuela Atlanta (híbrido EDITH + gestión de prácticas)
+Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/profesor/alumno y series semanales, horas del alumno frente a su objetivo, profesor asignado, portada propia, firma táctil, parte mensual (CSV/impresión) y avisos por WhatsApp.
+- [ ] **Exámenes de conducir** (teórico/práctico, resultado y % de aprobados) en la ficha del alumno y en el parte.
+- [ ] **Importar alumnos** desde Excel/CSV.
+- [ ] **Firma sin conexión**: cola offline que envía las firmas al recuperar la red.
+- [ ] Alta real del tenant «Autoescuela Atlanta» desde el onboarding (la demo `@atlanta.demo` solo existe con `SEED_DEMO=1`).
+- [ ] Avisos push de clases y copias de seguridad (equivalentes a los de Volanta).

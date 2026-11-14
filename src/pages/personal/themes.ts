@@ -20,7 +20,7 @@ const reduced = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduce
 export const useHud = create<HudSettings>((set, get) => {
   const persist = () => { const { theme, quality, sound, motion } = get(); try { localStorage.setItem(KEY, JSON.stringify({ theme, quality, sound, motion })); } catch { /* sin almacenamiento */ } };
   return {
-    theme: THEMES.some((t) => t.id === saved.theme) ? saved.theme! : 'stark', quality: saved.quality ?? 'alta', sound: saved.sound ?? true, motion: saved.motion ?? !reduced,
+    theme: THEMES.some((t) => t.id === saved.theme) ? saved.theme! : 'stark', quality: saved.quality ?? (typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 600 ? 'media' : 'alta'), sound: saved.sound ?? true, motion: saved.motion ?? !reduced,
     setTheme: (theme) => { set({ theme }); persist(); }, setQuality: (quality) => { set({ quality }); persist(); },
     setSound: (sound) => { set({ sound }); persist(); }, setMotion: (motion) => { set({ motion }); persist(); },
   };

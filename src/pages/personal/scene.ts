@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export interface NodeScreen { x: number; y: number; scale: number; depth: number }
-export interface SceneOpts { quality: 'alta' | 'media' | 'baja'; motion: boolean; hex: string; hex2: string; nodes: number; onNodes?: (n: NodeScreen[]) => void }
+export interface SceneOpts { quality: 'alta' | 'media' | 'baja'; motion: boolean; hex: string; hex2: string; nodes: number; compact?: boolean; onNodes?: (n: NodeScreen[]) => void }
 export interface HudScene { setColors: (a: string, b: string) => void; setQuality: (q: SceneOpts['quality']) => void; setMotion: (m: boolean) => void; pulse: () => void; setThinking: (b: boolean) => void; setHover: (on: boolean) => void; dispose: () => void }
 
 const Q = { alta: { stars: 2200, dpr: 2, net: 110 }, media: { stars: 1100, dpr: 1.5, net: 70 }, baja: { stars: 450, dpr: 1, net: 40 } };
@@ -24,7 +24,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
   const glow = glowTexture();
 
   /* Núcleo */
-  const core = new THREE.Group(); core.position.y = 0.3; core.scale.setScalar(1.2); scene.add(core);
+  const core = new THREE.Group(); const cy = opts.compact ? 2.75 : 0.3; const cs = opts.compact ? .72 : 1.2; core.position.y = cy; core.scale.setScalar(cs); scene.add(core);
   const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1.15, 2), reg(new THREE.MeshBasicMaterial({ wireframe: true, opacity: .55, ...add })));
   const inner = new THREE.Mesh(new THREE.IcosahedronGeometry(.72, 1), reg(new THREE.MeshBasicMaterial({ wireframe: true, opacity: .8, ...add }), 'b'));
   const heart = new THREE.Mesh(new THREE.SphereGeometry(.32, 32, 32), reg(new THREE.MeshBasicMaterial({ opacity: .9, ...add })));
@@ -75,7 +75,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
   const grid = new THREE.GridHelper(60, 60, 0xffffff, 0xffffff); grid.position.y = -3.6; const gm = grid.material as THREE.LineBasicMaterial; gm.transparent = true; gm.opacity = .16; gm.depthWrite = false; gm.blending = THREE.AdditiveBlending; reg(gm as unknown as THREE.Material & { color: THREE.Color }, 'a'); mats[mats.length - 1].base = .16; scene.add(grid);
 
   /* Satélites (módulos) */
-  const orbit = new THREE.Group(); orbit.position.y = 0.3; orbit.rotation.x = -1.12; scene.add(orbit);
+  const orbit = new THREE.Group(); orbit.position.y = cy; orbit.rotation.x = -1.12; scene.add(orbit);
   const sats: THREE.Object3D[] = Array.from({ length: opts.nodes }, () => { const s = new THREE.Sprite(reg(new THREE.SpriteMaterial({ map: glow, opacity: .85, ...add }) as unknown as THREE.Material & { color: THREE.Color }) as unknown as THREE.SpriteMaterial); s.scale.setScalar(.55); orbit.add(s); return s; });
   const v = new THREE.Vector3();
 
@@ -97,9 +97,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
     speed += ((thinking ? 4 : hover ? .15 : 1) - speed) * Math.min(1, dt * 3); energy *= Math.pow(.02, dt);
     const k = dt * ts * speed;
     mouse.x += (mouse.tx - mouse.x) * Math.min(1, dt * 3); mouse.y += (mouse.ty - mouse.y) * Math.min(1, dt * 3);
-    const par = motion ? 1 : 0; camera.position.x = mouse.x * 1.1 * par; camera.position.y = .2 + mouse.y * .6 * par; camera.lookAt(0, .2, 0);
+    const par = motion ? 1 : 0; camera.position.z = opts.compact ? 8 : 8 * Math.max(1, 1.5 / camera.aspect); camera.position.x = mouse.x * 1.1 * par; camera.position.y = .2 + mouse.y * .6 * par; camera.lookAt(0, .2, 0);
     shell.rotation.y += k * .35; shell.rotation.x += k * .12; inner.rotation.y -= k * .6; inner.rotation.z += k * .3;
-    const pulse = 1.2 * (1 + Math.sin(t * 1.6) * .04 + energy * .35); core.scale.setScalar(pulse); halo.scale.setScalar(5.2 + energy * 3 + (thinking ? Math.sin(t * 9) * .4 : 0));
+    const pulse = cs * (1 + Math.sin(t * 1.6) * .04 + energy * .35); core.scale.setScalar(pulse); halo.scale.setScalar(5.2 + energy * 3 + (thinking ? Math.sin(t * 9) * .4 : 0));
     rings.forEach((r, i) => { r.mesh.rotation.z += k * r.speed; r.mesh.rotation.x += k * .02 * (i + 1); });
     ticks.rotation.z -= k * .05; net.rotation.y += k * .02; net.rotation.x = Math.sin(t * .1) * .05;
     if (stars) { stars.rotation.y += k * .01; }

@@ -2,12 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { addDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BellRing, CalendarDays, CheckSquare, Clock, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Wallet, X } from 'lucide-react';
+import { BellRing, CalendarDays, Home, MoreHorizontal, ChevronLeft, CheckSquare, Clock, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Wallet, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
-import { AddForm, Bar, COLORS, Empty, F, Panel, Row, eur, todayISO } from './shared';
+import { AddForm, Bar, COLORS, Empty, F, Panel, Row, eur, todayISO, useDevice } from './shared';
 import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, AgendaCal, CalendarPanel, monthStats, useReminderAlerts } from './life';
 import { Schedule, SchedulePanel, classesOn, mins } from './timetable';
 import { createScene, type HudScene } from './scene';
@@ -27,20 +27,20 @@ const MODS: { id: Mod; label: string; icon: typeof CheckSquare }[] = [
 ];
 
 /* ───────────── Escena 3D de fondo + nodos orbitales ───────────── */
-function Stage({ onOpen, orbit }: { onOpen?: (m: Mod) => void; orbit: boolean }) {
+function Stage({ onOpen, orbit, compact }: { onOpen?: (m: Mod) => void; orbit: boolean; compact?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null); const nodes = useRef<(HTMLButtonElement | null)[]>([]); const sc = useRef<HudScene | null>(null);
   const { theme, quality, motion, sound } = useHud(); const [failed, setFailed] = useState(false);
   useEffect(() => {
     const t = themeOf(theme);
     try {
-      sc.current = createScene(canvas.current!, { quality, motion, hex: t.hex, hex2: t.hex2, nodes: orbit ? MODS.length : 0, onNodes: (ns) => ns.forEach((n, i) => { const el = nodes.current[i]; if (!el) return; el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) scale(${n.scale})`; el.style.opacity = String(Math.min(1, .45 + n.scale * .6)); el.style.zIndex = String(Math.round(n.depth * 10 + 50)); }) });
+      sc.current = createScene(canvas.current!, { quality, motion, hex: t.hex, hex2: t.hex2, nodes: orbit ? MODS.length : 0, compact, onNodes: (ns) => ns.forEach((n, i) => { const el = nodes.current[i]; if (!el) return; el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) scale(${n.scale})`; el.style.opacity = String(Math.min(1, .45 + n.scale * .6)); el.style.zIndex = String(Math.round(n.depth * 10 + 50)); }) });
     } catch { setFailed(true); }
     const off = hudBus.on((e) => { if (e === 'pulse' || e === 'success') sc.current?.pulse(); if (e === 'think-on') sc.current?.setThinking(true); if (e === 'think-off') sc.current?.setThinking(false); });
     const move = (e: PointerEvent) => { const s = document.documentElement.style; s.setProperty('--mx', String((e.clientX / window.innerWidth) * 2 - 1)); s.setProperty('--my', String((e.clientY / window.innerHeight) * 2 - 1)); };
     window.addEventListener('pointermove', move, { passive: true });
     return () => { off(); window.removeEventListener('pointermove', move); sc.current?.dispose(); sc.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orbit]);
+  }, [orbit, compact]);
   useEffect(() => { const t = themeOf(theme); sc.current?.setColors(t.hex, t.hex2); }, [theme]);
   useEffect(() => { sc.current?.setQuality(quality); }, [quality]);
   useEffect(() => { sc.current?.setMotion(motion); }, [motion]);
@@ -196,9 +196,30 @@ function HelpBody() {
 }
 
 /* ───────────── HUD ───────────── */
+/** Tarjeta de estudio de la portada: nombre, minutos, cuenta atrás y controles. */
+function StudyCard({ timer, studyToday, onOpen }: { timer: Timer; studyToday: number; onOpen: () => void }) {
+  const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0');
+  return (
+    <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={onOpen} grow={.95}>
+      <TimerControls timer={timer} />
+      <div className="mt-2 flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>
+      <div className="mt-2"><Bar pct={100 - (timer.left / (timer.total * 60)) * 100} /></div>
+    </Panel>
+  );
+}
+
+/** «Más»: el resto de módulos y ajustes en una cuadrícula grande y fácil de tocar (móvil). */
+function MoreBody({ go, onSettings, onHelp, onSwitch, onLogout }: { go: (m: Mod) => void; onSettings: () => void; onHelp: () => void; onSwitch: () => void; onLogout: () => void }) {
+  const tiles: { label: string; icon: typeof Home; run: () => void }[] = [
+    ...(['reminders', 'agenda', 'tasks', 'study', 'notes', 'subjects'] as Mod[]).map((id) => { const m = MODS.find((x) => x.id === id)!; return { label: m.label, icon: m.icon, run: () => go(id) }; }),
+    { label: 'Ajustes', icon: Settings, run: onSettings }, { label: 'Ayuda', icon: HelpCircle, run: onHelp }, { label: 'Cambiar perfil', icon: Users, run: onSwitch }, { label: 'Cerrar sesión', icon: LogOut, run: onLogout },
+  ];
+  return <div className="grid grid-cols-3 gap-3">{tiles.map((t) => <button key={t.label} onClick={t.run} className="more-tile"><t.icon size={24} aria-hidden /><span>{t.label}</span></button>)}</div>;
+}
+
 function Hud() {
   const { data, profile, logout, sync, status, switchProfile } = usePersonal(); const timer = useTimer(); const { sound } = useHud(); const alerts = useReminderAlerts();
-  const [open, setOpen] = useState<Mod | null>(null); const [calDay, setCalDay] = useState(todayISO()); const [finSel, setFinSel] = useState('all'); const [panel, setPanel] = useState<'settings' | 'help' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
+  const dev = useDevice(); const [open, setOpen] = useState<Mod | null>(null); const [calDay, setCalDay] = useState(todayISO()); const [finSel, setFinSel] = useState('all'); const [panel, setPanel] = useState<'settings' | 'help' | 'more' | 'chat' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -212,17 +233,44 @@ function Hud() {
   const todayClasses = classesOn(data, todayISO()); const nextClass = todayClasses.find((s) => mins(s.start) > nowM);
   const pendingRem = data.reminders.filter((r) => !r.done).length; const pendingTasks = data.tasks.filter((x) => !x.done).length;
   const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
-  const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0'); const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
+  const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
   const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money sel={finSel} setSel={setFinSel} />, study: <StudyPanel timer={timer} />, notes: <Notes />, subjects: <Subjects /> };
   const openMod = (m: Mod) => () => setOpen(m);
+  const phoneMode = dev.phone; const W = Math.max(1180, dev.w); const z = dev.w / W; const Hd = z < 1 ? Math.min(dev.h / z, 1000) : dev.h; const top0 = z < 1 ? Math.max(0, (dev.h - Hd * z) / 2) : 0;
   return (
-    <div className="hud-root" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon')) blip('tick', sound); }}>
-      <Stage orbit onOpen={setOpen} />
-      <div className="hud-hero" aria-live="off" style={{ top: '19%' }}>
+    <div className={`hud-root ${phoneMode ? 'hud-root-phone' : ''}`} onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon, .ph-tab, .ph-fab')) blip('tick', sound); }}>
+      <Stage orbit={!phoneMode} compact={phoneMode} onOpen={setOpen} />
+      <AlertStack ctl={alerts} />
+      {phoneMode ? (
+      <div className="hud-phone">
+        <header className="ph-top"><Logo size={26} /><span className="hud-title text-base">E.D.I.T.H.</span>
+          <span className={`hud-chip ml-auto ${sync === 'ok' ? '' : '!border-warn !text-warn'}`} role="status"><i className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: sync === 'ok' ? 'var(--ok)' : 'var(--warn)' }} />{syncLabel}</span>
+          <button className="hud-icon" onClick={() => setPanel('settings')} aria-label="Ajustes"><Settings size={16} aria-hidden /></button></header>
+        {sync === 'conflict' && <p role="alert" className="mx-3 mb-2 rounded border border-warn bg-black/70 px-3 py-2 text-xs text-warn">Datos modificados desde otro dispositivo. Recarga la página para no perder cambios.</p>}
+        <main className="ph-body">
+          <section className="ph-hero" aria-live="off"><p className="hud-sub">{greet}</p><p className="hud-title text-3xl">{name.toUpperCase()}</p><p className="mt-1 text-xs text-muted">{format(now, "EEEE d 'de' MMMM", { locale: es })}</p></section>
+          <div className="ph-chips" aria-label="Resumen"><span className="hud-chip"><Clock size={11} aria-hidden />{nextClass ? `${nextClass.title} · ${nextClass.start}` : 'sin más clases hoy'}</span><span className="hud-chip"><BellRing size={11} aria-hidden />{pendingRem} recordatorios</span><span className="hud-chip"><CheckSquare size={11} aria-hidden />{pendingTasks} tareas</span><span className="hud-chip"><Wallet size={11} aria-hidden />{eur(st.total)}</span></div>
+          <SchedulePanel now={now} onOpen={openMod('schedule')} compact />
+          <RemindersPanel onOpen={openMod('reminders')} />
+          <CalendarPanel day={calDay} setDay={setCalDay} onOpen={openMod('agenda')} />
+          <FinancePanel onOpen={(id) => { setFinSel(id ?? data.wallets[0]?.id ?? 'all'); setOpen('money'); }} />
+          <StudyCard timer={timer} studyToday={studyToday} onOpen={openMod('study')} />
+          <span className="sr-only">{status}</span>
+        </main>
+        <nav className="ph-tabs" aria-label="Navegación">
+          <button className="ph-tab" aria-current={!open && !panel ? 'page' : undefined} onClick={() => { setOpen(null); setPanel(null); }}><Home size={20} aria-hidden />Hoy</button>
+          <button className="ph-tab" aria-current={open === 'schedule' ? 'page' : undefined} onClick={() => setOpen('schedule')}><Clock size={20} aria-hidden />Horario</button>
+          <button className="ph-fab" aria-label="Hablar con EDITH" onClick={() => setPanel('chat')}><Logo size={34} /></button>
+          <button className="ph-tab" aria-current={open === 'money' ? 'page' : undefined} onClick={() => { setFinSel('all'); setOpen('money'); }}><Wallet size={20} aria-hidden />Dinero</button>
+          <button className="ph-tab" aria-current={panel === 'more' ? 'page' : undefined} onClick={() => setPanel('more')}><MoreHorizontal size={20} aria-hidden />Más</button>
+        </nav>
+      </div>
+      ) : (
+      <div className="hud-scale" style={{ width: W, height: Hd, top: top0, transform: z < 1 ? `scale(${z})` : undefined }}>
+      <div className="hud-hero" aria-live="off" style={{ top: z < 1 ? 'calc(45% - 205px)' : '19%' }}>
         <div className="mb-2 flex justify-center"><Logo size={40} /></div><p className="hud-sub">{greet}</p><p className="hud-title text-2xl">{name.toUpperCase()}</p>
         <p className="mt-1 text-[11px] text-muted">{todayClasses.length} clases hoy · {pendingRem} recordatorios · total {eur(st.total)}</p>
       </div>
-      <AlertStack ctl={alerts} />
       <div className="hud-stage">
         <header className="hud-top">
           <div className="flex items-center gap-3"><Logo size={30} /><span className="hud-title text-lg">E.D.I.T.H.</span><span className="hud-chip hidden md:inline-flex">{name} · {format(now, "EEE d 'de' MMM", { locale: es })}</span></div>
@@ -246,21 +294,23 @@ function Hud() {
           <div className="hud-col r">
             <CalendarPanel day={calDay} setDay={setCalDay} onOpen={openMod('agenda')} />
             <FinancePanel onOpen={(id) => { setFinSel(id ?? data.wallets[0]?.id ?? 'all'); setOpen('money'); }} />
-            <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={openMod('study')} grow={.95}>
-              <TimerControls timer={timer} />
-              <div className="mt-2 flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>
-              <div className="mt-2"><Bar pct={100 - (timer.left / (timer.total * 60)) * 100} /></div>
-            </Panel>
+            <StudyCard timer={timer} studyToday={studyToday} onOpen={openMod('study')} />
           </div>
         </div>
         <nav className="hud-dock" aria-label="Módulos">{MODS.map((m, i) => <button key={m.id} onClick={() => { setOpen(m.id); blip('open', sound); hudBus.emit('pulse'); }}><m.icon size={15} aria-hidden /><span className="hidden xl:inline">{m.label}</span><span className="hud-kbd">{i + 1}</span></button>)}</nav>
         <span className="sr-only">{status}</span>
       </div>
-      <Drawer open={open !== null} onClose={() => setOpen(null)} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className={open === 'schedule' ? 'w-full max-w-[min(1240px,97vw)]' : 'w-full max-w-xl'}>
-        <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5"><h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
+      </div>
+      )}
+      <Drawer open={open !== null} onClose={() => setOpen(null)} hideClose={dev.phone} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className={dev.phone ? 'w-full max-w-none' : open === 'schedule' ? 'w-full max-w-[min(1240px,97vw)]' : 'w-full max-w-xl'}>
+        <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5">{dev.phone && <button className="ph-back" onClick={() => setOpen(null)}><ChevronLeft size={18} aria-hidden />Volver</button>}<h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
       </Drawer>
-      <Drawer open={panel !== null} onClose={() => setPanel(null)} label={panel === 'settings' ? 'Ajustes' : 'Ayuda'} className="w-full max-w-md">
-        <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5"><h2 className="hud-title mb-5 text-xl">{panel === 'settings' ? 'AJUSTES' : 'AYUDA'}</h2>{panel === 'settings' ? <SettingsBody onSwitch={() => { setPanel(null); void switchProfile(); }} /> : <HelpBody />}</div>
+      <Drawer open={panel !== null} onClose={() => setPanel(null)} hideClose={dev.phone} label={{ settings: 'Ajustes', help: 'Ayuda', more: 'Más', chat: 'EDITH' }[panel ?? 'help']} className={dev.phone ? 'w-full max-w-none' : 'w-full max-w-md'}>
+        <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5">{dev.phone && <button className="ph-back" onClick={() => setPanel(null)}><ChevronLeft size={18} aria-hidden />Volver</button>}
+          <h2 className="hud-title mb-5 text-xl">{{ settings: 'AJUSTES', help: 'AYUDA', more: 'MÁS', chat: 'EDITH' }[panel ?? 'help']}</h2>
+          {panel === 'settings' && <SettingsBody onSwitch={() => { setPanel(null); void switchProfile(); }} />}{panel === 'help' && <HelpBody />}
+          {panel === 'more' && <MoreBody go={(m) => { setPanel(null); setOpen(m); }} onSettings={() => setPanel('settings')} onHelp={() => setPanel('help')} onSwitch={() => { setPanel(null); void switchProfile(); }} onLogout={() => void logout()} />}
+          {panel === 'chat' && <Chat profile={name} inputRef={chatRef} tall />}</div>
       </Drawer>
     </div>
   );
@@ -268,7 +318,7 @@ function Hud() {
 
 /* ───────────── Chat con EDITH ───────────── */
 const SUGGEST = ['¿Qué tengo hoy?', '¿Cuándo es mi próximo examen?', 'Resume mis finanzas del mes', 'Hazme un plan de estudio para esta semana'];
-function Chat({ profile, inputRef }: { profile: string; inputRef: React.RefObject<HTMLInputElement | null> }) {
+function Chat({ profile, inputRef, tall }: { profile: string; inputRef: React.RefObject<HTMLInputElement | null>; tall?: boolean }) {
   const sound = useHud((s) => s.sound); const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([]); const [q, setQ] = useState(''); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [msgs]);
   const ask = async (text: string) => {
@@ -279,7 +329,7 @@ function Chat({ profile, inputRef }: { profile: string; inputRef: React.RefObjec
     <section className="hud-panel !flex-none" aria-label="Conversación con EDITH">
       <i className="hud-glare" aria-hidden />
       <h2 className="hud-h"><span>Habla con EDITH</span><span className="hud-kbd">/</span></h2>
-      <div className="mb-2 max-h-28 min-h-10 space-y-2 overflow-y-auto text-sm" aria-live="polite">
+      <div className={`mb-2 space-y-2 overflow-y-auto text-sm ${tall ? 'max-h-[58dvh] min-h-40' : 'max-h-28 min-h-10'}`} aria-live="polite">
         {msgs.length === 0 && <div className="flex flex-wrap gap-2">{SUGGEST.map((s) => <button key={s} className="hud-chip hover:!border-[var(--hud)] hover:!text-white" onClick={() => void ask(s)}>{s}</button>)}</div>}
         {msgs.map((m, i) => <p key={i} className={m.role === 'user' ? 'text-right text-muted' : 'whitespace-pre-wrap'}><span className="hud-sub mr-2">{m.role === 'user' ? profile : 'EDITH'}</span>{m.text}</p>)}
         {busy && <p className="hud-sub"><Loader2 size={12} className="mr-1 inline animate-spin" aria-hidden />Procesando…</p>}<div ref={end} />
@@ -290,7 +340,8 @@ function Chat({ profile, inputRef }: { profile: string; inputRef: React.RefObjec
 }
 
 export default function PersonalPage() {
-  const { status, init } = usePersonal(); const started = useRef(false); const theme = useHud((s) => s.theme);
+  const { status, init } = usePersonal(); const dev = useDevice();
+  useEffect(() => { document.documentElement.classList.toggle('hud-mobile', dev.phone); return () => document.documentElement.classList.remove('hud-mobile'); }, [dev.phone]); const started = useRef(false); const theme = useHud((s) => s.theme);
   useEffect(() => { document.documentElement.classList.add('hud'); document.documentElement.dataset.theme = 'dark'; document.title = 'EDITH · Personal'; return () => { document.documentElement.classList.remove('hud'); clearTheme(); }; }, []);
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { if (!started.current) { started.current = true; void init(); } }, [init]);

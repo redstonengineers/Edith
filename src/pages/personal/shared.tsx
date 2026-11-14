@@ -1,4 +1,4 @@
-import { useRef, type FormEvent, type PointerEvent as RPE, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent as RPE, type ReactNode } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -30,3 +30,11 @@ export function AddForm({ onAdd, children, label = 'Añadir' }: { onAdd: () => b
   return <form onSubmit={(e: FormEvent) => { e.preventDefault(); onAdd(); }} className="mb-4 flex flex-wrap items-end gap-2">{children}<button className="hud-btn" type="submit"><Plus size={14} className="mr-1 inline" aria-hidden />{label}</button></form>;
 }
 export const F = ({ label, children, w = 'flex-1 min-w-32' }: { label: string; children: ReactNode; w?: string }) => <label className={`block ${w}`}><span className="hud-sub mb-1 block">{label}</span>{children}</label>;
+
+/** Tipo de dispositivo: móvil (el lado corto < 600 px) o ancho (ordenador y iPad, con la misma disposición). */
+export function useDevice() {
+  const get = () => ({ w: window.innerWidth, h: window.innerHeight, phone: Math.min(window.innerWidth, window.innerHeight) < 600 });
+  const [d, setD] = useState(get);
+  useEffect(() => { const f = () => setD(get()); window.addEventListener('resize', f); window.addEventListener('orientationchange', f); return () => { window.removeEventListener('resize', f); window.removeEventListener('orientationchange', f); }; }, []);
+  return d;
+}
