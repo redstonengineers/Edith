@@ -1,3 +1,4 @@
+import { Logo } from '@/components/ui/Logo';
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
@@ -27,7 +28,7 @@ export default function LoginPage() {
   return (
     <div className="ambient grid min-h-full lg:grid-cols-[1.1fr_1fr]">
       <div className="relative z-10 hidden flex-col justify-between border-r border-line p-12 lg:flex">
-        <div className="flex items-center gap-3"><span aria-hidden className="grid h-9 w-9 place-items-center rounded-[10px]" style={{ background: 'linear-gradient(135deg,var(--brand),var(--brand-2))' }}><span className="h-3 w-3 rounded-full bg-[#0d0a24]" /></span><span className="text-sm font-semibold tracking-wide">EDITH</span></div>
+        <Logo withWord />
         <div>
           <h1 className="max-w-md text-4xl leading-tight font-semibold tracking-tight">El centro de control de tu academia.</h1>
           <p className="mt-4 max-w-md text-muted">Alumnos, horarios, asistencia, pagos y comunicación en un único lugar. Cada academia con su marca, su vocabulario y sus módulos.</p>

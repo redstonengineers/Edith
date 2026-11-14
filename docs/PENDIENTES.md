@@ -14,14 +14,14 @@ Marca cada punto cuando esté hecho.
 - [ ] **WhatsApp / SMS / push**: hoy los canales están simulados y marcados como tal. Requiere WhatsApp Business API (Meta o proveedor como Twilio) y plantillas aprobadas.
 - [ ] **JARVIS con Claude**: el código ya está (`server/claude.ts`). Falta crear una clave en console.anthropic.com y definir en Coolify `ANTHROPIC_API_KEY` (y opcionalmente `ANTHROPIC_MODEL`) en la app del servidor. Sin clave usa el motor local.
 - [ ] **Pagos online** (cobro con tarjeta, domiciliación SEPA): Stripe o Redsys; hoy los pagos se registran a mano.
-- [ ] **Almacenamiento de documentos**: hoy solo se guardan metadatos. Hace falta un bucket S3-compatible (o volumen) y claves.
+- [ ] **Almacenamiento en Google Drive** (decidido): hoy solo se guardan metadatos. Falta: proyecto en Google Cloud con la API de Drive activada, una cuenta de servicio con su clave JSON (variable `GOOGLE_SERVICE_ACCOUNT_JSON` en Coolify) y una carpeta raíz de Drive compartida con esa cuenta (`DRIVE_ROOT_FOLDER_ID`). Si hay clínicas, usar Google Workspace de pago con el acuerdo de tratamiento de datos firmado, no una cuenta personal. Después lo implemento en el servidor (una subcarpeta por academia, descargas autenticadas por el servidor).
 - [ ] **Facturación SaaS** (suscripciones y MRR de la plataforma): cifras orientativas; depende del proveedor de pagos anterior.
 
 ## 3. Producto y negocio (decisiones tuyas)
 - [ ] **Qué sectores se venden primero.** Hay 18 plantillas (ver `docs/VERTICALES.md`). Elegir 2-3 y definir precio por sector.
 - [x] **Autoescuelas / Volanta**: hecho por integración (módulo «Prácticas y vehículos» que abre Volanta, ya desplegada). Pendiente: inicio de sesión único y alumnos compartidos entre EDITH y Volanta (requiere unificar usuarios), o portarlo por completo a EDITH.
 - [ ] **Textos legales**: política de privacidad, aviso legal y contrato de encargado de tratamiento (RGPD), imprescindibles al guardar datos de alumnos, menores y, en clínicas, datos de salud. Revisión por un abogado.
-- [ ] **Marca**: logo y nombre definitivo (EDITH), favicon e iconos PWA propios.
+- [x] **Logo**: elegida la propuesta B (hexágono con E), aplicada en acceso, onboarding y favicon. Pendiente: iconos PWA y versión de una sola tinta si se imprime.
 - [ ] **Dominio por cliente** (white-label): decidir si cada academia tendrá subdominio propio (`cliente.edith…`) o dominio propio.
 
 ## 4. Seguridad antes de producción real
