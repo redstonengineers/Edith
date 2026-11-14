@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+
+/* ───────── Tokens ─────────
+   Los colores de marca (--brand, --brand-2) se inyectan en runtime desde Settings (lib/branding.ts).
+   El resto del sistema deriva de ellos, así cambiar la marca recolorea toda la app. */
+:root {
+  --brand: #38bdf8;
+  --brand-2: #818cf8;
+  --on-brand: #04121c;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #070b13;
+  --surface: #0d1320;
+  --surface-2: #131b2b;
+  --line: #1f2a3d;
+  --line-strong: #2c3a52;
+  --text: #e8edf6;
+  --muted: #94a3bc;
+  --brand-text: color-mix(in oklab, var(--brand) 82%, white);
+  --ok: #34d399; --warn: #fbbf24; --bad: #f87171; --info: #60a5fa;
+  --glow: color-mix(in oklab, var(--brand) 22%, transparent);
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-2: #f0f3f9;
+  --line: #e2e7f0;
+  --line-strong: #cdd5e3;
+  --text: #0f172a;
+  --muted: #48566f;
+  --brand-text: color-mix(in oklab, var(--brand) 62%, black);
+  --ok: #05603f; --warn: #824008; --bad: #a61b1b; --info: #1d4ed8;
+  --glow: color-mix(in oklab, var(--brand) 14%, transparent);
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-on-brand: var(--on-brand);
+  --color-brand-text: var(--brand-text);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-info: var(--info);
+}
+
+html, body, #root { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Fondo ambiental muy sutil */
+.ambient::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(900px 480px at 85% -10%, var(--glow), transparent 60%),
+    radial-gradient(700px 400px at -5% 110%, color-mix(in oklab, var(--brand-2) 10%, transparent), transparent 60%);
+}
+
+/* Panel translúcido (glass muy moderado) */
+.panel {
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+}
+:root[data-theme='light'] .panel { box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.08); }
+
+/* Foco visible accesible */
+@layer base { :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; } }
+
+/* Animaciones breves y con propósito */
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-in-right { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slide-in-left { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok) 55%, transparent); } 100% { box-shadow: 0 0 0 7px transparent; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes bell { 0%,100% { transform: rotate(0); } 20% { transform: rotate(14deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
+@keyframes draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: var(--off); } }
+
+.anim-rise { animation: rise .32s cubic-bezier(.2,.7,.2,1) both; }
+.anim-fade { animation: fade .18s ease-out both; }
+.anim-pop { animation: pop .14s ease-out both; }
+.anim-right { animation: slide-in-right .22s cubic-bezier(.2,.7,.2,1) both; }
+.anim-left { animation: slide-in-left .22s cubic-bezier(.2,.7,.2,1) both; }
+.anim-bell { animation: bell .7s ease-in-out 1; transform-origin: 50% 0; }
+.dot-live { animation: pulse-ring 1.8s ease-out infinite; }
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, color-mix(in oklab, var(--surface-2) 70%, var(--line-strong)) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: 8px;
+}
+.ring-draw { animation: draw .9s cubic-bezier(.2,.7,.2,1) .15s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+/* Scrollbars discretas */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+@media print {
+  body * { visibility: hidden !important; }
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area { position: fixed; inset: 0; background: #fff !important; color: #000 !important; padding: 32px; }
+}
+
+/* Paleta categórica de gráficos (slots 1-3 validados en todas las parejas). Un solo color = marca. */
+:root[data-theme='light'] { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; }
+:root[data-theme='dark'] { --s1: #3987e5; --s2: #d95926; --s3: #199e70; }

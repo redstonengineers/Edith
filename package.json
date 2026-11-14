@@ -1,0 +1,45 @@
+{
+  "name": "academy-control",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "dev:api": "vite --mode api",
+    "build:api": "node scripts-gen-remote.mjs && tsc -b && vite build --mode api",
+    "server": "tsx server/index.ts",
+    "server:dev": "SEED_DEMO=1 tsx watch server/index.ts",
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
+    "gen:remote": "node scripts-gen-remote.mjs",
+    "test:api": "node tests/api-security.mjs",
+    "test:a11y": "node tests/axe.cjs"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "fastify": "^5.12.8",
+    "lucide-react": "^1.72.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.7",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

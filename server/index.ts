@@ -1,0 +1,37 @@
+import { generateDatabase } from '../src/data/seed';
+import type { Database } from '../src/data/db';
+import { setHasher, hashPassword } from '../src/services/crypto';
+import { installDatabase, getDatabase } from '../src/services/database';
+import { DEFAULT_LABELS } from '../src/config/presets';
+import { MODULES } from '../src/config/modules';
+import { buildApp } from './app';
+import { config } from './config';
+import { scryptHasher } from './password';
+import { Store } from './store';
+
+setHasher(scryptHasher);
+const store = new Store(config.dbPath);
+if (config.reseed) store.wipe();
+
+let db: Database;
+if (!store.isEmpty()) db = store.load();
+else if (config.seedDemo) {
+  db = generateDatabase(new Date());
+  const pwd = await hashPassword('demo'); // misma sal para todas las cuentas demo: solo en demo
+  for (const u of db.users) u.pwd = await hashPassword('demo', pwd.salt);
+  console.warn('⚠ SEED_DEMO=1: cuentas de demostración con contraseña "demo". No usar en producción.');
+} else {
+  db = Object.fromEntries(['academies', 'settings', 'users', 'students', 'guardians', 'teachers', 'subjects', 'classrooms', 'groups', 'classes', 'enrollments', 'waitlist', 'attendance', 'exams', 'grades', 'payments', 'incidents', 'documents', 'notifications', 'messages', 'activity'].map((t) => [t, []])) as unknown as Database;
+  if (config.bootstrapEmail && config.bootstrapPassword) {
+    db.academies.push({ id: 'acad_platform', name: 'Plataforma', type: 'otro', plan: 'pro', status: 'active', createdAt: new Date().toISOString().slice(0, 10) });
+    db.settings.push({ academyId: 'acad_platform', branding: { name: 'Plataforma', tagline: '', primary: '#38bdf8', secondary: '#818cf8', theme: 'dark' }, labels: DEFAULT_LABELS, modules: Object.fromEntries(MODULES.map((m) => [m.id, true])), locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
+    db.users.push({ academyId: 'acad_platform', id: 'acad_platform_usr_001', name: 'Propietario', email: config.bootstrapEmail, role: 'SUPER_ADMIN', avatarHue: 200, pwd: await hashPassword(config.bootstrapPassword) });
+    console.warn('Super Admin creado a partir de BOOTSTRAP_ADMIN_*.');
+  } else console.warn('Base vacía y sin BOOTSTRAP_ADMIN_EMAIL/PASSWORD ni SEED_DEMO: solo se podrán crear academias desde el onboarding.');
+}
+installDatabase(db, () => store.flush(getDatabase()));
+store.flush(db);
+
+const app = buildApp(store);
+await app.listen({ port: config.port, host: config.host });
+for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => void app.close().then(() => process.exit(0)));
