@@ -14,7 +14,7 @@ const eur = (n: number) => `${n.toLocaleString('es-ES', { maximumFractionDigits:
 const gradeAvg = (d: PData, id: string) => { const g = d.grades.filter((x) => x.subjectId === id); const w = g.reduce((a, x) => a + x.weight, 0); return w ? g.reduce((a, x) => a + x.score * x.weight, 0) / w : null; };
 const streak = (log: string[]) => { let n = 0; let d = new Date(); if (!log.includes(format(d, 'yyyy-MM-dd'))) d = addDays(d, -1); while (log.includes(format(d, 'yyyy-MM-dd'))) { n++; d = addDays(d, -1); } return n; };
 
-function Bar({ pct, tone }: { pct: number; tone?: 'warn' | 'bad' }) { return <div className={`hud-bar ${tone ?? ''}`} role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>; }
+function Bar({ pct, tone }: { pct: number; tone?: 'warn' | 'bad' }) { return <div className={`hud-bar ${tone ?? ''}`} role="progressbar" aria-label="Progreso" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>; }
 function Panel({ title, right, children, className = '' }: { title: string; right?: ReactNode; children: ReactNode; className?: string }) { return <section className={`hud-panel ${className}`}><h2 className="hud-h"><span>{title}</span>{right}</h2>{children}</section>; }
 const Empty = ({ text }: { text: string }) => <p className="py-3 text-xs text-muted">{text}</p>;
 
@@ -54,8 +54,9 @@ function Reactor({ children }: { children: ReactNode }) {
         <g className="r-spin-b"><circle cx="200" cy="200" r="120" fill="none" stroke="#22c8ff" strokeWidth="10" strokeDasharray="38 12" strokeOpacity=".55" /></g>
         <circle cx="200" cy="200" r="98" fill="#041426" stroke="#22c8ff" strokeWidth="2" />
         <g className="r-core"><circle cx="200" cy="200" r="86" fill="url(#core)" /><circle cx="200" cy="200" r="66" fill="none" stroke="#bff0ff" strokeOpacity=".5" /></g>
+        <circle cx="200" cy="200" r="72" fill="#031020" fillOpacity=".9" />
       </svg>
-      <div className="reactor-center"><div className="max-w-[58%]">{children}</div></div>
+      <div className="reactor-center"><div className="max-w-[34%]">{children}</div></div>
     </div>
   );
 }
@@ -219,7 +220,7 @@ function Hud() {
           </Panel>
         </div>
         <div className="space-y-4">
-          <Reactor><p className="hud-sub">{greet}</p><p className="hud-title text-2xl">{name.toUpperCase()}</p><p className="mt-1 text-xs text-muted">{pending.length} misiones · {upcoming.length} citas próximas</p></Reactor>
+          <Reactor><p className="hud-sub">{greet}</p><p className="hud-title text-xl">{name.toUpperCase()}</p><p className="mt-1 text-[10px] leading-tight text-muted">{pending.length} misiones<br />{upcoming.length} citas</p></Reactor>
           <Chat profile={name} />
           <div className="hud-panel text-center"><p className="hud-sub">System status</p><p className="hud-title mt-1 text-lg">ALL SYSTEMS OPERATIONAL</p><div className="mt-3"><Bar pct={status === 'ready' ? 100 : 30} /></div></div>
         </div>
