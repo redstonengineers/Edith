@@ -4,7 +4,7 @@ Lo que no puedo resolver desde la sesión (credenciales, DNS, cuentas de tercero
 Marca cada punto cuando esté hecho.
 
 ## 1. Despliegue y dominio
-- [ ] **Comprobar `https://edith.redstonengineers.com`** en un navegador: desde la sesión el proxy bloquea el dominio, así que solo he podido confirmar el estado en Coolify (`running:healthy`). Verificar DNS (registro A/CNAME) y certificado.
+- [ ] **Comprobar en un navegador `https://edith.redstonengineers.com`** (app con servidor + modo personal JARVIS) **y `https://demo-edith.redstonengineers.com`** (demo estática; subdominio nuevo: hay que crear su registro DNS). Desde la sesión el proxy bloquea los dominios, así que solo he podido confirmar el estado en Coolify (`running:healthy`). Verificar DNS y certificados.
 - [ ] **Decidir si se despliega el modo servidor.** Ahora está publicada la demo estática (datos en el navegador de cada visitante). Para datos compartidos hay que desplegar el `Dockerfile` de la raíz en Coolify (app aparte, volumen persistente `/data`) con `BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_PASSWORD` (o `SEED_DEMO=1` solo para una demo). Pasar el frontend a `VITE_DATA_MODE=api`.
 - [ ] **Copias de seguridad** del volumen `/data` hacia almacenamiento externo (Coolify → Backups o S3).
 - [ ] Token de GitHub con permisos de creación de repos si quieres que la sesión cree repos nuevos por sí sola (hoy hay que crearlos a mano).

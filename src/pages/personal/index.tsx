@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent as RPE, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { addDays, format, parseISO, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarDays, CheckSquare, Flame, GraduationCap, Loader2, LogOut, NotebookPen, Plus, Send, Target, Timer, Trash2, Wallet, X } from 'lucide-react';
+import { CalendarDays, CheckSquare, Flame, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, Plus, RotateCcw, Send, Settings, Target, Timer as TimerIcon, Trash2, Users, Wallet, X } from 'lucide-react';
 import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
+import { createScene, type HudScene } from './scene';
+import { THEMES, applyTheme, clearTheme, themeOf, useHud, type Quality } from './themes';
+import { blip, hudBus } from './fx';
 import './hud.css';
 
 const todayISO = () => format(new Date(), 'yyyy-MM-dd');
@@ -15,59 +18,88 @@ const gradeAvg = (d: PData, id: string) => { const g = d.grades.filter((x) => x.
 const streak = (log: string[]) => { let n = 0; let d = new Date(); if (!log.includes(format(d, 'yyyy-MM-dd'))) d = addDays(d, -1); while (log.includes(format(d, 'yyyy-MM-dd'))) { n++; d = addDays(d, -1); } return n; };
 
 function Bar({ pct, tone }: { pct: number; tone?: 'warn' | 'bad' }) { return <div className={`hud-bar ${tone ?? ''}`} role="progressbar" aria-label="Progreso" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} /></div>; }
-function Panel({ title, right, children, className = '' }: { title: string; right?: ReactNode; children: ReactNode; className?: string }) { return <section className={`hud-panel ${className}`}><h2 className="hud-h"><span>{title}</span>{right}</h2>{children}</section>; }
-const Empty = ({ text }: { text: string }) => <p className="py-3 text-xs text-muted">{text}</p>;
+const Empty = ({ text }: { text: string }) => <p className="py-2 text-xs text-muted">{text}</p>;
+
+/** Panel de cristal que se inclina hacia el puntero y refleja luz. */
+function Panel({ title, right, children, className = '', onOpen }: { title: string; right?: ReactNode; children: ReactNode; className?: string; onOpen?: () => void }) {
+  const ref = useRef<HTMLElement>(null);
+  const move = (e: RPE<HTMLElement>) => {
+    if (e.pointerType === 'touch') return; const el = ref.current!; const r = el.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width; const py = (e.clientY - r.top) / r.height;
+    el.classList.add('tilting'); el.style.setProperty('--ry', `${(px - .5) * 8}deg`); el.style.setProperty('--rx', `${-(py - .5) * 8}deg`); el.style.setProperty('--gx', `${px * 100}%`); el.style.setProperty('--gy', `${py * 100}%`);
+  };
+  const leave = () => { const el = ref.current!; el.classList.remove('tilting'); el.style.setProperty('--ry', '0deg'); el.style.setProperty('--rx', '0deg'); };
+  return (
+    <section ref={ref} className={`hud-panel ${className}`} onPointerMove={move} onPointerLeave={leave}>
+      <i className="hud-glare" aria-hidden />
+      <h2 className="hud-h"><span>{title}</span>{right}{onOpen && <button className="hud-ghost" onClick={onOpen} aria-label={`Abrir ${title}`}><Plus size={14} aria-hidden /></button>}</h2>
+      <div className="hud-body">{children}</div>
+    </section>
+  );
+}
+
+/* ───────────── Módulos ───────────── */
+type Mod = 'tasks' | 'agenda' | 'subjects' | 'habits' | 'study' | 'notes' | 'money' | 'goals';
+const MODS: { id: Mod; label: string; icon: typeof CheckSquare }[] = [
+  { id: 'tasks', label: 'Tareas', icon: CheckSquare }, { id: 'agenda', label: 'Agenda', icon: CalendarDays }, { id: 'subjects', label: 'Notas', icon: GraduationCap },
+  { id: 'habits', label: 'Hábitos', icon: Flame }, { id: 'study', label: 'Estudio', icon: TimerIcon }, { id: 'notes', label: 'Apuntes', icon: NotebookPen },
+  { id: 'money', label: 'Gastos', icon: Wallet }, { id: 'goals', label: 'Objetivos', icon: Target },
+];
+
+/* ───────────── Escena 3D de fondo + nodos orbitales ───────────── */
+function Stage({ onOpen, orbit }: { onOpen?: (m: Mod) => void; orbit: boolean }) {
+  const canvas = useRef<HTMLCanvasElement>(null); const nodes = useRef<(HTMLButtonElement | null)[]>([]); const sc = useRef<HudScene | null>(null);
+  const { theme, quality, motion, sound } = useHud(); const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const t = themeOf(theme);
+    try {
+      sc.current = createScene(canvas.current!, { quality, motion, hex: t.hex, hex2: t.hex2, nodes: orbit ? MODS.length : 0, onNodes: (ns) => ns.forEach((n, i) => { const el = nodes.current[i]; if (!el) return; el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) scale(${n.scale})`; el.style.opacity = String(Math.min(1, .45 + n.scale * .6)); el.style.zIndex = String(Math.round(n.depth * 10 + 50)); }) });
+    } catch { setFailed(true); }
+    const off = hudBus.on((e) => { if (e === 'pulse' || e === 'success') sc.current?.pulse(); if (e === 'think-on') sc.current?.setThinking(true); if (e === 'think-off') sc.current?.setThinking(false); });
+    const move = (e: PointerEvent) => { const s = document.documentElement.style; s.setProperty('--mx', String((e.clientX / window.innerWidth) * 2 - 1)); s.setProperty('--my', String((e.clientY / window.innerHeight) * 2 - 1)); };
+    window.addEventListener('pointermove', move, { passive: true });
+    return () => { off(); window.removeEventListener('pointermove', move); sc.current?.dispose(); sc.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orbit]);
+  useEffect(() => { const t = themeOf(theme); sc.current?.setColors(t.hex, t.hex2); }, [theme]);
+  useEffect(() => { sc.current?.setQuality(quality); }, [quality]);
+  useEffect(() => { sc.current?.setMotion(motion); }, [motion]);
+  return (<>
+    <canvas ref={canvas} className="hud-canvas" aria-hidden />
+    {failed && <p className="sr-only">La escena 3D no está disponible en este dispositivo.</p>}
+    <div className="hud-vignette" aria-hidden />
+    {orbit && <div className="hud-nodes" role="group" aria-label="Módulos">
+      {MODS.map((m, i) => <button key={m.id} ref={(el) => { nodes.current[i] = el; }} className="hud-node" aria-label={`${m.label} (tecla ${i + 1})`} onClick={() => { blip('open', sound); hudBus.emit('pulse'); onOpen?.(m.id); }}
+        onPointerEnter={() => { sc.current?.setHover(true); blip('hover', sound); }} onPointerLeave={() => sc.current?.setHover(false)}>
+        <span className="orb"><m.icon size={20} aria-hidden /></span><span className="lbl">{m.label}</span></button>)}
+    </div>}
+  </>);
+}
 
 /* ───────────── Selector de perfil ───────────── */
 function Choose() {
   const { choose, logout } = usePersonal(); const [busy, setBusy] = useState<Profile | null>(null); const [err, setErr] = useState('');
-  const go = async (p: Profile) => { setBusy(p); setErr(''); try { await choose(p); } catch (e) { setErr((e as Error).message); setBusy(null); } };
+  const go = async (p: Profile) => { setBusy(p); setErr(''); hudBus.emit('think-on'); try { await choose(p); } catch (e) { setErr((e as Error).message); setBusy(null); } finally { hudBus.emit('think-off'); } };
   return (
-    <main className="hud-root grid min-h-screen place-items-center p-6">
-      <div className="relative z-10 text-center">
-        <h1 className="hud-title text-5xl">JARVIS</h1><p className="hud-sub mt-2">Just a rather very intelligent system</p>
-        <p className="mt-10 mb-5 text-sm text-muted">Identifícate para abrir tu sistema personal</p>
-        <div className="flex flex-wrap justify-center gap-6">
+    <main className="hud-root">
+      <Stage orbit={false} />
+      <div className="absolute inset-x-0 top-[7vh] z-10 text-center" style={{ textShadow: '0 0 10px #000' }}>
+        <h1 className="hud-title text-5xl md:text-6xl">J.A.R.V.I.S.</h1><p className="hud-sub mt-3">Just a rather very intelligent system</p></div>
+      <div className="absolute inset-x-0 bottom-[7vh] z-10 p-4 text-center">
+        <p className="mb-5 text-sm text-muted" style={{ textShadow: '0 0 8px #000' }}>¿Quién eres? Elige tu perfil para despertar tu sistema</p>
+        <div className="flex flex-wrap justify-center gap-7">
           {(Object.keys(PROFILES) as Profile[]).map((p) => (
             <button key={p} className="profile-card" disabled={!!busy} onClick={() => void go(p)} aria-label={`Entrar como ${PROFILES[p].name}`}>
               <span className="hud-sub block">{PROFILES[p].tag}</span><span className="hud-title mt-3 block text-3xl">{PROFILES[p].name.toUpperCase()}</span>
-              <span className="mt-4 block text-xs text-muted">{busy === p ? 'Cargando sistemas…' : 'Abrir mi JARVIS'}</span>
+              <span className="mt-4 block text-xs text-muted">{busy === p ? 'Cargando sistemas…' : 'Abrir mi JARVIS →'}</span>
             </button>))}
         </div>
         {err && <p role="alert" className="mt-5 text-sm text-bad">{err}</p>}
-        <button className="hud-ghost mt-10" onClick={() => void logout()}>Cerrar sesión</button>
+        <button className="hud-ghost mt-6" onClick={() => void logout()}>Cerrar sesión</button>
       </div>
     </main>
   );
 }
 
-/* ───────────── Reactor ───────────── */
-function Reactor({ children }: { children: ReactNode }) {
-  const ticks = Array.from({ length: 60 }, (_, i) => i);
-  return (
-    <div className="reactor" aria-hidden={false}>
-      <svg viewBox="0 0 400 400" aria-hidden>
-        <defs><radialGradient id="core" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#fff" /><stop offset=".25" stopColor="#bff0ff" /><stop offset=".6" stopColor="#22c8ff" stopOpacity=".7" /><stop offset="1" stopColor="#22c8ff" stopOpacity="0" /></radialGradient></defs>
-        <g className="r-spin-c" stroke="#22c8ff" strokeOpacity=".7">{ticks.map((i) => <line key={i} x1="200" y1="8" x2="200" y2={i % 5 === 0 ? 24 : 16} transform={`rotate(${i * 6} 200 200)`} strokeWidth={i % 5 === 0 ? 2 : 1} />)}</g>
-        <circle cx="200" cy="200" r="170" fill="none" stroke="#22c8ff" strokeOpacity=".35" strokeWidth="1" />
-        <g className="r-spin-a"><circle cx="200" cy="200" r="150" fill="none" stroke="#22c8ff" strokeWidth="5" strokeDasharray="90 30 40 30" strokeOpacity=".85" /><circle cx="200" cy="200" r="138" fill="none" stroke="#3b82f6" strokeWidth="2" strokeDasharray="3 9" /></g>
-        <g className="r-spin-b"><circle cx="200" cy="200" r="120" fill="none" stroke="#22c8ff" strokeWidth="10" strokeDasharray="38 12" strokeOpacity=".55" /></g>
-        <circle cx="200" cy="200" r="98" fill="#041426" stroke="#22c8ff" strokeWidth="2" />
-        <g className="r-core"><circle cx="200" cy="200" r="86" fill="url(#core)" /><circle cx="200" cy="200" r="66" fill="none" stroke="#bff0ff" strokeOpacity=".5" /></g>
-        <circle cx="200" cy="200" r="72" fill="#031020" fillOpacity=".9" />
-      </svg>
-      <div className="reactor-center"><div className="max-w-[34%]">{children}</div></div>
-    </div>
-  );
-}
-
-/* ───────────── Módulos (cajón lateral) ───────────── */
-type Mod = 'tasks' | 'agenda' | 'subjects' | 'habits' | 'study' | 'notes' | 'money' | 'goals';
-const MODS: { id: Mod; label: string; icon: typeof CheckSquare }[] = [
-  { id: 'tasks', label: 'Tareas', icon: CheckSquare }, { id: 'agenda', label: 'Agenda', icon: CalendarDays }, { id: 'subjects', label: 'Notas', icon: GraduationCap },
-  { id: 'habits', label: 'Hábitos', icon: Flame }, { id: 'study', label: 'Estudio', icon: Timer }, { id: 'notes', label: 'Apuntes', icon: NotebookPen },
-  { id: 'money', label: 'Gastos', icon: Wallet }, { id: 'goals', label: 'Objetivos', icon: Target },
-];
 const Row = ({ children, onDelete, label }: { children: ReactNode; onDelete: () => void; label: string }) => <div className="hud-row">{children}<button onClick={onDelete} className="hud-ghost ml-auto" aria-label={`Eliminar ${label}`}><Trash2 size={14} aria-hidden /></button></div>;
 function AddForm({ onAdd, children, label = 'Añadir' }: { onAdd: () => boolean | void; children: ReactNode; label?: string }) {
   return <form onSubmit={(e: FormEvent) => { e.preventDefault(); onAdd(); }} className="mb-4 flex flex-wrap items-end gap-2">{children}<button className="hud-btn" type="submit"><Plus size={14} className="mr-1 inline" aria-hidden />{label}</button></form>;
@@ -86,7 +118,7 @@ function Tasks() {
     </AddForm>
     {sorted.length === 0 && <Empty text="Sin tareas. Añade la primera arriba." />}
     {sorted.map((t) => <Row key={t.id} label={t.title} onDelete={() => update((d) => ({ ...d, tasks: d.tasks.filter((x) => x.id !== t.id) }))}>
-      <input type="checkbox" className="hud-check" checked={t.done} onChange={() => update((d) => ({ ...d, tasks: d.tasks.map((x) => x.id === t.id ? { ...x, done: !x.done } : x) }))} aria-label={`Completar ${t.title}`} />
+      <input type="checkbox" className="hud-check" checked={t.done} onChange={() => { if (!t.done) hudBus.emit('success'); update((d) => ({ ...d, tasks: d.tasks.map((x) => x.id === t.id ? { ...x, done: !x.done } : x) })); }} aria-label={`Completar ${t.title}`} />
       <span className={t.done ? 'text-muted line-through' : ''}>{t.title}</span>
       <span className="hud-sub">{data.subjects.find((s) => s.id === t.subjectId)?.name}</span>
       {t.due && <span className={`ml-2 text-xs ${!t.done && t.due < todayISO() ? 'text-bad' : 'text-muted'}`}>{format(parseISO(t.due), 'd MMM', { locale: es })}</span>}
@@ -183,88 +215,154 @@ function useTimer(): Timer {
   return { left, total, running, subjectId, setSubjectId, setTotal: (m) => { setTotal(m); setLeft(m * 60); }, toggle: () => setRunning((r) => !r), reset: () => { setRunning(false); setLeft(total * 60); } };
 }
 
+
+/* ───────────── Ajustes y ayuda ───────────── */
+function SettingsBody({ onSwitch }: { onSwitch: () => void }) {
+  const h = useHud();
+  const Toggle = ({ on, set, label }: { on: boolean; set: (b: boolean) => void; label: string }) => <div className="hud-seg" role="group" aria-label={label}><button aria-pressed={on} onClick={() => set(true)}>Sí</button><button aria-pressed={!on} onClick={() => set(false)}>No</button></div>;
+  return (
+    <div className="space-y-7">
+      <section><h3 className="hud-sub mb-3">Paleta de colores</h3>
+        <div className="flex flex-wrap gap-3">{THEMES.map((t) => <button key={t.id} className="theme-dot" aria-pressed={h.theme === t.id} aria-label={`Paleta ${t.name}`} title={t.name} style={{ background: `linear-gradient(135deg, ${t.hex}, ${t.hex2})`, ['--c' as string]: t.hex }} onClick={() => { h.setTheme(t.id); hudBus.emit('pulse'); }} />)}</div>
+        <p className="mt-2 text-xs text-muted">Activa: {themeOf(h.theme).name}. Cambia todo el sistema, incluido el 3D.</p></section>
+      <section><h3 className="hud-sub mb-3">Calidad del 3D</h3>
+        <div className="hud-seg" role="group" aria-label="Calidad del 3D">{(['alta', 'media', 'baja'] as Quality[]).map((q) => <button key={q} aria-pressed={h.quality === q} onClick={() => h.setQuality(q)}>{q}</button>)}</div>
+        <p className="mt-2 text-xs text-muted">Si va lento en tu equipo o móvil, baja la calidad.</p></section>
+      <section><h3 className="hud-sub mb-3">Animación y movimiento</h3><Toggle on={h.motion} set={h.setMotion} label="Animación" /><p className="mt-2 text-xs text-muted">Desactívala para reducir el movimiento (parallax y giro).</p></section>
+      <section><h3 className="hud-sub mb-3">Sonidos de interfaz</h3><Toggle on={h.sound} set={h.setSound} label="Sonido" /></section>
+      <section><h3 className="hud-sub mb-3">Perfil</h3><button className="hud-btn" onClick={onSwitch}><Users size={14} className="mr-2 inline" aria-hidden />Cambiar de perfil</button></section>
+    </div>
+  );
+}
+function HelpBody() {
+  const rows: [string, string][] = [['1 – 8', 'Abrir un módulo'], ['/', 'Hablar con JARVIS'], [',', 'Ajustes (paleta, calidad)'], ['?', 'Esta ayuda'], ['Esc', 'Cerrar paneles']];
+  return (<div className="space-y-5 text-sm">
+    <p>Tu sistema personal en una sola pantalla: lo importante está a la vista y los <b>nodos que orbitan</b> el núcleo abren cada módulo.</p>
+    <ul className="space-y-2 text-muted"><li>• <b className="text-fg">Misiones</b>: escribe y pulsa Intro para añadir; marca el cuadro para completar.</li><li>• <b className="text-fg">Hábitos</b>: pulsa el hábito para marcar hoy.</li><li>• <b className="text-fg">Estudio</b>: inicia el temporizador en el panel; al acabar se guarda solo.</li><li>• Todo se guarda automáticamente y se sincroniza entre dispositivos.</li></ul>
+    <div className="hud-panel !flex-none">{rows.map(([k, v]) => <div key={k} className="hud-row"><span className="hud-kbd w-12 text-center">{k}</span><span>{v}</span></div>)}</div>
+  </div>);
+}
+
 /* ───────────── HUD ───────────── */
+function QuickAdd() {
+  const update = usePersonal((s) => s.update); const sound = useHud((s) => s.sound); const [t, setT] = useState('');
+  const go = (e: FormEvent) => { e.preventDefault(); const title = t.trim(); if (!title) return; update((d) => ({ ...d, tasks: [...d.tasks, { id: uid(), title, priority: 'media', done: false }] })); setT(''); blip('tick', sound); hudBus.emit('pulse'); };
+  return <form onSubmit={go} className="mb-2 flex gap-2"><input className="hud-input" value={t} onChange={(e) => setT(e.target.value)} placeholder="Nueva misión… (Intro)" aria-label="Nueva misión" maxLength={140} /><button className="hud-btn !px-3" type="submit" aria-label="Añadir misión" disabled={!t.trim()}><Plus size={15} aria-hidden /></button></form>;
+}
+
 function Hud() {
-  const { data, update, profile, logout, sync, status } = usePersonal(); const timer = useTimer(); const [open, setOpen] = useState<Mod | null>(null); const [now, setNow] = useState(new Date());
+  const { data, update, profile, logout, sync, status, switchProfile } = usePersonal(); const timer = useTimer(); const { sound } = useHud();
+  const [open, setOpen] = useState<Mod | null>(null); const [panel, setPanel] = useState<'settings' | 'help' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
-  const t = todayISO(); const pending = data.tasks.filter((x) => !x.done); const doneToday = data.tasks.filter((x) => x.done).length; const taskPct = data.tasks.length ? (doneToday / data.tasks.length) * 100 : 0;
-  const upcoming = data.events.filter((e) => e.date >= t).sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? ''))).slice(0, 5);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement; if (el.closest('input, textarea, select, [contenteditable]') || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (/^[1-8]$/.test(e.key)) { setOpen(MODS[Number(e.key) - 1].id); blip('open', sound); hudBus.emit('pulse'); } else if (e.key === '/') { e.preventDefault(); chatRef.current?.focus(); } else if (e.key === ',') setPanel('settings'); else if (e.key === '?') setPanel('help');
+    };
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
+  }, [sound]);
+  const t = todayISO(); const pending = data.tasks.filter((x) => !x.done); const done = data.tasks.length - pending.length; const taskPct = data.tasks.length ? (done / data.tasks.length) * 100 : 0;
+  const upcoming = data.events.filter((e) => e.date >= t).sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')));
   const spend = monthSpend(data); const spendPct = data.budget ? (spend / data.budget) * 100 : 0; const hour = now.getHours();
   const greet = hour < 6 ? 'Buenas noches' : hour < 13 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
-  const studyToday = data.study.filter((s) => s.date === t).reduce((a, s) => a + s.minutes, 0);
-  const name = profile ? PROFILES[profile].name : '';
-  const syncLabel = { ok: 'Todo guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Datos cambiados en otro dispositivo' }[sync];
+  const studyToday = data.study.filter((s) => s.date === t).reduce((a, s) => a + s.minutes, 0); const name = profile ? PROFILES[profile].name : '';
+  const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
+  const bestStreak = Math.max(0, ...data.habits.map((h) => streak(h.log)));
+  const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0');
   const ModBody = { tasks: <Tasks />, agenda: <Agenda />, subjects: <Subjects />, habits: <Habits />, study: <StudyPanel timer={timer} />, notes: <Notes />, money: <Money />, goals: <Goals /> };
+  const toggleTask = (id: string) => { update((d) => ({ ...d, tasks: d.tasks.map((y) => y.id === id ? { ...y, done: true } : y) })); blip('ok', sound); hudBus.emit('success'); };
+  const toggleHabit = (id: string) => { update((d) => ({ ...d, habits: d.habits.map((x) => x.id === id ? { ...x, log: x.log.includes(t) ? x.log.filter((l) => l !== t) : [...x.log, t] } : x) })); blip('tick', sound); hudBus.emit('pulse'); };
   return (
-    <div className="hud-root">
-      <header className="relative z-10 flex flex-wrap items-start justify-between gap-3 px-5 pt-4">
-        <div className="hud-sub">Perfil · <b className="text-fg">{name}</b><br />{format(now, "EEEE d 'de' MMMM", { locale: es })}</div>
-        <div className="text-center"><h1 className="hud-title text-4xl">JARVIS</h1><p className="hud-sub">Just a rather very intelligent system</p></div>
-        <div className="flex items-center gap-3 text-right"><div className="hud-sub"><span className="hud-val text-lg">{format(now, 'HH:mm:ss')}</span><br /><span className={sync === 'ok' ? '' : 'text-warn'} role="status">{syncLabel}</span></div>
-          <button className="hud-ghost" onClick={() => void logout()} aria-label="Cerrar sesión"><LogOut size={18} aria-hidden /></button></div>
-      </header>
-      {sync === 'conflict' && <p role="alert" className="relative z-10 mx-5 mt-2 rounded border border-warn px-3 py-2 text-sm text-warn">Estos datos se modificaron desde otro dispositivo. Recarga la página para no perder cambios.</p>}
-      <main className="relative z-10 grid gap-4 p-5 lg:grid-cols-[1fr_minmax(380px,1.15fr)_1fr]">
-        <div className="space-y-4">
-          <Panel title="Misiones de hoy" right={<span className="hud-val">{Math.round(taskPct)}%</span>}>
-            <Bar pct={taskPct} />
-            {pending.length === 0 ? <Empty text={data.tasks.length ? 'Todo completado. Buen trabajo.' : 'Aún no hay tareas.'} /> : pending.sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9')).slice(0, 5).map((x) => (
-              <div key={x.id} className="hud-row"><input type="checkbox" className="hud-check" aria-label={`Completar ${x.title}`} checked={false} onChange={() => update((d) => ({ ...d, tasks: d.tasks.map((y) => y.id === x.id ? { ...y, done: true } : y) }))} /><span className="truncate">{x.title}</span>{x.due && <span className={`ml-auto text-xs ${x.due < t ? 'text-bad' : 'text-muted'}`}>{x.due.slice(5)}</span>}</div>))}
-          </Panel>
-          <Panel title="Hábitos" right={<span className="hud-sub">{data.habits.filter((h) => h.log.includes(t)).length}/{data.habits.length} hoy</span>}>
-            {data.habits.length === 0 ? <Empty text="Crea hábitos en el módulo Hábitos." /> : data.habits.slice(0, 5).map((h) => <div key={h.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span>{h.name}</span><span className="hud-val">{streak(h.log)} d</span></div><Bar pct={Math.min(100, streak(h.log) * (100 / 7))} /></div>)}
-          </Panel>
-          <Panel title="Estudio" right={<span className="hud-val">{studyToday} min hoy</span>}>
-            <p className="text-xs text-muted">Temporizador: <span className={timer.running ? 'hud-val' : ''}>{String(Math.floor(timer.left / 60)).padStart(2, '0')}:{String(timer.left % 60).padStart(2, '0')}</span> {timer.running ? '· en marcha' : ''}</p>
-            <button className="hud-btn mt-2 w-full" onClick={() => setOpen('study')}>Abrir sesión de estudio</button>
-          </Panel>
+    <div className="hud-root" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon')) blip('tick', sound); }}>
+      <Stage orbit onOpen={setOpen} />
+      <div className="hud-hero" aria-live="off" style={{ top: '17%' }}>
+        <p className="hud-sub">{greet}</p><p className="hud-title text-2xl">{name.toUpperCase()}</p>
+        <p className="mt-1 text-[11px] text-muted">{pending.length} misiones · {upcoming.length} citas · racha {bestStreak} d</p>
+      </div>
+      <div className="hud-stage">
+        <header className="hud-top">
+          <div className="flex items-center gap-3"><span className="hud-title text-lg">J.A.R.V.I.S.</span><span className="hud-chip hidden md:inline-flex">{name} · {format(now, "EEE d 'de' MMM", { locale: es })}</span></div>
+          <div className="flex items-center gap-2">
+            <span className="hud-val mr-1 text-lg tabular-nums">{format(now, 'HH:mm:ss')}</span>
+            <span className={`hud-chip ${sync === 'ok' ? '' : '!border-warn !text-warn'}`} role="status"><i className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: sync === 'ok' ? 'var(--ok)' : 'var(--warn)', boxShadow: '0 0 8px currentColor' }} />{syncLabel}</span>
+            <button className="hud-icon" style={{ ['--rot' as string]: '90deg' }} onClick={() => setPanel('settings')} aria-label="Ajustes"><Settings size={16} aria-hidden /></button>
+            <button className="hud-icon" onClick={() => setPanel('help')} aria-label="Ayuda"><HelpCircle size={16} aria-hidden /></button>
+            <button className="hud-icon" onClick={() => void logout()} aria-label="Cerrar sesión"><LogOut size={16} aria-hidden /></button>
+          </div>
+        </header>
+        {sync === 'conflict' && <p role="alert" className="pointer-events-auto absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded border border-warn bg-black/70 px-3 py-2 text-sm text-warn">Datos modificados desde otro dispositivo. Recarga la página para no perder cambios.</p>}
+        <div className="hud-cols">
+          <div className="hud-col l">
+            <Panel title="Misiones de hoy" right={<span className="hud-val">{done}/{data.tasks.length}</span>} onOpen={() => setOpen('tasks')}>
+              <QuickAdd /><Bar pct={taskPct} />
+              {pending.length === 0 ? <Empty text={data.tasks.length ? 'Todo completado. Buen trabajo.' : 'Escribe arriba tu primera misión.'} /> : [...pending].sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9')).slice(0, 8).map((x) => (
+                <div key={x.id} className="hud-row"><input type="checkbox" className="hud-check" aria-label={`Completar ${x.title}`} checked={false} onChange={() => toggleTask(x.id)} /><span className="truncate">{x.title}</span>{x.due && <span className={`ml-auto text-xs ${x.due < t ? 'text-bad' : 'text-muted'}`}>{x.due.slice(5)}</span>}</div>))}
+            </Panel>
+            <Panel title="Agenda" right={<span className="hud-sub">{upcoming.length} próximas</span>} onOpen={() => setOpen('agenda')}>
+              {upcoming.length === 0 ? <Empty text="Nada próximo. Pulsa + para añadir un examen o cita." /> : upcoming.slice(0, 6).map((e) => <div key={e.id} className="hud-row"><span className="hud-val w-24 flex-none text-xs">{e.date === t ? 'Hoy' : format(parseISO(e.date), 'EEE d MMM', { locale: es })}{e.time && ` ${e.time}`}</span><span className="truncate">{e.title}</span></div>)}
+            </Panel>
+            <Panel title="Hábitos" right={<span className="hud-sub">{data.habits.filter((h) => h.log.includes(t)).length}/{data.habits.length} hoy</span>} onOpen={() => setOpen('habits')}>
+              {data.habits.length === 0 ? <Empty text="Crea hábitos con +. Luego pulsa para marcar el día." /> : data.habits.slice(0, 6).map((h) => <button key={h.id} className="hud-row w-full text-left" onClick={() => toggleHabit(h.id)} aria-pressed={h.log.includes(t)} aria-label={`Hábito ${h.name}`}><span className={`hud-check ${h.log.includes(t) ? '!bg-[var(--hud)]' : ''}`} aria-hidden /><span className="truncate">{h.name}</span><span className="hud-val ml-auto text-xs"><Flame size={11} className="mr-1 inline" aria-hidden />{streak(h.log)}</span></button>)}
+            </Panel>
+          </div>
+          <div className="hud-mid">
+            <div className="pointer-events-auto flex flex-wrap justify-center gap-2" aria-label="Resumen">
+              <span className="hud-chip"><CheckSquare size={11} aria-hidden />{pending.length} pendientes</span><span className="hud-chip"><Flame size={11} aria-hidden />racha {bestStreak} d</span><span className="hud-chip"><TimerIcon size={11} aria-hidden />{studyToday} min hoy</span>{data.budget > 0 && <span className="hud-chip"><Wallet size={11} aria-hidden />{Math.round(spendPct)}% presupuesto</span>}
+            </div>
+            <Chat profile={name} inputRef={chatRef} />
+          </div>
+          <div className="hud-col r">
+            <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={() => setOpen('study')}>
+              <div className="flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>
+              <div className="mt-2"><Bar pct={100 - (timer.left / (timer.total * 60)) * 100} /></div>
+            </Panel>
+            <Panel title="Rendimiento académico" onOpen={() => setOpen('subjects')}>{data.subjects.length === 0 ? <Empty text="Pulsa + para añadir asignaturas y notas." /> : data.subjects.slice(0, 6).map((s) => { const a = gradeAvg(data, s.id); return <div key={s.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span><i style={{ color: s.color }}>●</i> {s.name}</span><span className="hud-val">{a === null ? '—' : a.toFixed(1)}</span></div><Bar pct={(a ?? 0) * 10} tone={a !== null && a < 5 ? 'bad' : a !== null && a < 6 ? 'warn' : undefined} /></div>; })}</Panel>
+            <Panel title="Finanzas del mes" right={<span className="hud-val">{eur(spend)}</span>} onOpen={() => setOpen('money')}>{data.budget ? <><Bar pct={spendPct} tone={spendPct > 100 ? 'bad' : spendPct > 80 ? 'warn' : undefined} /><p className="mt-1 text-xs text-muted">{eur(Math.max(0, data.budget - spend))} disponibles de {eur(data.budget)}</p></> : <Empty text="Define un presupuesto con +." />}</Panel>
+            <Panel title="Objetivos" onOpen={() => setOpen('goals')}>{data.goals.length === 0 ? <Empty text="Pulsa + para fijar tu primer objetivo." /> : data.goals.slice(0, 4).map((g) => <div key={g.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span className="truncate">{g.title}</span><span className="hud-val">{g.progress}%</span></div><Bar pct={g.progress} /></div>)}</Panel>
+          </div>
         </div>
-        <div className="space-y-4">
-          <Reactor><p className="hud-sub">{greet}</p><p className="hud-title text-xl">{name.toUpperCase()}</p><p className="mt-1 text-[10px] leading-tight text-muted">{pending.length} misiones<br />{upcoming.length} citas</p></Reactor>
-          <Chat profile={name} />
-          <div className="hud-panel text-center"><p className="hud-sub">System status</p><p className="hud-title mt-1 text-lg">ALL SYSTEMS OPERATIONAL</p><div className="mt-3"><Bar pct={status === 'ready' ? 100 : 30} /></div></div>
-        </div>
-        <div className="space-y-4">
-          <Panel title="Agenda"><>{upcoming.length === 0 ? <Empty text="Nada próximo en la agenda." /> : upcoming.map((e) => <div key={e.id} className="hud-row"><span className="hud-val w-24 text-xs">{e.date === t ? 'Hoy' : format(parseISO(e.date), 'EEE d MMM', { locale: es })}{e.time && ` ${e.time}`}</span><span className="truncate">{e.title}</span></div>)}</></Panel>
-          <Panel title="Rendimiento académico">{data.subjects.length === 0 ? <Empty text="Añade asignaturas y notas." /> : data.subjects.map((s) => { const a = gradeAvg(data, s.id); return <div key={s.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span>{s.name}</span><span className="hud-val">{a === null ? '—' : a.toFixed(1)}</span></div><Bar pct={(a ?? 0) * 10} tone={a !== null && a < 5 ? 'bad' : a !== null && a < 6 ? 'warn' : undefined} /></div>; })}</Panel>
-          <Panel title="Finanzas del mes" right={<span className="hud-val">{eur(spend)}</span>}>{data.budget ? <><Bar pct={spendPct} tone={spendPct > 100 ? 'bad' : spendPct > 80 ? 'warn' : undefined} /><p className="mt-1 text-xs text-muted">{eur(Math.max(0, data.budget - spend))} disponibles de {eur(data.budget)}</p></> : <Empty text="Define un presupuesto en Gastos." />}</Panel>
-          <Panel title="Objetivos">{data.goals.length === 0 ? <Empty text="Sin objetivos." /> : data.goals.slice(0, 4).map((g) => <div key={g.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span>{g.title}</span><span className="hud-val">{g.progress}%</span></div><Bar pct={g.progress} /></div>)}</Panel>
-        </div>
-      </main>
-      <nav className="hud-dock relative z-10 px-5 pb-8" aria-label="Módulos">{MODS.map((m) => <button key={m.id} onClick={() => setOpen(m.id)}><m.icon size={20} aria-hidden />{m.label}</button>)}</nav>
+        <nav className="hud-dock" aria-label="Módulos">{MODS.map((m, i) => <button key={m.id} onClick={() => { setOpen(m.id); blip('open', sound); hudBus.emit('pulse'); }}><m.icon size={15} aria-hidden /><span className="hidden xl:inline">{m.label}</span><span className="hud-kbd">{i + 1}</span></button>)}</nav>
+        <span className="sr-only">{status}</span>
+      </div>
       <Drawer open={open !== null} onClose={() => setOpen(null)} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className="w-full max-w-xl">
-        <div className="hud-root h-full overflow-y-auto p-5"><h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
+        <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5"><h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
+      </Drawer>
+      <Drawer open={panel !== null} onClose={() => setPanel(null)} label={panel === 'settings' ? 'Ajustes' : 'Ayuda'} className="w-full max-w-md">
+        <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5"><h2 className="hud-title mb-5 text-xl">{panel === 'settings' ? 'AJUSTES' : 'AYUDA'}</h2>{panel === 'settings' ? <SettingsBody onSwitch={() => { setPanel(null); void switchProfile(); }} /> : <HelpBody />}</div>
       </Drawer>
     </div>
   );
 }
 
 /* ───────────── Chat con JARVIS ───────────── */
-function Chat({ profile }: { profile: string }) {
-  const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([]); const [q, setQ] = useState(''); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
+const SUGGEST = ['¿Qué tengo pendiente hoy?', 'Hazme un plan de estudio para esta semana', '¿Cómo voy de notas?'];
+function Chat({ profile, inputRef }: { profile: string; inputRef: React.RefObject<HTMLInputElement | null> }) {
+  const sound = useHud((s) => s.sound); const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([]); const [q, setQ] = useState(''); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [msgs]);
-  const send = async (e: FormEvent) => {
-    e.preventDefault(); const text = q.trim(); if (!text || busy) return; setQ(''); const hist = msgs.slice(-8); setMsgs((m) => [...m, { role: 'user', text }]); setBusy(true);
-    try { const r = await personalApi.ask(text, hist); setMsgs((m) => [...m, { role: 'ai', text: r.text }]); } catch (err) { setMsgs((m) => [...m, { role: 'ai', text: (err as Error).message }]); } finally { setBusy(false); }
+  const ask = async (text: string) => {
+    if (!text || busy) return; setQ(''); const hist = msgs.slice(-8); setMsgs((m) => [...m, { role: 'user', text }]); setBusy(true); blip('tick', sound); hudBus.emit('think-on');
+    try { const r = await personalApi.ask(text, hist); setMsgs((m) => [...m, { role: 'ai', text: r.text }]); blip('ok', sound); } catch (err) { setMsgs((m) => [...m, { role: 'ai', text: (err as Error).message }]); } finally { setBusy(false); hudBus.emit('think-off'); hudBus.emit('pulse'); }
   };
   return (
-    <section className="hud-panel" aria-label="Conversación con JARVIS">
-      <h2 className="hud-h"><span>Consulta a JARVIS</span></h2>
-      <div className="mb-3 max-h-52 min-h-16 space-y-2 overflow-y-auto text-sm" aria-live="polite">
-        {msgs.length === 0 && <p className="text-xs text-muted">Pregúntame por tus tareas, un plan de estudio o cómo vas de notas, {profile}.</p>}
+    <section className="hud-panel !flex-none" aria-label="Conversación con JARVIS">
+      <i className="hud-glare" aria-hidden />
+      <h2 className="hud-h"><span>Habla con JARVIS</span><span className="hud-kbd">/</span></h2>
+      <div className="mb-2 max-h-28 min-h-10 space-y-2 overflow-y-auto text-sm" aria-live="polite">
+        {msgs.length === 0 && <div className="flex flex-wrap gap-2">{SUGGEST.map((s) => <button key={s} className="hud-chip hover:!border-[var(--hud)] hover:!text-white" onClick={() => void ask(s)}>{s}</button>)}</div>}
         {msgs.map((m, i) => <p key={i} className={m.role === 'user' ? 'text-right text-muted' : 'whitespace-pre-wrap'}><span className="hud-sub mr-2">{m.role === 'user' ? profile : 'JARVIS'}</span>{m.text}</p>)}
         {busy && <p className="hud-sub"><Loader2 size={12} className="mr-1 inline animate-spin" aria-hidden />Procesando…</p>}<div ref={end} />
       </div>
-      <form onSubmit={(e) => void send(e)} className="flex gap-2"><input className="hud-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="¿Qué debería estudiar esta semana?" aria-label="Pregunta para JARVIS" maxLength={400} /><button className="hud-btn" type="submit" disabled={busy || !q.trim()} aria-label="Enviar"><Send size={14} aria-hidden /></button></form>
+      <form onSubmit={(e: FormEvent) => { e.preventDefault(); void ask(q.trim()); }} className="flex gap-2"><input ref={inputRef} className="hud-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Pregúntame lo que quieras, ${profile}…`} aria-label="Pregunta para JARVIS" maxLength={400} /><button className="hud-btn" type="submit" disabled={busy || !q.trim()} aria-label="Enviar"><Send size={14} aria-hidden /></button></form>
     </section>
   );
 }
 
 export default function PersonalPage() {
-  const { status, init } = usePersonal(); const started = useRef(false);
-  useEffect(() => { document.documentElement.classList.add('hud'); document.documentElement.dataset.theme = 'dark'; document.title = 'JARVIS · Personal'; return () => { document.documentElement.classList.remove('hud'); }; }, []);
+  const { status, init } = usePersonal(); const started = useRef(false); const theme = useHud((s) => s.theme);
+  useEffect(() => { document.documentElement.classList.add('hud'); document.documentElement.dataset.theme = 'dark'; document.title = 'JARVIS · Personal'; return () => { document.documentElement.classList.remove('hud'); clearTheme(); }; }, []);
+  useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { if (!started.current) { started.current = true; void init(); } }, [init]);
-  if (status === 'loading') return <div className="hud-root grid min-h-screen place-items-center"><p className="hud-title text-xl">INICIANDO SISTEMAS…</p></div>;
+  if (status === 'loading') return <div className="hud-root grid place-items-center"><p className="hud-title text-xl">INICIANDO SISTEMAS…</p></div>;
   if (status === 'anon') return <Navigate to="/login" replace />;
   if (status === 'choose') return <Choose />;
   return <Hud />;

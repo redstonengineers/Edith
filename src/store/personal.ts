@@ -19,7 +19,7 @@ export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().to
 
 interface PState {
   status: 'loading' | 'anon' | 'choose' | 'ready'; profile: Profile | null; data: PData; rev: number; sync: 'ok' | 'saving' | 'error' | 'conflict'; error?: string;
-  init: () => Promise<void>; login: (u: string, p: string) => Promise<void>; choose: (p: Profile) => Promise<void>; logout: () => Promise<void>;
+  init: () => Promise<void>; login: (u: string, p: string) => Promise<void>; choose: (p: Profile) => Promise<void>; logout: () => Promise<void>; switchProfile: () => Promise<void>;
   update: (fn: (d: PData) => PData) => void;
 }
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -38,6 +38,7 @@ export const usePersonal = create<PState>((set, get) => ({
   async login(u, p) { await personalApi.login(u, p); set({ status: 'choose' }); },
   async choose(p) { await personalApi.profile(p); set({ profile: p, status: 'loading' }); await load(set); },
   async logout() { try { await personalApi.logout(); } catch { /* ya sin sesión */ } clearTimeout(timer); set({ status: 'anon', profile: null, data: EMPTY, rev: 0 }); },
+  async switchProfile() { clearTimeout(timer); if (get().sync === 'saving') { try { const r = await personalApi.save(get().rev, get().data); set({ rev: r.rev, sync: 'ok' }); } catch { /* se reintentará al volver */ } } set({ status: 'choose', data: EMPTY, rev: 0 }); },
   update(fn) {
     set({ data: fn(get().data), sync: 'saving' }); clearTimeout(timer);
     timer = setTimeout(async () => {
