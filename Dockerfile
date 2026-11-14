@@ -1,14 +1,12 @@
-FROM node:22.23-slim AS build
+FROM node:22-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npm run build:api
 
-FROM node:22.23-slim
+FROM node:22-slim
 WORKDIR /app
-# curl: la comprobación de salud de Coolify se ejecuta dentro del contenedor y la imagen slim no lo trae.
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=4000 TRUST_PROXY=1 DB_PATH=/app/data/academy.db
 COPY package.json package-lock.json ./
 RUN npm ci && npm cache clean --force
