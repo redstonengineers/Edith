@@ -12,6 +12,7 @@ import LoginPage from '@/pages/Login';
 import ModulePlaceholder from '@/pages/ModulePlaceholder';
 
 const OnboardingPage = lazy(() => import('@/pages/onboarding'));
+const PersonalPage = lazy(() => import('@/pages/personal'));
 const DashboardPage = lazy(() => import('@/pages/DashboardRouter'));
 
 /** Registro de pantallas implementadas. Lo que no esté aquí muestra el placeholder de su fase. */
@@ -72,6 +73,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/personal" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><PersonalPage /></Suspense>} />
         <Route path="/onboarding" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><OnboardingPage /></Suspense>} />
         <Route element={<Protected />}>
           {MODULES.map((m) => (<Route key={m.id} path={m.path === '/' ? undefined : `${m.path}/*`} index={m.path === '/'} element={<Guard m={m} />} />))}

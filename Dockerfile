@@ -9,7 +9,8 @@ FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=4000 TRUST_PROXY=1 DB_PATH=/app/data/academy.db
 COPY package.json package-lock.json ./
-RUN npm ci && npm cache clean --force
+# NODE_ENV=production omitiría las devDependencies, y tsx (que ejecuta el servidor) es una de ellas.
+RUN npm ci --include=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY src ./src
 COPY server ./server

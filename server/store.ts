@@ -23,7 +23,15 @@ export class Store {
     this.db.exec(`PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;
       CREATE TABLE IF NOT EXISTS entities (tbl TEXT NOT NULL, id TEXT NOT NULL, academy_id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (tbl, id));
       CREATE INDEX IF NOT EXISTS idx_entities_tenant ON entities (academy_id, tbl);
+      CREATE TABLE IF NOT EXISTS personal (profile TEXT PRIMARY KEY, rev INTEGER NOT NULL, body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, academy_id TEXT NOT NULL, expires_at INTEGER NOT NULL);`);
+  }
+
+  personalGet(profile: string): { rev: number; body: string } | null { return (this.db.prepare('SELECT rev, body FROM personal WHERE profile = ?').get(profile) as { rev: number; body: string } | undefined) ?? null; }
+  /** Guarda el estado personal con control de versión (rev): devuelve null si otro dispositivo escribió antes. */
+  personalPut(profile: string, body: string, baseRev: number): number | null {
+    const cur = this.personalGet(profile); const rev = cur?.rev ?? 0; if (baseRev !== rev) return null;
+    this.db.prepare('INSERT INTO personal (profile, rev, body) VALUES (?, ?, ?) ON CONFLICT(profile) DO UPDATE SET rev = excluded.rev, body = excluded.body').run(profile, rev + 1, body); return rev + 1;
   }
 
   isEmpty() { return (this.db.prepare('SELECT COUNT(*) AS n FROM entities').get() as { n: number }).n === 0; }

@@ -1,6 +1,8 @@
 import { Logo } from '@/components/ui/Logo';
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { IS_API } from '@/services/mode';
+import { usePersonal } from '@/store/personal';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { StatusIndicator } from '@/components/ui/primitives';
 import { ROLE_LABELS } from '@/lib/permissions';
@@ -9,7 +11,7 @@ import { useSession } from '@/store/session';
 import { useEffect } from 'react';
 
 export default function LoginPage() {
-  const { status, signIn } = useSession();
+  const { status, signIn } = useSession(); const navigate = useNavigate(); const personalLogin = usePersonal((x) => x.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,7 +24,15 @@ export default function LoginPage() {
 
   const submit = async (e?: string, p?: string) => {
     setBusy(true); setError('');
-    try { await signIn(e ?? email, p ?? password); } catch (err) { setError((err as Error).message); setBusy(false); }
+    try {
+      const id = (e ?? email).trim();
+      // Un identificador sin «@» es el acceso personal (solo existe en el servidor). Los correos van al login de academias.
+      if (id && !id.includes('@')) {
+        if (!IS_API) throw new Error('El modo personal solo está disponible en la versión con servidor.');
+        await personalLogin(id, p ?? password); navigate('/personal', { replace: true }); return;
+      }
+      await signIn(e ?? email, p ?? password);
+    } catch (err) { setError((err as Error).message); setBusy(false); }
   };
 
   return (
@@ -40,8 +50,8 @@ export default function LoginPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h2>
           <p className="mt-1 text-sm text-muted">Accede con tu cuenta o usa un acceso de demostración.</p>
           <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="mt-6 space-y-4" noValidate>
-            <div><label htmlFor="email" className="mb-1.5 block text-sm font-medium">Correo electrónico</label>
-              <input id="email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
+            <div><label htmlFor="email" className="mb-1.5 block text-sm font-medium">Correo o usuario</label>
+              <input id="email" type="text" inputMode="email" autoCapitalize="none" spellCheck={false} autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
             <div><label htmlFor="pw" className="mb-1.5 block text-sm font-medium">Contraseña</label>
               <input id="pw" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
             {error && <p role="alert" className="text-sm text-bad">{error}</p>}

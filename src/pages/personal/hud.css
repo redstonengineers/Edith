@@ -1,0 +1,53 @@
+/* HUD personal: estilo JARVIS (propio, azul eléctrico sobre negro). Las variables se aplican a <html class="hud"> para que
+   también afecten a los paneles que se montan en portales. */
+html.hud {
+  --bg: #02060f; --surface: #06101e; --surface-2: #0a1a2e; --line: #12365a; --line-strong: #1d5a8f;
+  --text: #d8f3ff; --muted: #86b6d4; --brand: #22c8ff; --brand-2: #3b82f6; --on-brand: #00131f; --brand-text: #7ddcff;
+  --ok: #34d399; --warn: #fbbf24; --bad: #f87171; --info: #60a5fa; --glow: rgb(34 200 255 / .22);
+  --hud: #22c8ff;
+}
+.hud-root { position: relative; min-height: 100vh; color: var(--text); overflow-x: hidden;
+  background: radial-gradient(1100px 700px at 50% 42%, rgb(14 70 130 / .35), transparent 62%), radial-gradient(700px 500px at 0% 100%, rgb(10 50 100 / .25), transparent 60%), #02060f; }
+.hud-root::before { content: ''; position: fixed; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgb(34 200 255 / .045) 1px, transparent 1px), linear-gradient(90deg, rgb(34 200 255 / .045) 1px, transparent 1px); background-size: 44px 44px;
+  mask-image: radial-gradient(circle at 50% 45%, #000 20%, transparent 75%); }
+.hud-title { font-weight: 800; letter-spacing: .28em; color: var(--hud); text-shadow: 0 0 18px rgb(34 200 255 / .7), 0 0 44px rgb(34 200 255 / .35); }
+.hud-sub { font-size: 10px; letter-spacing: .22em; color: var(--muted); text-transform: uppercase; }
+.hud-panel { position: relative; background: linear-gradient(180deg, rgb(8 24 44 / .82), rgb(4 14 28 / .82)); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; backdrop-filter: blur(6px); box-shadow: inset 0 0 24px rgb(34 200 255 / .05), 0 0 22px rgb(34 200 255 / .06); }
+.hud-panel::before, .hud-panel::after { content: ''; position: absolute; width: 12px; height: 12px; border: 2px solid var(--hud); pointer-events: none; opacity: .9; }
+.hud-panel::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.hud-panel::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+.hud-h { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--brand-text); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.hud-bar { height: 7px; background: rgb(34 200 255 / .1); border: 1px solid rgb(34 200 255 / .25); border-radius: 2px; overflow: hidden; }
+.hud-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #0891b2, #22c8ff); box-shadow: 0 0 10px rgb(34 200 255 / .7); transition: width .6s var(--ease-out, ease); }
+.hud-bar.warn > i { background: linear-gradient(90deg, #b45309, #fbbf24); box-shadow: 0 0 10px rgb(251 191 36 / .6); }
+.hud-bar.bad > i { background: linear-gradient(90deg, #b91c1c, #f87171); box-shadow: 0 0 10px rgb(248 113 113 / .6); }
+.hud-val { font-variant-numeric: tabular-nums; color: var(--hud); text-shadow: 0 0 12px rgb(34 200 255 / .5); }
+.hud-dock { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.hud-dock button { display: grid; justify-items: center; gap: 4px; min-width: 76px; padding: 10px 8px; border: 1px solid var(--line); border-radius: 6px; background: rgb(6 20 38 / .8); color: var(--muted); font-size: 11px; letter-spacing: .06em; }
+.hud-dock button:hover, .hud-dock button:focus-visible { color: #fff; border-color: var(--hud); box-shadow: 0 0 16px rgb(34 200 255 / .35); }
+.hud-input { height: 38px; width: 100%; background: rgb(2 10 20 / .9); border: 1px solid var(--line); border-radius: 4px; padding: 0 10px; color: var(--text); font-size: 13px; outline: none; }
+.hud-input:focus { border-color: var(--hud); box-shadow: 0 0 0 1px var(--hud); }
+.hud-btn { height: 38px; padding: 0 16px; border: 1px solid var(--hud); border-radius: 4px; background: rgb(34 200 255 / .12); color: #bff0ff; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+.hud-btn:hover:not(:disabled) { background: rgb(34 200 255 / .28); box-shadow: 0 0 16px rgb(34 200 255 / .45); }
+.hud-btn:disabled { opacity: .45; }
+.hud-ghost { color: var(--muted); font-size: 12px; } .hud-ghost:hover { color: #fff; }
+.hud-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgb(34 200 255 / .1); font-size: 13px; }
+.hud-row:last-child { border-bottom: 0; }
+.hud-check { appearance: none; width: 16px; height: 16px; border: 1px solid var(--hud); border-radius: 3px; display: grid; place-items: center; flex: none; background: transparent; }
+.hud-check:checked { background: var(--hud); box-shadow: 0 0 10px rgb(34 200 255 / .6); }
+.hud-check:checked::after { content: ''; width: 8px; height: 4px; border-left: 2px solid #00131f; border-bottom: 2px solid #00131f; transform: rotate(-45deg) translate(1px, -1px); }
+
+/* Reactor */
+.reactor { position: relative; width: min(420px, 78vw); aspect-ratio: 1; margin: 0 auto; }
+.reactor svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.r-spin-a { transform-origin: 50% 50%; animation: spin 38s linear infinite; }
+.r-spin-b { transform-origin: 50% 50%; animation: spin 24s linear infinite reverse; }
+.r-spin-c { transform-origin: 50% 50%; animation: spin 90s linear infinite; }
+.r-core { animation: corepulse 3.4s ease-in-out infinite; transform-origin: 50% 50%; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes corepulse { 0%, 100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.045); } }
+.reactor-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+.profile-card { width: 240px; padding: 28px 20px; border: 1px solid var(--line-strong); border-radius: 6px; background: rgb(6 20 38 / .8); text-align: center; transition: transform .25s var(--spring, ease), box-shadow .25s, border-color .2s; }
+.profile-card:hover, .profile-card:focus-visible { transform: translateY(-4px); border-color: var(--hud); box-shadow: 0 0 34px rgb(34 200 255 / .4); }
+@media (prefers-reduced-motion: reduce) { .r-spin-a, .r-spin-b, .r-spin-c, .r-core { animation: none; } }

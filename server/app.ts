@@ -5,6 +5,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import type { User } from '../src/types';
 import { askClaude, claudeEnabled } from './claude';
+import { personalEnabled, registerPersonal } from './personal';
 import { createRepos } from '../src/services/repositories';
 import { getDatabase, installDatabase } from '../src/services/database';
 import { logActivity } from '../src/services/activity';
@@ -88,7 +89,7 @@ export function buildApp(store: Store) {
   };
   const need = (req: FastifyRequest, reply: FastifyReply) => { const u = auth(req); if (!u) { fail(reply, 401, 'Sesión no válida o caducada.'); return null; } return u; };
 
-  app.get('/api/health', async () => ({ ok: true, ai: claudeEnabled() ? 'claude' : 'local' }));
+  app.get('/api/health', async () => ({ ok: true, ai: claudeEnabled() ? 'claude' : 'local', personal: personalEnabled() }));
 
   app.get('/api/demo-accounts', async (_req, reply) => {
     if (!config.seedDemo) return fail(reply, 404, 'No disponible');
@@ -157,6 +158,7 @@ export function buildApp(store: Store) {
     return askClaude({ question: p.data.question, history: p.data.history ?? [], snapshot, user: u });
   });
 
+  registerPersonal(app, store, loginLimit, fail);
   app.setErrorHandler((err, req, reply) => { req.log.error(err); const code = (err as { statusCode?: number }).statusCode; reply.code(code && code < 500 ? code : 500).send({ error: code && code < 500 ? 'Petición no válida' : 'Error interno' }); });
   app.addHook('onClose', async () => { store.close(); });
   setInterval(() => store.purgeSessions(Date.now()), 3_600_000).unref();
