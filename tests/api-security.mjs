@@ -2,7 +2,7 @@
 // Uso: API_URL=http://127.0.0.1:4000 node tests/api-security.mjs
 const B = (process.env.API_URL || 'http://127.0.0.1:4000') + '/api'; let fails = 0;
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
-const H = (cookie, extra = {}) => ({ 'content-type': 'application/json', 'x-requested-with': 'academy-control', ...(cookie ? { cookie } : {}), ...extra });
+const H = (cookie, extra = {}) => ({ 'content-type': 'application/json', 'x-requested-with': 'edith', ...(cookie ? { cookie } : {}), ...extra });
 const call = async (method, path, body, cookie, extra) => { const r = await fetch(B + path, { method, headers: H(cookie, extra), body: body === undefined ? undefined : JSON.stringify(body) }); let j = null; try { j = await r.json(); } catch {} return { status: r.status, j, headers: r.headers }; };
 const login = async (email, pw = 'demo') => { const r = await call('POST', '/auth/login', { email, password: pw }); const sc = r.headers.get('set-cookie'); return { r, cookie: sc ? sc.split(';')[0] : null, setCookie: sc }; };
 const rpc = (name, args, cookie) => call('POST', `/rpc/${name}`, { args }, cookie);

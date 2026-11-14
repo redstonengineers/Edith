@@ -1,4 +1,4 @@
-# Academy Control
+# EDITH
 
 Centro de control multi-academia (SaaS white-label) · React 19 + TypeScript + Vite + Tailwind v4.
 Arquitectura, modelo de datos y plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

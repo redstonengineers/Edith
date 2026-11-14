@@ -5,7 +5,7 @@ import { API_BASE } from './mode';
 export async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method, credentials: 'include',
-    headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), 'X-Requested-With': 'academy-control' },
+    headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), 'X-Requested-With': 'edith' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   let data: { error?: string; code?: string } & Record<string, unknown> = {};

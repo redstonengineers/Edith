@@ -13,7 +13,7 @@ export function Sidebar() {
     <aside aria-label="Barra lateral" className={cn('relative z-10 hidden shrink-0 flex-col border-r border-line bg-surface/80 backdrop-blur-xl transition-[width] duration-200 lg:flex', collapsed ? 'w-[68px]' : 'w-[248px]')}>
       <div className={cn('flex h-16 items-center gap-3 border-b border-line px-4', collapsed && 'justify-center px-0')}>
         <BrandMark />
-        {!collapsed && <div className="min-w-0"><p className="truncate text-sm leading-tight font-semibold">{branding.name}</p><p className="text-[10px] tracking-[0.14em] text-muted uppercase">Academy Control</p></div>}
+        {!collapsed && <div className="min-w-0"><p className="truncate text-sm leading-tight font-semibold">{branding.name}</p><p className="text-[10px] tracking-[0.14em] text-muted uppercase">EDITH</p></div>}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto"><NavList collapsed={collapsed} /></div>
       <div className="border-t border-line p-3">

@@ -1,4 +1,4 @@
-# ACADEMY CONTROL — Arquitectura técnica
+# EDITH — Arquitectura técnica
 
 ## 0. Análisis del proyecto existente
 

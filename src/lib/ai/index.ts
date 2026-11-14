@@ -28,7 +28,7 @@ export const mockAIProvider: AIProvider = {
 export const httpAIProvider: AIProvider = {
   id: 'http', label: 'Servidor',
   async ask({ question, history }) {
-    const res = await fetch(`${API_BASE}/ai/chat`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'academy-control' }, body: JSON.stringify({ question, history: history.slice(-10).map((m) => ({ role: m.role, text: m.text.slice(0, 500) })) }) });
+    const res = await fetch(`${API_BASE}/ai/chat`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'edith' }, body: JSON.stringify({ question, history: history.slice(-10).map((m) => ({ role: m.role, text: m.text.slice(0, 500) })) }) });
     if (!res.ok) throw new Error(`El asistente no está disponible (${res.status})`);
     return (await res.json()) as AIAnswer;
   },

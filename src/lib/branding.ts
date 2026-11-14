@@ -9,7 +9,7 @@ export function applyBranding(settings: Settings | null, theme: ThemeMode) {
   root.style.setProperty('--brand', settings.branding.primary);
   root.style.setProperty('--brand-2', settings.branding.secondary);
   root.style.setProperty('--on-brand', onColor(settings.branding.primary));
-  document.title = `${settings.branding.name} · Academy Control`;
+  document.title = `${settings.branding.name} · EDITH`;
   const link = document.getElementById('app-favicon') as HTMLLinkElement | null;
   if (link && settings.branding.faviconUrl) link.href = settings.branding.faviconUrl;
 }

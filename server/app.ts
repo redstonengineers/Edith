@@ -48,7 +48,7 @@ export function buildApp(store: Store) {
     if (apiLimit(req.ip)) return fail(reply, 429, 'Demasiadas peticiones. Inténtalo en un minuto.');
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       // CSRF: cabecera personalizada (un sitio externo no puede enviarla sin pasar por CORS, que no habilitamos) + Origin coherente.
-      if (req.headers['x-requested-with'] !== 'academy-control') return fail(reply, 403, 'Petición no permitida.');
+      if (req.headers['x-requested-with'] !== 'edith') return fail(reply, 403, 'Petición no permitida.');
       const origin = req.headers.origin; if (origin) { try { if (new URL(origin).host !== req.headers.host) return fail(reply, 403, 'Origen no permitido.'); } catch { return fail(reply, 403, 'Origen no válido.'); } }
     }
   });
