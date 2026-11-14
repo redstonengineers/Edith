@@ -51,3 +51,6 @@ Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/pr
 - Exámenes de conducir (teórico/práctico, resultado) en la ficha del alumno y «Exámenes del mes» con % de aprobados en el parte mensual.
 - Importar alumnos desde CSV (Excel → Guardar como CSV; coma o punto y coma; fechas dd/mm/aaaa o aaaa-mm-dd), validando fila a fila, con plantilla descargable.
 - Sigue pendiente: alta real del tenant «Autoescuela Atlanta» desde el onboarding (hoy solo existe la demo con SEED_DEMO=1), firma sin conexión, avisos push y copias de seguridad.
+
+## Alta automática de una academia (PROVISION_*)
+Variables de entorno del servidor: `PROVISION_ACADEMY_NAME`, `PROVISION_ADMIN_EMAIL`, `PROVISION_ADMIN_PASSWORD` (+ opcionales `PROVISION_ACADEMY_TYPE` = autoescuela, `PROVISION_ADMIN_NAME`, `PROVISION_PRIMARY`). Al arrancar crea la academia si el correo no existe (idempotente). Tras el primer arranque se puede borrar la variable de la contraseña. Usado para Autoescuela Atlanta.

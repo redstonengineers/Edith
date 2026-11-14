@@ -4,6 +4,8 @@ import { setHasher, hashPassword } from '../src/services/crypto';
 import { installDatabase, getDatabase } from '../src/services/database';
 import { DEFAULT_LABELS } from '../src/config/presets';
 import { MODULES } from '../src/config/modules';
+import { PRESETS } from '../src/config/presets';
+import { createAcademy } from '../src/services/mutations.local';
 import { buildApp } from './app';
 import { registerChannel } from '../src/services/channels';
 import { emailChannel, mailEnabled } from './mailer';
@@ -32,7 +34,12 @@ else if (config.seedDemo) {
   } else console.warn('Base vacía y sin BOOTSTRAP_ADMIN_EMAIL/PASSWORD ni SEED_DEMO: solo se podrán crear academias desde el onboarding.');
 }
 installDatabase(db, () => store.flush(getDatabase()));
-store.flush(db);
+if (config.provision) {
+  const pv = config.provision;
+  if (getDatabase().users.some((u) => u.email.toLowerCase() === pv.adminEmail.toLowerCase())) console.warn(`Alta automática omitida: ya existe ${pv.adminEmail}.`);
+  else { await createAcademy({ academyName: pv.academyName, type: pv.type, modules: PRESETS[pv.type].modules, adminName: pv.adminName, adminEmail: pv.adminEmail, adminPassword: pv.adminPassword, primary: pv.primary ?? '#f97316' }); console.warn(`Academia «${pv.academyName}» creada con administrador ${pv.adminEmail}. Puedes borrar PROVISION_ADMIN_PASSWORD del entorno.`); }
+}
+store.flush(getDatabase());
 
 if (mailEnabled()) registerChannel(emailChannel);
 const app = buildApp(store);
