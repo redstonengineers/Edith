@@ -65,6 +65,7 @@ export const updatePractice = ((_user: unknown, ...args: unknown[]) => rpc('upda
 export const cancelPractice = ((_user: unknown, ...args: unknown[]) => rpc('cancelPractice', args)) as unknown as typeof L.cancelPractice;
 export const completePractice = ((_user: unknown, ...args: unknown[]) => rpc('completePractice', args)) as unknown as typeof L.completePractice;
 export const setStudentTraining = ((_user: unknown, ...args: unknown[]) => rpc('setStudentTraining', args)) as unknown as typeof L.setStudentTraining;
+export const getPracticeSignatures = ((_user: unknown, ...args: unknown[]) => rpc('getPracticeSignatures', args)) as unknown as typeof L.getPracticeSignatures;
 
 /** Alta pública de academia (onboarding): endpoint propio, sin sesión previa. */
 export const createAcademy = ((input: unknown) => post('/onboarding', input)) as unknown as typeof L.createAcademy;

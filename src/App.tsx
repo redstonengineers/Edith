@@ -36,6 +36,7 @@ const PAGES: Partial<Record<ModuleId, React.ComponentType>> = {
   documents: lazy(() => import('@/pages/documents')),
   practicas: lazy(() => import('@/pages/practicas')),
   vehiculos: lazy(() => import('@/pages/vehiculos')),
+  parte: lazy(() => import('@/pages/parte')),
   messages: lazy(() => import('@/pages/messages')),
   announcements: lazy(() => import('@/pages/announcements')),
   notifications: lazy(() => import('@/pages/notifications')),

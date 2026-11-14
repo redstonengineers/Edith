@@ -41,7 +41,7 @@ export type LabelKey =
 export type ModuleId =
   | 'dashboard' | 'students' | 'teachers' | 'groups' | 'classes' | 'subjects' | 'schedule'
   | 'exams' | 'grades' | 'attendance' | 'applications' | 'waitlist' | 'enrollments'
-  | 'payments' | 'billing' | 'documents' | 'practicas' | 'vehiculos' | 'incidents' | 'messages' | 'announcements'
+  | 'payments' | 'billing' | 'documents' | 'practicas' | 'vehiculos' | 'parte' | 'incidents' | 'messages' | 'announcements'
   | 'notifications' | 'statistics' | 'reports' | 'ai' | 'settings' | 'users' | 'permissions'
   | 'customization' | 'platform';
 
@@ -164,4 +164,6 @@ export type VehicleStatus = 'activo' | 'taller' | 'baja';
 export interface Vehicle extends Tenant { id: ID; plate: string; model: string; km: number; status: VehicleStatus; itvDue?: ISODate; insuranceDue?: ISODate; notes?: string; color: string }
 /** Autoescuela: práctica 1 a 1 (alumno + profesor + coche). */
 export type PracticeStatus = 'programada' | 'hecha' | 'cancelada';
-export interface Practice extends Tenant { id: ID; studentId: ID; teacherId: ID; vehicleId?: ID; date: ISODate; start: string; end: string; status: PracticeStatus; km?: number; notes?: string; seriesId?: ID }
+export interface Practice extends Tenant { id: ID; studentId: ID; teacherId: ID; vehicleId?: ID; date: ISODate; start: string; end: string; status: PracticeStatus; km?: number; notes?: string; seriesId?: ID;
+  /** Firmas táctiles (PNG en data URL). En el snapshot solo viaja `signed`; las imágenes se piden aparte. */
+  studentSig?: string; teacherSig?: string; signed?: boolean }

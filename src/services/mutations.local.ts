@@ -698,11 +698,11 @@ export function cancelPractice(user: User, id: ID, cancelled = true) {
   return done(p);
 }
 /** Marca la práctica como hecha, anota los kilómetros y los suma al cuentakilómetros del coche. */
-export function completePractice(user: User, id: ID, data: { km?: number; notes?: string }) {
+export function completePractice(user: User, id: ID, data: { km?: number; notes?: string; studentSig?: string; teacherSig?: string }) {
   need(user, 'practicas:write'); const db = getDatabase(); const p = own(user, db.practices.find((x) => x.id === id), 'Práctica');
   if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes cerrar tus prácticas.');
   if (p.status === 'cancelada') throw new DomainError('La práctica está cancelada.');
-  const wasDone = p.status === 'hecha'; const prevKm = p.km ?? 0; p.status = 'hecha'; p.km = data.km ?? p.km; if (data.notes !== undefined) p.notes = data.notes;
+  const wasDone = p.status === 'hecha'; const prevKm = p.km ?? 0; p.status = 'hecha'; p.km = data.km ?? p.km; if (data.notes !== undefined) p.notes = data.notes; if (data.studentSig) p.studentSig = data.studentSig; if (data.teacherSig) p.teacherSig = data.teacherSig;
   const v = p.vehicleId ? db.vehicles.find((x) => x.id === p.vehicleId && x.academyId === user.academyId) : undefined; if (v) v.km = Math.max(0, v.km + (p.km ?? 0) - (wasDone ? prevKm : 0));
   logActivity(user, 'registró', 'practice', `${user.name} cerró la práctica de ${practiceNames(user).student(p.studentId)} (${p.date})`, p.id);
   return done(p);
@@ -712,4 +712,10 @@ export function setStudentTraining(user: User, id: ID, data: { targetHours?: num
   if (data.assignedTeacherId) own(user, db.teachers.find((x) => x.id === data.assignedTeacherId), 'Profesor');
   Object.assign(s, data); logActivity(user, 'modificó', 'student', `${user.name} actualizó la formación de ${s.firstName} ${s.lastName}`, s.id);
   return done(s);
+}
+/** Firmas de una práctica (imágenes aparte del snapshot para no engordar la carga del calendario). */
+export function getPracticeSignatures(user: User, id: ID): { studentSig?: string; teacherSig?: string } {
+  need(user, 'practicas:read'); const p = own(user, getDatabase().practices.find((x) => x.id === id), 'Práctica');
+  if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes ver tus prácticas.');
+  return { studentSig: p.studentSig, teacherSig: p.teacherSig };
 }

@@ -25,7 +25,7 @@ export const ROLE_PERMISSIONS: Record<RoleId, ReadonlySet<Permission>> = {
   SECRETARIA: new Set([
     ...rw('dashboard', 'students', 'groups', 'classes', 'schedule', 'applications', 'waitlist', 'enrollments',
       'payments', 'billing', 'documents', 'practicas', 'vehiculos', 'incidents', 'messages', 'announcements', 'notifications', 'attendance', 'ai'),
-    ...ro('teachers', 'subjects', 'exams', 'grades', 'statistics'),
+    ...ro('teachers', 'subjects', 'exams', 'grades', 'statistics', 'reports'),
   ]),
   PROFESOR: new Set([
     ...rw('attendance', 'grades', 'exams', 'incidents', 'messages', 'practicas'),

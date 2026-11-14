@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
-import { AlertTriangle, Ban, CheckCircle2, RotateCcw } from 'lucide-react';
+import { AlertTriangle, Ban, CheckCircle2, MessageCircle, PenLine, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
 import { FormModal } from '@/components/ui/FormModal';
@@ -11,6 +11,8 @@ import { practiceConflicts, type PracticeNames } from '@/lib/practices';
 import { fieldErrors, practiceSchema } from '@/lib/schemas';
 import { cancelPractice, completePractice, createPractice, createPracticeSeries, updatePractice } from '@/services/mutations';
 import type { Practice } from '@/types';
+import { SignFlow } from './SignFlow';
+import { WhatsappSheet } from './Whatsapp';
 import { hhmmToMin, norm } from '@/utils/format';
 
 export interface PracticeDefaults { date?: string; start?: string; studentId?: string }
@@ -36,7 +38,7 @@ export function PracticeForm({ open, onClose, practice, defaults }: { open: bool
   const [f, setF] = useState({ date: date0, start: start0, dur: practice ? hhmmToMin(practice.end) - hhmmToMin(practice.start) : 60, teacherId: practice?.teacherId ?? snap.students.find((s) => s.id === initStu)?.assignedTeacherId ?? myTeacher, vehicleId: practice?.vehicleId ?? snap.vehicles.find((v) => v.status === 'activo')?.id ?? '', notes: practice?.notes ?? '' });
   const [q, setQ] = useState(initStu ? names.student(initStu) : ''); const [studentId, setStudentId] = useState(initStu);
   const [repeat, setRepeat] = useState(false); const [weeks, setWeeks] = useState(8); const [err, setErr] = useState<Record<string, string>>({}); const [top, setTop] = useState<string | null>(null);
-  const [km, setKm] = useState(practice?.km ? String(practice.km) : ''); const [confirmCancel, setConfirmCancel] = useState(false);
+  const [km, setKm] = useState(practice?.km ? String(practice.km) : ''); const [confirmCancel, setConfirmCancel] = useState(false); const [sign, setSign] = useState(false); const [wa, setWa] = useState(false);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: k === 'dur' ? Number(e.target.value) : e.target.value }));
   const pickStudent = (text: string) => { setQ(text); const m = students.find((s) => norm(`${s.firstName} ${s.lastName}`) === norm(text.trim())); setStudentId(m?.id ?? ''); if (m?.assignedTeacherId && !practice) setF((x) => ({ ...x, teacherId: m.assignedTeacherId! })); };
   const matches = q && !studentId ? students.filter((s) => norm(`${s.firstName} ${s.lastName}`).includes(norm(q))).slice(0, 5) : [];
@@ -86,10 +88,15 @@ export function PracticeForm({ open, onClose, practice, defaults }: { open: bool
             <p className="text-sm font-medium">{done ? 'Kilómetros de la práctica' : 'Terminar práctica'}</p>
             <div className="flex flex-wrap items-end gap-2"><Field label="Kilómetros">{(p) => <Input {...p} type="number" min={0} value={km} onChange={(e) => setKm(e.target.value)} className="w-28" />}</Field>
               <Button onClick={() => void run(() => completePractice(user, practice.id, { km: km ? Number(km) : undefined, notes: f.notes }), 'Práctica terminada').then((r) => r && onClose())}><CheckCircle2 size={15} />{done ? 'Guardar km' : 'Marcar como hecha'}</Button>
+              {!done && <Button variant="primary" onClick={() => setSign(true)}><PenLine size={15} />Terminar y firmar</Button>}
               {!done && <Button variant="danger" onClick={() => setConfirmCancel(true)}><Ban size={15} />Cancelar práctica</Button>}</div>
+            {practice.signed && <p className="flex items-center gap-1.5 text-xs text-ok"><CheckCircle2 size={13} aria-hidden />Firmada por alumno y profesor</p>}
           </div>)}
+        {practice && !done && <div className="border-t border-line pt-3"><Button onClick={() => setWa(true)}><MessageCircle size={15} />Avisar por WhatsApp</Button></div>}
         {practice && write && cancelled && <Button onClick={() => void run(() => cancelPractice(user, practice.id, false), 'Práctica restaurada').then((r) => r && onClose())}><RotateCcw size={15} />Restaurar</Button>}
       </FormModal>
+      {sign && practice && <SignFlow practice={practice} onClose={() => setSign(false)} onDone={() => { setSign(false); onClose(); }} />}
+      {wa && practice && <WhatsappSheet practice={practice} onClose={() => setWa(false)} />}
       <ConfirmDialog open={confirmCancel} danger title="¿Cancelar esta práctica?" description="Dejará de ocupar al profesor y al coche. Podrás restaurarla." confirmLabel="Cancelar práctica" onClose={() => setConfirmCancel(false)}
         onConfirm={() => practice && void run(() => cancelPractice(user, practice.id), 'Práctica cancelada').then((r) => r && onClose())} />
     </>
