@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { addDays, format, parseISO, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarDays, CheckSquare, Flame, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, Plus, RotateCcw, Send, Settings, Target, Timer as TimerIcon, Trash2, Users, Wallet, X } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
@@ -83,14 +84,14 @@ function Choose() {
     <main className="hud-root">
       <Stage orbit={false} />
       <div className="absolute inset-x-0 top-[7vh] z-10 text-center" style={{ textShadow: '0 0 10px #000' }}>
-        <h1 className="hud-title text-5xl md:text-6xl">J.A.R.V.I.S.</h1><p className="hud-sub mt-3">Just a rather very intelligent system</p></div>
+        <div className="mb-4 flex justify-center drop-shadow-[0_0_28px_var(--hud)]"><Logo size={84} /></div><h1 className="hud-title text-5xl md:text-6xl">E.D.I.T.H.</h1><p className="hud-sub mt-3">Tu sistema personal</p></div>
       <div className="absolute inset-x-0 bottom-[7vh] z-10 p-4 text-center">
         <p className="mb-5 text-sm text-muted" style={{ textShadow: '0 0 8px #000' }}>¿Quién eres? Elige tu perfil para despertar tu sistema</p>
         <div className="flex flex-wrap justify-center gap-7">
           {(Object.keys(PROFILES) as Profile[]).map((p) => (
             <button key={p} className="profile-card" disabled={!!busy} onClick={() => void go(p)} aria-label={`Entrar como ${PROFILES[p].name}`}>
               <span className="hud-sub block">{PROFILES[p].tag}</span><span className="hud-title mt-3 block text-3xl">{PROFILES[p].name.toUpperCase()}</span>
-              <span className="mt-4 block text-xs text-muted">{busy === p ? 'Cargando sistemas…' : 'Abrir mi JARVIS →'}</span>
+              <span className="mt-4 block text-xs text-muted">{busy === p ? 'Cargando sistemas…' : 'Abrir mi EDITH →'}</span>
             </button>))}
         </div>
         {err && <p role="alert" className="mt-5 text-sm text-bad">{err}</p>}
@@ -235,7 +236,7 @@ function SettingsBody({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 function HelpBody() {
-  const rows: [string, string][] = [['1 – 8', 'Abrir un módulo'], ['/', 'Hablar con JARVIS'], [',', 'Ajustes (paleta, calidad)'], ['?', 'Esta ayuda'], ['Esc', 'Cerrar paneles']];
+  const rows: [string, string][] = [['1 – 8', 'Abrir un módulo'], ['/', 'Hablar con EDITH'], [',', 'Ajustes (paleta, calidad)'], ['?', 'Esta ayuda'], ['Esc', 'Cerrar paneles']];
   return (<div className="space-y-5 text-sm">
     <p>Tu sistema personal en una sola pantalla: lo importante está a la vista y los <b>nodos que orbitan</b> el núcleo abren cada módulo.</p>
     <ul className="space-y-2 text-muted"><li>• <b className="text-fg">Misiones</b>: escribe y pulsa Intro para añadir; marca el cuadro para completar.</li><li>• <b className="text-fg">Hábitos</b>: pulsa el hábito para marcar hoy.</li><li>• <b className="text-fg">Estudio</b>: inicia el temporizador en el panel; al acabar se guarda solo.</li><li>• Todo se guarda automáticamente y se sincroniza entre dispositivos.</li></ul>
@@ -275,13 +276,13 @@ function Hud() {
   return (
     <div className="hud-root" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon')) blip('tick', sound); }}>
       <Stage orbit onOpen={setOpen} />
-      <div className="hud-hero" aria-live="off" style={{ top: '17%' }}>
-        <p className="hud-sub">{greet}</p><p className="hud-title text-2xl">{name.toUpperCase()}</p>
+      <div className="hud-hero" aria-live="off" style={{ top: '19%' }}>
+        <div className="mb-2 flex justify-center"><Logo size={40} /></div><p className="hud-sub">{greet}</p><p className="hud-title text-2xl">{name.toUpperCase()}</p>
         <p className="mt-1 text-[11px] text-muted">{pending.length} misiones · {upcoming.length} citas · racha {bestStreak} d</p>
       </div>
       <div className="hud-stage">
         <header className="hud-top">
-          <div className="flex items-center gap-3"><span className="hud-title text-lg">J.A.R.V.I.S.</span><span className="hud-chip hidden md:inline-flex">{name} · {format(now, "EEE d 'de' MMM", { locale: es })}</span></div>
+          <div className="flex items-center gap-3"><Logo size={30} /><span className="hud-title text-lg">E.D.I.T.H.</span><span className="hud-chip hidden md:inline-flex">{name} · {format(now, "EEE d 'de' MMM", { locale: es })}</span></div>
           <div className="flex items-center gap-2">
             <span className="hud-val mr-1 text-lg tabular-nums">{format(now, 'HH:mm:ss')}</span>
             <span className={`hud-chip ${sync === 'ok' ? '' : '!border-warn !text-warn'}`} role="status"><i className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: sync === 'ok' ? 'var(--ok)' : 'var(--warn)', boxShadow: '0 0 8px currentColor' }} />{syncLabel}</span>
@@ -334,7 +335,7 @@ function Hud() {
   );
 }
 
-/* ───────────── Chat con JARVIS ───────────── */
+/* ───────────── Chat con EDITH ───────────── */
 const SUGGEST = ['¿Qué tengo pendiente hoy?', 'Hazme un plan de estudio para esta semana', '¿Cómo voy de notas?'];
 function Chat({ profile, inputRef }: { profile: string; inputRef: React.RefObject<HTMLInputElement | null> }) {
   const sound = useHud((s) => s.sound); const [msgs, setMsgs] = useState<{ role: 'user' | 'ai'; text: string }[]>([]); const [q, setQ] = useState(''); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
@@ -344,22 +345,22 @@ function Chat({ profile, inputRef }: { profile: string; inputRef: React.RefObjec
     try { const r = await personalApi.ask(text, hist); setMsgs((m) => [...m, { role: 'ai', text: r.text }]); blip('ok', sound); } catch (err) { setMsgs((m) => [...m, { role: 'ai', text: (err as Error).message }]); } finally { setBusy(false); hudBus.emit('think-off'); hudBus.emit('pulse'); }
   };
   return (
-    <section className="hud-panel !flex-none" aria-label="Conversación con JARVIS">
+    <section className="hud-panel !flex-none" aria-label="Conversación con EDITH">
       <i className="hud-glare" aria-hidden />
-      <h2 className="hud-h"><span>Habla con JARVIS</span><span className="hud-kbd">/</span></h2>
+      <h2 className="hud-h"><span>Habla con EDITH</span><span className="hud-kbd">/</span></h2>
       <div className="mb-2 max-h-28 min-h-10 space-y-2 overflow-y-auto text-sm" aria-live="polite">
         {msgs.length === 0 && <div className="flex flex-wrap gap-2">{SUGGEST.map((s) => <button key={s} className="hud-chip hover:!border-[var(--hud)] hover:!text-white" onClick={() => void ask(s)}>{s}</button>)}</div>}
-        {msgs.map((m, i) => <p key={i} className={m.role === 'user' ? 'text-right text-muted' : 'whitespace-pre-wrap'}><span className="hud-sub mr-2">{m.role === 'user' ? profile : 'JARVIS'}</span>{m.text}</p>)}
+        {msgs.map((m, i) => <p key={i} className={m.role === 'user' ? 'text-right text-muted' : 'whitespace-pre-wrap'}><span className="hud-sub mr-2">{m.role === 'user' ? profile : 'EDITH'}</span>{m.text}</p>)}
         {busy && <p className="hud-sub"><Loader2 size={12} className="mr-1 inline animate-spin" aria-hidden />Procesando…</p>}<div ref={end} />
       </div>
-      <form onSubmit={(e: FormEvent) => { e.preventDefault(); void ask(q.trim()); }} className="flex gap-2"><input ref={inputRef} className="hud-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Pregúntame lo que quieras, ${profile}…`} aria-label="Pregunta para JARVIS" maxLength={400} /><button className="hud-btn" type="submit" disabled={busy || !q.trim()} aria-label="Enviar"><Send size={14} aria-hidden /></button></form>
+      <form onSubmit={(e: FormEvent) => { e.preventDefault(); void ask(q.trim()); }} className="flex gap-2"><input ref={inputRef} className="hud-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Pregúntame lo que quieras, ${profile}…`} aria-label="Pregunta para EDITH" maxLength={400} /><button className="hud-btn" type="submit" disabled={busy || !q.trim()} aria-label="Enviar"><Send size={14} aria-hidden /></button></form>
     </section>
   );
 }
 
 export default function PersonalPage() {
   const { status, init } = usePersonal(); const started = useRef(false); const theme = useHud((s) => s.theme);
-  useEffect(() => { document.documentElement.classList.add('hud'); document.documentElement.dataset.theme = 'dark'; document.title = 'JARVIS · Personal'; return () => { document.documentElement.classList.remove('hud'); clearTheme(); }; }, []);
+  useEffect(() => { document.documentElement.classList.add('hud'); document.documentElement.dataset.theme = 'dark'; document.title = 'EDITH · Personal'; return () => { document.documentElement.classList.remove('hud'); clearTheme(); }; }, []);
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { if (!started.current) { started.current = true; void init(); } }, [init]);
   if (status === 'loading') return <div className="hud-root grid place-items-center"><p className="hud-title text-xl">INICIANDO SISTEMAS…</p></div>;

@@ -1,1 +1,0 @@
-var e=e=>e.f??/(a|ión|dad|tad|tud|umbre|ase|ule)$/i.test(e.singular.trim()),t=t=>`${e(t)?`Nueva`:`Nuevo`} ${t.singular.toLowerCase()}`;export{t};

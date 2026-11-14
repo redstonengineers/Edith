@@ -13,7 +13,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => m.type() === 'error' && !/Failed to load|401|409/.test(m.text()) && errs.push(m.text().slice(0, 140)));
   await p.goto(U + '/login'); await p.getByLabel(/Correo o usuario/).fill('redstonengineers'); await p.getByLabel('Contraseña').fill('mala'); await p.getByRole('button', { name: /Entrar/ }).click(); await p.waitForTimeout(700);
   ok(await p.getByText(/incorrectos/).count() === 1, 'login personal con contraseña mala muestra error');
-  await p.getByLabel('Contraseña').fill(PW); await p.getByRole('button', { name: /Entrar/ }).click(); await p.waitForURL(/\/personal/); await p.waitForSelector('text=Abrir mi JARVIS');
+  await p.getByLabel('Contraseña').fill(PW); await p.getByRole('button', { name: /Entrar/ }).click(); await p.waitForURL(/\/personal/); await p.waitForSelector('text=Abrir mi EDITH');
   ok(await p.getByRole('button', { name: /Entrar como Gazael/ }).count() === 1 && await p.getByRole('button', { name: /Entrar como Hokage/ }).count() === 1, 'selector de perfiles Gazael / Hokage');
   await p.getByRole('button', { name: /Entrar como Gazael/ }).click(); await p.waitForSelector('.hud-cols'); ok(true, 'HUD de Gazael abre');
   await p.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + '/hud-vacio.png' });
@@ -32,9 +32,9 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   // Persistencia: recarga y cambio de perfil → datos aislados
   await p.reload(); await p.waitForSelector('.hud-cols'); ok(await p.getByText('Entregar práctica').count() >= 1, 'los datos persisten tras recargar (sesión por cookie)');
   await p.getByRole('button', { name: 'Cerrar sesión' }).click(); await p.waitForURL(/\/login/);
-  await p.getByLabel(/Correo o usuario/).fill('redstonengineers'); await p.getByLabel('Contraseña').fill(PW); await p.getByRole('button', { name: /Entrar/ }).click(); await p.waitForSelector('text=Abrir mi JARVIS');
+  await p.getByLabel(/Correo o usuario/).fill('redstonengineers'); await p.getByLabel('Contraseña').fill(PW); await p.getByRole('button', { name: /Entrar/ }).click(); await p.waitForSelector('text=Abrir mi EDITH');
   await p.getByRole('button', { name: /Entrar como Hokage/ }).click(); await p.waitForSelector('.hud-cols'); ok(await p.getByText('Entregar práctica').count() === 0, 'Hokage no ve los datos de Gazael');
-  await p.getByRole('textbox', { name: 'Pregunta para JARVIS' }).fill('¿Qué tengo pendiente?'); await p.getByRole('button', { name: 'Enviar' }).click(); await p.waitForSelector('text=ANTHROPIC_API_KEY', { timeout: 8000 }).catch(() => {}); ok(await p.getByText(/modelo de lenguaje|ANTHROPIC/).count() >= 1, 'chat de JARVIS responde (sin clave: avisa)');
+  await p.getByRole('textbox', { name: 'Pregunta para EDITH' }).fill('¿Qué tengo pendiente?'); await p.getByRole('button', { name: 'Enviar' }).click(); await p.waitForSelector('text=ANTHROPIC_API_KEY', { timeout: 8000 }).catch(() => {}); ok(await p.getByText(/modelo de lenguaje|ANTHROPIC/).count() >= 1, 'chat de JARVIS responde (sin clave: avisa)');
   // Las cuentas de academia siguen funcionando con correo
   const p2 = await (await b.newContext()).newPage(); await p2.goto(U + '/login'); await p2.locator('button[class*="text-xs"]').filter({ hasText: 'Pablo' }).first().click(); await p2.waitForSelector('main h1'); ok(true, 'login de academia sigue funcionando');
   console.log('ERRORS', JSON.stringify(errs)); console.log(fails ? `${fails} FALLOS` : 'TODO OK'); await b.close(); process.exit(fails ? 1 : 0);
