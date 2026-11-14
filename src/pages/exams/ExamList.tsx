@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { FileText, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -35,7 +36,7 @@ export default function ExamList() {
   const close = () => { sp.delete('nuevo'); setSp(sp, { replace: true }); };
   return (
     <>
-      <PageHeader title={L.exam.plural} description="Convocatorias, realización y corrección." actions={can('exams:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><Plus size={16} />Nuevo {L.exam.singular.toLowerCase()}</Button>} />
+      <PageHeader title={L.exam.plural} description="Convocatorias, realización y corrección." actions={can('exams:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><Plus size={16} />{nuevo(L.exam)}</Button>} />
       <div className="mb-4"><FilterChips<F> label="Filtrar" value={f} onChange={setF} options={[opt('proximos', 'Próximos'), opt('por_calificar', 'Por calificar'), opt('corregidos', 'Corregidos'), opt('realizados', 'Realizados'), opt('todos', 'Todos')]} /></div>
       <DataTable label={L.exam.plural} rows={rows} columns={cols} rowKey={(e) => e.id} onRowClick={(e) => nav(`/examenes/${e.id}`)} defaultSort={{ key: 'd', dir: f === 'proximos' ? 'asc' : 'desc' }} empty={{ icon: FileText, title: 'Sin resultados' }} />
       {sp.get('nuevo') === '1' && <ExamForm open onClose={close} onCreated={(id) => nav(`/examenes/${id}`)} />}

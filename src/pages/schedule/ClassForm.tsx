@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { AlertTriangle, Ban, CheckSquare, Copy, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/form';
@@ -43,7 +44,7 @@ export function ClassForm({ open, onClose, session, defaults }: { open: boolean;
     setTop(null); const p = classSchema.safeParse(f); if (!p.success) return setErr(fieldErrors(p.error)); setErr({});
     try { const r = session ? await run(() => updateClass(user, session.id, p.data), 'Clase actualizada') : await run(() => createClass(user, p.data), 'Clase creada'); if (r) onClose(); } catch (e) { setTop((e as Error).message); }
   };
-  const title = session ? `${session.status === 'cancelada' ? 'Clase cancelada' : 'Editar'} ${L.class.singular.toLowerCase()}` : `Nueva ${L.class.singular.toLowerCase()}`;
+  const title = session ? `${session.status === 'cancelada' ? 'Clase cancelada' : 'Editar'} ${L.class.singular.toLowerCase()}` : `${nuevo(L.class)}`;
   return (
     <>
       <FormModal open={open} onClose={onClose} title={title} onSubmit={submit} error={top} wide submitLabel={write ? 'Guardar' : 'Cerrar'}>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { CalendarDays, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -33,7 +34,7 @@ export default function ClassesPage() {
   const close = () => { setOpen(null); if (sp.has('nuevo')) { sp.delete('nuevo'); setSp(sp, { replace: true }); } };
   return (
     <>
-      <PageHeader title={L.class.plural} description="Sesiones programadas, impartidas y canceladas." actions={can('classes:write') && <Button variant="primary" onClick={() => setOpen('new')}><Plus size={16} />Nueva {L.class.singular.toLowerCase()}</Button>} />
+      <PageHeader title={L.class.plural} description="Sesiones programadas, impartidas y canceladas." actions={can('classes:write') && <Button variant="primary" onClick={() => setOpen('new')}><Plus size={16} />{nuevo(L.class)}</Button>} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <FilterChips<F> label="Filtrar" value={f} onChange={setF} options={[opt('hoy', 'Hoy'), opt('proximas', 'Próximas'), opt('pasadas', 'Pasadas'), opt('canceladas', 'Canceladas')]} />
         <SearchInput value={q} onChange={setQ} placeholder="Buscar…" label={`Buscar ${L.class.plural.toLowerCase()}`} />

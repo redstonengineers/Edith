@@ -16,7 +16,7 @@ export interface Academy {
   status: 'active' | 'suspended';
   createdAt: ISODate;
 }
-export type AcademyType = 'educativa' | 'idiomas' | 'musica' | 'oposiciones' | 'refuerzo' | 'autoescuela' | 'otro';
+export type AcademyType = 'educativa' | 'idiomas' | 'musica' | 'oposiciones' | 'refuerzo' | 'autoescuela' | 'fisioterapia' | 'psicologia' | 'fitness' | 'danza' | 'deportiva' | 'infantil' | 'formacion' | 'nautica' | 'canina' | 'estetica' | 'artes' | 'otro';
 
 export interface User extends Tenant {
   id: ID;
@@ -33,7 +33,7 @@ export interface User extends Tenant {
   pwd?: { salt: string; hash: string };
 }
 
-export interface EntityLabel { singular: string; plural: string }
+export interface EntityLabel { singular: string; plural: string; /** Género femenino (para «Nueva sesión»). Si falta, se infiere. */ f?: boolean }
 export type LabelKey =
   | 'student' | 'teacher' | 'group' | 'class' | 'subject' | 'exam' | 'classroom'
   | 'enrollment' | 'payment' | 'incident' | 'document';

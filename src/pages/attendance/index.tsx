@@ -26,7 +26,12 @@ const OPTS: { id: AttendanceStatus; label: string; short: string; on: string }[]
 function Register() {
   const snap = useSnapshot(); const L = useLabels(); const can = useCan(); const user = useUser(); const run = useAction(); const [sp, setSp] = useSearchParams();
   const preset = sp.get('clase') ? snap.classes.find((c) => c.id === sp.get('clase')) : undefined;
-  const [date, setDate] = useState(preset?.date ?? todayISO());
+  // Sin clases hoy (fin de semana, festivo), se abre el último día con clases en vez de una pantalla vacía.
+  const [date, setDate] = useState(() => {
+    if (preset) return preset.date; const t = todayISO(); const live = snap.classes.filter((c) => c.status !== 'cancelada');
+    if (live.some((c) => c.date === t)) return t;
+    return live.map((c) => c.date).filter((d) => d < t).sort().pop() ?? t;
+  });
   const [sel, setSel] = useState<string | null>(preset?.id ?? null);
   const write = can('attendance:write');
   const classes = useMemo(() => snap.classes.filter((c) => c.date === date && c.status !== 'cancelada').sort((a, b) => a.start.localeCompare(b.start)), [snap.classes, date]);

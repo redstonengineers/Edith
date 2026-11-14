@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { GraduationCap, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -29,7 +30,7 @@ export default function TeacherList() {
   ];
   return (
     <>
-      <PageHeader title={L.teacher.plural} description={`${rows.filter((r) => r.t.active).length} activos`} actions={can('teachers:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><UserPlus size={16} />Nuevo {L.teacher.singular.toLowerCase()}</Button>} />
+      <PageHeader title={L.teacher.plural} description={`${rows.filter((r) => r.t.active).length} activos`} actions={can('teachers:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><UserPlus size={16} />{nuevo(L.teacher)}</Button>} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <FilterChips label="Estado" value={f} onChange={setF} options={[{ id: 'activos', label: 'Activos' }, { id: 'inactivos', label: 'Inactivos' }, { id: 'todos', label: 'Todos' }]} />
         <SearchInput value={q} onChange={setQ} placeholder={`Buscar ${L.teacher.plural.toLowerCase()}…`} label={`Buscar ${L.teacher.plural.toLowerCase()}`} />

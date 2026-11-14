@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { Hourglass, UserPlus, Users } from 'lucide-react';
 import { AttendanceCell, PayBadge, StudentStatusBadge } from '@/components/domain/badges';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -47,7 +48,7 @@ export default function StudentList() {
   return (
     <>
       <PageHeader title={L.student.plural} description={`${rows.filter((r) => r.student.status === 'activo' || r.student.status === 'nuevo').length} activos · ${rows.length} en total`}
-        actions={can('students:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><UserPlus size={16} />Nuevo {L.student.singular.toLowerCase()}</Button>} />
+        actions={can('students:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><UserPlus size={16} />{nuevo(L.student)}</Button>} />
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterChips<Filter> label="Filtrar" value={filter} onChange={setFilter} options={[opt('todos', 'Todos'), opt('activos', 'Activos'), opt('nuevos', 'Nuevos'), opt('inactivos', 'Inactivos'), ...(can('payments:read') ? [opt('morosos', 'Morosos')] : []), opt('baja_asistencia', 'Asistencia baja')]} />
         <div className="flex items-center gap-2">

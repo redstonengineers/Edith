@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Field, Input } from '@/components/ui/form';
+import { nuevo } from '@/lib/labels';
 import { FormModal } from '@/components/ui/FormModal';
 import { useAction, useLabels, useSnapshot, useUser } from '@/hooks';
 import { DAYS } from '@/lib/conflicts';
@@ -29,7 +30,7 @@ export function TeacherForm({ open, onClose, teacher, onCreated }: { open: boole
   };
   const chip = (on: boolean) => cn('h-8 rounded-full border px-3 text-[13px]', on ? 'border-brand/50 bg-brand/12' : 'border-line text-muted hover:text-fg');
   return (
-    <FormModal open={open} onClose={onClose} title={teacher ? `Editar ${L.teacher.singular.toLowerCase()}` : `Nuevo ${L.teacher.singular.toLowerCase()}`} onSubmit={submit} error={top} wide>
+    <FormModal open={open} onClose={onClose} title={teacher ? `Editar ${L.teacher.singular.toLowerCase()}` : `${nuevo(L.teacher)}`} onSubmit={submit} error={top} wide>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre" required error={err.firstName}>{(p) => <Input {...p} data-autofocus value={f.firstName} onChange={set('firstName')} />}</Field>
         <Field label="Apellidos" required error={err.lastName}>{(p) => <Input {...p} value={f.lastName} onChange={set('lastName')} />}</Field>

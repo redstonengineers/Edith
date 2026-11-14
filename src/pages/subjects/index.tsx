@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -24,7 +25,7 @@ function SubjectForm({ subject, onClose }: { subject?: Subject; onClose: () => v
     try { const r = subject ? await run(() => updateSubject(user, subject.id, p.data), 'Guardado') : await run(() => createSubject(user, p.data), `${L.subject.singular} creado`); if (r) onClose(); } catch (e) { setTop((e as Error).message); }
   };
   return (
-    <FormModal open onClose={onClose} title={subject ? `Editar ${L.subject.singular.toLowerCase()}` : `Nuevo ${L.subject.singular.toLowerCase()}`} onSubmit={submit} error={top}>
+    <FormModal open onClose={onClose} title={subject ? `Editar ${L.subject.singular.toLowerCase()}` : `${nuevo(L.subject)}`} onSubmit={submit} error={top}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre" required error={err.name} className="sm:col-span-2">{(p) => <Input {...p} data-autofocus value={f.name} onChange={set('name')} />}</Field>
         <Field label="Código" required error={err.code}>{(p) => <Input {...p} value={f.code} onChange={set('code')} maxLength={6} />}</Field>
@@ -55,7 +56,7 @@ export default function SubjectsPage() {
   const close = () => { setEdit(null); if (sp.has('nuevo')) { sp.delete('nuevo'); setSp(sp, { replace: true }); } };
   return (
     <>
-      <PageHeader title={L.subject.plural} description={`${rows.length} en el catálogo`} actions={write && <Button variant="primary" onClick={() => setEdit('new')}><Plus size={16} />Nuevo {L.subject.singular.toLowerCase()}</Button>} />
+      <PageHeader title={L.subject.plural} description={`${rows.length} en el catálogo`} actions={write && <Button variant="primary" onClick={() => setEdit('new')}><Plus size={16} />{nuevo(L.subject)}</Button>} />
       <DataTable label={L.subject.plural} rows={rows} columns={cols} rowKey={(r) => r.s.id} defaultSort={{ key: 'name', dir: 'asc' }} empty={{ icon: BookOpen, title: `Sin ${L.subject.plural.toLowerCase()}`, description: 'Crea el primero para poder montar grupos.' }} />
       {(creating || editing) && <SubjectForm subject={editing} onClose={close} />}
       <ConfirmDialog open={!!del} danger title={`¿Eliminar ${del?.name}?`} description="Esta acción no se puede deshacer. Si hay grupos que la usan, no se podrá eliminar." confirmLabel="Eliminar" onClose={() => setDel(null)} onConfirm={() => del && void run(() => deleteSubject(user, del.id), 'Eliminado')} />

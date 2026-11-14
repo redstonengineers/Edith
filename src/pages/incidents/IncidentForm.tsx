@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
+import { nuevo } from '@/lib/labels';
 import { FormModal } from '@/components/ui/FormModal';
 import { useAction, useLabels, useSnapshot, useUser } from '@/hooks';
 import { fieldErrors, incidentSchema } from '@/lib/schemas';
@@ -20,7 +21,7 @@ export function IncidentForm({ onClose, onCreated }: { onClose: () => void; onCr
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const submit = async () => { const p = incidentSchema.safeParse(f); if (!p.success) return setErr(fieldErrors(p.error)); const r = await run(() => createIncident(user, p.data), `${L.incident.singular} creada`); if (r) { onClose(); onCreated?.((r as Incident).id); } };
   return (
-    <FormModal open onClose={onClose} title={`Nueva ${L.incident.singular.toLowerCase()}`} onSubmit={submit} wide>
+    <FormModal open onClose={onClose} title={`${nuevo(L.incident)}`} onSubmit={submit} wide>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Título" required error={err.title} className="sm:col-span-2">{(p) => <Input {...p} data-autofocus value={f.title} onChange={set('title')} placeholder="Alumno con problemas de asistencia" />}</Field>
         <Field label="Tipo" required error={err.type}>{(p) => <Select {...p} value={f.type} onChange={set('type')}><option value="">Seleccionar…</option>{INCIDENT_TYPES.map((t) => <option key={t}>{t}</option>)}</Select>}</Field>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
+import { nuevo } from '@/lib/labels';
 import { FormModal } from '@/components/ui/FormModal';
 import { useAction, useLabels, useSnapshot, useUser } from '@/hooks';
 import { examSchema, fieldErrors } from '@/lib/schemas';
@@ -20,7 +21,7 @@ export function ExamForm({ open, onClose, exam, onCreated }: { open: boolean; on
     try { const r = exam ? await run(() => updateExam(user, exam.id, p.data), `${L.exam.singular} actualizado`) : await run(() => createExam(user, p.data), `${L.exam.singular} creado`); if (r) { onClose(); if (!exam) onCreated?.((r as Exam).id); } } catch (e) { setTop((e as Error).message); }
   };
   return (
-    <FormModal open={open} onClose={onClose} title={exam ? `Editar ${L.exam.singular.toLowerCase()}` : `Nuevo ${L.exam.singular.toLowerCase()}`} onSubmit={submit} error={top} wide>
+    <FormModal open={open} onClose={onClose} title={exam ? `Editar ${L.exam.singular.toLowerCase()}` : `${nuevo(L.exam)}`} onSubmit={submit} error={top} wide>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Título" required error={err.title} className="sm:col-span-2">{(p) => <Input {...p} data-autofocus value={f.title} onChange={set('title')} placeholder="Examen parcial · Matemáticas" />}</Field>
         <Field label={L.group.singular} required error={err.groupId}>{(p) => <Select {...p} value={f.groupId} onChange={(e) => onGroup(e.target.value)}>{snap.groups.filter((g) => g.active).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select>}</Field>

@@ -47,7 +47,7 @@ const U = process.env.APP_URL || 'http://127.0.0.1:5173';
   await radios.nth(0).getByRole('radio', { name: 'Ausente' }).click(); await p.waitForTimeout(300);
   ok(await radios.nth(0).getByRole('radio', { name: 'Ausente' }).getAttribute('aria-checked') === 'true', 'absent set');
   await p.getByRole('button', { name: /Marcar todos presentes/ }).click(); await p.waitForTimeout(400);
-  ok(await radios.nth(0).getByRole('radio', { name: 'Ausente' }).getAttribute('aria-checked') === 'true' && await radios.nth(Math.min(1, nr - 1)).getByRole('radio', { name: 'Presente' }).getAttribute('aria-checked') === 'true', 'mark all keeps existing, fills rest');
+  ok(await radios.nth(0).getByRole('radio', { name: 'Ausente' }).getAttribute('aria-checked') === 'true' && await p.locator('[role=radiogroup] [role=radio][aria-checked=true]').count() === nr, 'mark all keeps existing, fills rest');
   await p.screenshot({ path: out + 'shot-attendance.png' });
   await p.getByRole('tab', { name: 'Estadísticas' }).click(); await p.getByRole('button', { name: /Bajo el/ }).click(); ok(await p.locator('tbody tr').count() >= 1, 'low attendance list');
   // exams

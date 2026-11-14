@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { Plus, UsersRound } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -32,7 +33,7 @@ export default function GroupList() {
   ];
   return (
     <>
-      <PageHeader title={L.group.plural} description={`${rows.length} ${L.group.plural.toLowerCase()} activos`} actions={can('groups:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><Plus size={16} />Nuevo {L.group.singular.toLowerCase()}</Button>} />
+      <PageHeader title={L.group.plural} description={`${rows.length} ${L.group.plural.toLowerCase()} activos`} actions={can('groups:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><Plus size={16} />{nuevo(L.group)}</Button>} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <FilterChips label="Ocupación" value={f} onChange={setF} options={[{ id: 'todos', label: 'Todos' }, { id: 'completos', label: 'Completos' }, { id: 'disponibles', label: 'Con plazas' }]} />
         <SearchInput value={q} onChange={setQ} placeholder={`Buscar ${L.group.plural.toLowerCase()}…`} label={`Buscar ${L.group.plural.toLowerCase()}`} />

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Field, Input, Select, Textarea } from '@/components/ui/form';
+import { nuevo } from '@/lib/labels';
 import { FormModal } from '@/components/ui/FormModal';
 import { useAction, useLabels, useSnapshot, useUser } from '@/hooks';
 import { ageOf } from '@/lib/people';
@@ -32,7 +33,7 @@ export function StudentForm({ open, onClose, student, onCreated }: { open: boole
   };
 
   return (
-    <FormModal open={open} onClose={onClose} title={student ? `Editar ${L.student.singular.toLowerCase()}` : `Nuevo ${L.student.singular.toLowerCase()}`} description={student ? undefined : 'Se creará la ficha y la matrícula. Podrás completar el resto desde el perfil.'} onSubmit={submit} error={top} wide>
+    <FormModal open={open} onClose={onClose} title={student ? `Editar ${L.student.singular.toLowerCase()}` : `${nuevo(L.student)}`} description={student ? undefined : 'Se creará la ficha y la matrícula. Podrás completar el resto desde el perfil.'} onSubmit={submit} error={top} wide>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre" required error={err.firstName}>{(p) => <Input {...p} data-autofocus value={f.firstName} onChange={set('firstName')} autoComplete="off" />}</Field>
         <Field label="Apellidos" required error={err.lastName}>{(p) => <Input {...p} value={f.lastName} onChange={set('lastName')} autoComplete="off" />}</Field>

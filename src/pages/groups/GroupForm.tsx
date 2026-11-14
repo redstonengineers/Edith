@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
+import { nuevo } from '@/lib/labels';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/form';
 import { FormModal } from '@/components/ui/FormModal';
@@ -35,7 +36,7 @@ export function GroupForm({ open, onClose, group, onCreated }: { open: boolean; 
     } catch (e) { setTop((e as Error).message); }
   };
   return (
-    <FormModal open={open} onClose={onClose} title={group ? `Editar ${L.group.singular.toLowerCase()}` : `Nuevo ${L.group.singular.toLowerCase()}`} onSubmit={submit} error={top} wide>
+    <FormModal open={open} onClose={onClose} title={group ? `Editar ${L.group.singular.toLowerCase()}` : `${nuevo(L.group)}`} onSubmit={submit} error={top} wide>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre" required error={err.name} className="sm:col-span-2">{(p) => <Input {...p} data-autofocus value={f.name} onChange={set('name')} placeholder="Inglés B2 · Grupo A" />}</Field>
         <Field label={L.subject.singular} required error={err.subjectId}>{(p) => <Select {...p} value={f.subjectId} onChange={set('subjectId')}><option value="">Seleccionar…</option>{snap.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>}</Field>

@@ -36,7 +36,7 @@ export function CommandPalette() {
   const listRef = useRef<HTMLUListElement>(null);
 
   useHotkey('k', (e) => { e.preventDefault(); setOpen(!useUi.getState().paletteOpen); }, { mod: true });
-  useEffect(() => { if (open) { setQ(''); setActive(0); } }, [open]);
+  useEffect(() => { setQ(''); setActive(0); }, [open]); // se limpia también al cerrar, para que al reabrir con una tecla rápida no se mezcle con la búsqueda anterior
 
   const index = useMemo(() => (data ? buildIndex(data) : []), [data]);
 
@@ -46,7 +46,11 @@ export function CommandPalette() {
     const toRow = (c: Command): Row => ({ key: c.id, group: c.group, title: c.title, subtitle: c.hint, icon: c.icon, run: () => { close(); c.run(); } });
     const tokens = norm(q).split(/\s+/).filter(Boolean);
     let cmds = commands;
-    if (tokens.length) cmds = commands.filter((c) => { const h = norm(`${c.title} ${c.keywords}`); return tokens.every((t) => h.includes(t)); });
+    if (tokens.length) {
+      // Relevancia: coincidencia en el título pesa más que en las palabras clave; empezar por la palabra, más aún.
+      const rel = (c: Command) => { const t = norm(c.title); return tokens.reduce((n, k) => n + (t.split(/\s+/).some((w) => w.startsWith(k)) ? 3 : t.includes(k) ? 2 : 0), 0); };
+      cmds = commands.filter((c) => { const h = norm(`${c.title} ${c.keywords}`); return tokens.every((t) => h.includes(t)); }).map((c, i) => ({ c, i, r: rel(c) })).sort((a, b) => b.r - a.r || a.i - b.i).map((x) => x.c);
+    }
     else cmds = [...commands.filter((c) => c.quick), ...commands.filter((c) => !c.quick).slice(0, 5)];
     const res: Row[] = cmds.slice(0, 9).map(toRow);
     for (const e of searchIndex(index, q)) {

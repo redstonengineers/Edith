@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { Calendar, CalendarToolbar, type CalEvent, type CalView } from '@/components/calendar/Calendar';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -39,7 +40,7 @@ export default function SchedulePage() {
 
   return (
     <>
-      <PageHeader title="Horarios" description={write ? 'Arrastra una clase para moverla. Haz clic en un hueco para crear una nueva.' : 'Tu calendario de clases.'} actions={write && <Button variant="primary" onClick={() => setOpen({})}><Plus size={16} />Nueva {L.class.singular.toLowerCase()}</Button>} />
+      <PageHeader title="Horarios" description={write ? 'Arrastra una clase para moverla. Haz clic en un hueco para crear una nueva.' : 'Tu calendario de clases.'} actions={write && <Button variant="primary" onClick={() => setOpen({})}><Plus size={16} />{nuevo(L.class)}</Button>} />
       <CalendarToolbar view={view} setView={setView} cursor={cursor} setCursor={setCursor} extra={<>
         <Select aria-label={`Filtrar por ${L.teacher.singular.toLowerCase()}`} value={fTeacher} onChange={(e) => setFTeacher(e.target.value)} className="h-9 w-52"><option value="">Todos: {L.teacher.plural.toLowerCase()}</option>{snap.teachers.map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}</Select>
         <Select aria-label={`Filtrar por ${L.group.singular.toLowerCase()}`} value={fGroup} onChange={(e) => setFGroup(e.target.value)} className="h-9 w-52"><option value="">Todos: {L.group.plural.toLowerCase()}</option>{snap.groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select>

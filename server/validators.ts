@@ -11,7 +11,7 @@ const role = z.enum(['ADMIN', 'SECRETARIA', 'PROFESOR', 'ALUMNO', 'TUTOR']);
 const roleAny = z.enum(['SUPER_ADMIN', 'ADMIN', 'SECRETARIA', 'PROFESOR', 'ALUMNO', 'TUTOR']);
 const moduleIds = MODULES.map((m) => m.id) as [string, ...string[]];
 const labelKeys = Object.keys(DEFAULT_LABELS) as [string, ...string[]];
-const academyType = z.enum(['educativa', 'idiomas', 'musica', 'oposiciones', 'refuerzo', 'autoescuela', 'otro']);
+const academyType = z.enum(['educativa', 'idiomas', 'musica', 'oposiciones', 'refuerzo', 'autoescuela', 'fisioterapia', 'psicologia', 'fitness', 'danza', 'deportiva', 'infantil', 'formacion', 'nautica', 'canina', 'estetica', 'artes', 'otro']);
 const channel = z.enum(['app', 'email', 'whatsapp', 'sms', 'push']);
 
 /**

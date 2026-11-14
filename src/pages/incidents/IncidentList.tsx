@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { nuevo } from '@/lib/labels';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -30,7 +31,7 @@ export default function IncidentList() {
   const opt = (id: F, label: string) => ({ id, label, count: snap.incidents.filter(preds[id]).length });
   return (
     <>
-      <PageHeader title={L.incident.plural} description="Seguimiento por prioridad y responsable." actions={can('incidents:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><Plus size={16} />Nueva {L.incident.singular.toLowerCase()}</Button>} />
+      <PageHeader title={L.incident.plural} description="Seguimiento por prioridad y responsable." actions={can('incidents:write') && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><Plus size={16} />{nuevo(L.incident)}</Button>} />
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <FilterChips<F> label="Estado" value={f} onChange={setF} options={[opt('abiertas', 'Abiertas'), opt('pendiente', 'Pendientes'), opt('en_proceso', 'En proceso'), opt('resuelto', 'Resueltas'), opt('todas', 'Todas')]} />
         <div className="flex items-center gap-2"><select aria-label="Prioridad" value={prio} onChange={(e) => setPrio(e.target.value)} className="h-10 rounded-lg border border-line bg-bg px-3 text-sm"><option value="">Toda prioridad</option>{(['critica', 'alta', 'media', 'baja'] as const).map((p) => <option key={p} value={p}>{prioLabel[p]}</option>)}</select><SearchInput value={q} onChange={setQ} placeholder="Buscar…" label="Buscar incidencias" /></div>
