@@ -10,7 +10,10 @@ export interface Subj { id: string; name: string; color: string }
 export interface Grade { id: string; subjectId: string; title: string; score: number; weight: number; date: string }
 export interface Habit { id: string; name: string; log: string[] }
 export interface Note { id: string; title: string; body: string; updated: string }
-export interface Expense { id: string; concept: string; amount: number; date: string; category: string; income?: boolean }
+/** Carpeta de dinero (efectivo, un banco, la pensión…). Su saldo = saldo inicial + ingresos − gastos de sus movimientos. */
+export type WalletKind = 'efectivo' | 'banco' | 'pension' | 'ahorro' | 'tarjeta' | 'otro';
+export interface Wallet { id: string; name: string; kind: WalletKind; color: string; opening: number }
+export interface Expense { id: string; concept: string; amount: number; date: string; category: string; income?: boolean; walletId?: string; /** Patas de un traspaso entre carpetas: no cuentan como ingreso ni gasto. */ transferId?: string }
 export interface Slot { id: string; title: string; day: number; start: string; end: string; place?: string; color: string }
 /** Excepción de una semana concreta (week = lunes ISO): mover o cancelar una clase recurrente, o añadir una clase suelta. */
 export interface SlotEx { id: string; week: string; kind: 'move' | 'cancel' | 'extra'; slotId?: string; day?: number; start?: string; end?: string; place?: string; title?: string; color?: string }
@@ -18,8 +21,8 @@ export type Repeat = 'no' | 'diario' | 'semanal' | 'mensual';
 export interface Reminder { id: string; title: string; date: string; time?: string; done: boolean; repeat: Repeat }
 export interface Goal { id: string; title: string; progress: number; due?: string }
 export interface Study { id: string; subjectId?: string; minutes: number; date: string; name?: string }
-export interface PData { tasks: Task[]; events: Ev[]; subjects: Subj[]; grades: Grade[]; habits: Habit[]; notes: Note[]; expenses: Expense[]; goals: Goal[]; study: Study[]; budget: number; schedule: Slot[]; schedEx: SlotEx[]; reminders: Reminder[] }
-export const EMPTY: PData = { tasks: [], events: [], subjects: [], grades: [], habits: [], notes: [], expenses: [], goals: [], study: [], budget: 0, schedule: [], schedEx: [], reminders: [] };
+export interface PData { tasks: Task[]; events: Ev[]; subjects: Subj[]; grades: Grade[]; habits: Habit[]; notes: Note[]; expenses: Expense[]; goals: Goal[]; study: Study[]; budget: number; schedule: Slot[]; schedEx: SlotEx[]; reminders: Reminder[]; wallets: Wallet[] }
+export const EMPTY: PData = { tasks: [], events: [], subjects: [], grades: [], habits: [], notes: [], expenses: [], goals: [], study: [], budget: 0, schedule: [], schedEx: [], reminders: [], wallets: [] };
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
 interface PState {
@@ -31,7 +34,9 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 
 async function load(set: (p: Partial<PState>) => void) {
   const r = await personalApi.load();
-  set({ status: 'ready', rev: r.rev, data: { ...EMPTY, ...(r.data as Partial<PData> | null) }, sync: 'ok' });
+  const d: PData = { ...EMPTY, ...(r.data as Partial<PData> | null) };
+  if (d.wallets.length === 0 && d.expenses.length > 0) { const w = { id: 'w_main', name: 'Principal', kind: 'otro' as const, color: '#22c8ff', opening: 0 }; d.wallets = [w]; d.expenses = d.expenses.map((e) => ({ ...e, walletId: e.walletId ?? w.id })); }
+  set({ status: 'ready', rev: r.rev, data: d, sync: 'ok' });
 }
 
 export const usePersonal = create<PState>((set, get) => ({

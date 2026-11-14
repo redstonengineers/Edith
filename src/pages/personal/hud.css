@@ -138,3 +138,13 @@ textarea.hud-input { height: auto; }
 .mini-blk b { font-weight: 600; } .mini-blk.ex { border-style: dashed; } .mini-blk.cur { box-shadow: 0 0 12px var(--c); outline: 1px solid #fff; z-index: 2; }
 .mini-now { position: absolute; left: 0; right: 0; height: 1px; background: var(--bad); box-shadow: 0 0 5px var(--bad); z-index: 3; }
 .mini-blk.off { opacity: .35; border-style: dotted; text-decoration: line-through; box-shadow: none; }
+
+/* Carpetas de dinero */
+.wallet-card { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); border-radius: 8px; text-align: left; color: var(--text); background: linear-gradient(160deg, color-mix(in srgb, var(--c) 16%, rgb(4 12 24 / .85)), rgb(4 12 24 / .85)); transition: transform .2s var(--spring, ease), box-shadow .2s, border-color .2s; }
+.wallet-card svg { color: var(--c); grid-row: span 2; } .wallet-card b { grid-column: 2; font-size: 15px; }
+.wallet-card:hover { transform: translateY(-2px); box-shadow: 0 0 18px color-mix(in srgb, var(--c) 50%, transparent); } .wallet-card:active { transform: scale(.97); }
+.wallet-card[aria-pressed='true'] { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 22px color-mix(in srgb, var(--c) 45%, transparent); }
+.wallet-card.dashed { border-style: dashed; color: var(--muted); display: flex; justify-content: center; gap: 8px; background: transparent; }
+.wallet-mini { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 3px 8px; border: 1px solid color-mix(in srgb, var(--c) 50%, transparent); border-radius: 99px; font-size: 11px; background: color-mix(in srgb, var(--c) 14%, transparent); transition: transform .15s var(--spring, ease), box-shadow .2s; }
+.wallet-mini svg { color: var(--c); flex: none; } .wallet-mini:hover { transform: translateY(-1px); box-shadow: 0 0 12px color-mix(in srgb, var(--c) 55%, transparent); }
+.hud-btn[aria-pressed='true'] { background: rgb(var(--h) / .38); box-shadow: 0 0 18px rgb(var(--h) / .5); }

@@ -198,7 +198,7 @@ function HelpBody() {
 /* ───────────── HUD ───────────── */
 function Hud() {
   const { data, profile, logout, sync, status, switchProfile } = usePersonal(); const timer = useTimer(); const { sound } = useHud(); const alerts = useReminderAlerts();
-  const [open, setOpen] = useState<Mod | null>(null); const [calDay, setCalDay] = useState(todayISO()); const [panel, setPanel] = useState<'settings' | 'help' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState<Mod | null>(null); const [calDay, setCalDay] = useState(todayISO()); const [finSel, setFinSel] = useState('all'); const [panel, setPanel] = useState<'settings' | 'help' | null>(null); const [now, setNow] = useState(new Date()); const chatRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -213,14 +213,14 @@ function Hud() {
   const pendingRem = data.reminders.filter((r) => !r.done).length; const pendingTasks = data.tasks.filter((x) => !x.done).length;
   const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
   const mm = String(Math.floor(timer.left / 60)).padStart(2, '0'); const ss = String(timer.left % 60).padStart(2, '0'); const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
-  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money />, study: <StudyPanel timer={timer} />, notes: <Notes />, subjects: <Subjects /> };
+  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money sel={finSel} setSel={setFinSel} />, study: <StudyPanel timer={timer} />, notes: <Notes />, subjects: <Subjects /> };
   const openMod = (m: Mod) => () => setOpen(m);
   return (
     <div className="hud-root" onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon')) blip('tick', sound); }}>
       <Stage orbit onOpen={setOpen} />
       <div className="hud-hero" aria-live="off" style={{ top: '19%' }}>
         <div className="mb-2 flex justify-center"><Logo size={40} /></div><p className="hud-sub">{greet}</p><p className="hud-title text-2xl">{name.toUpperCase()}</p>
-        <p className="mt-1 text-[11px] text-muted">{todayClasses.length} clases hoy · {pendingRem} recordatorios · saldo {eur(st.balance)}</p>
+        <p className="mt-1 text-[11px] text-muted">{todayClasses.length} clases hoy · {pendingRem} recordatorios · total {eur(st.total)}</p>
       </div>
       <AlertStack ctl={alerts} />
       <div className="hud-stage">
@@ -245,7 +245,7 @@ function Hud() {
           </div>
           <div className="hud-col r">
             <CalendarPanel day={calDay} setDay={setCalDay} onOpen={openMod('agenda')} />
-            <FinancePanel onOpen={openMod('money')} />
+            <FinancePanel onOpen={(id) => { setFinSel(id ?? data.wallets[0]?.id ?? 'all'); setOpen('money'); }} />
             <Panel title="Estudio" right={<span className={timer.running ? 'hud-val' : 'hud-sub'}>{timer.running ? 'en marcha' : `${studyToday} min hoy`}</span>} onOpen={openMod('study')} grow={.95}>
               <TimerControls timer={timer} />
               <div className="mt-2 flex items-center gap-3"><p className="hud-title !tracking-[.12em] text-3xl tabular-nums">{mm}:{ss}</p><div className="ml-auto flex gap-2"><button className="hud-btn !px-3" onClick={timer.toggle} aria-label={timer.running ? 'Pausar' : 'Iniciar estudio'}>{timer.running ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}</button><button className="hud-icon" onClick={timer.reset} aria-label="Reiniciar"><RotateCcw size={14} aria-hidden /></button></div></div>

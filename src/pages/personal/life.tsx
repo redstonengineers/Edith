@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { addDays, addMonths, differenceInCalendarDays, format, parseISO, startOfMonth, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, BellRing, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, Plus, TrendingDown, TrendingUp, X } from 'lucide-react';
-import { uid, usePersonal, type PData, type Reminder, type Repeat } from '@/store/personal';
+import { ArrowLeftRight, Banknote, Bell, BellRing, Briefcase, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, CreditCard, Landmark, Pencil, PiggyBank, Plus, Trash2, TrendingDown, TrendingUp, Wallet, X } from 'lucide-react';
+import { uid, usePersonal, type PData, type Reminder, type Repeat, type WalletKind } from '@/store/personal';
 import { Bar, Empty, F, AddForm, Row, Panel, eur, todayISO } from './shared';
 import { blip, hudBus } from './fx';
 import { useHud } from './themes';
@@ -108,46 +108,97 @@ export function UpcomingPanel({ onAgenda, onTasks }: { onAgenda: () => void; onT
   );
 }
 
-/* ───────────── Finanzas ───────────── */
+/* ───────────── Finanzas: carpetas de dinero ───────────── */
 const CATS = ['Comida', 'Transporte', 'Estudios', 'Ocio', 'Casa', 'Salud', 'Otros'];
+const num = (s: string) => Number(s.replace(',', '.'));
+const KINDS: { id: WalletKind; label: string; icon: typeof Wallet; color: string }[] = [
+  { id: 'efectivo', label: 'Efectivo', icon: Banknote, color: '#34d399' }, { id: 'banco', label: 'Banco', icon: Landmark, color: '#22c8ff' }, { id: 'pension', label: 'Pensión', icon: Briefcase, color: '#fbbf24' },
+  { id: 'ahorro', label: 'Ahorros', icon: PiggyBank, color: '#f472b6' }, { id: 'tarjeta', label: 'Tarjeta', icon: CreditCard, color: '#a78bfa' }, { id: 'otro', label: 'Otra', icon: Wallet, color: '#fb923c' },
+];
+const kindOf = (k: WalletKind) => KINDS.find((x) => x.id === k) ?? KINDS[5];
+export const walletBalance = (d: PData, id: string) => { const w = d.wallets.find((x) => x.id === id); return (w?.opening ?? 0) + d.expenses.filter((e) => e.walletId === id).reduce((a, e) => a + (e.income ? e.amount : -e.amount), 0); };
+export const totalBalance = (d: PData) => d.wallets.reduce((a, w) => a + walletBalance(d, w.id), 0);
 export function monthStats(d: PData) {
-  const from = format(startOfMonth(new Date()), 'yyyy-MM-dd'); const m = d.expenses.filter((e) => e.date >= from);
+  const from = format(startOfMonth(new Date()), 'yyyy-MM-dd'); const m = d.expenses.filter((e) => e.date >= from && !e.transferId);
   const spent = m.filter((e) => !e.income).reduce((a, e) => a + e.amount, 0); const income = m.filter((e) => e.income).reduce((a, e) => a + e.amount, 0);
   const cats = new Map<string, number>(); m.filter((e) => !e.income).forEach((e) => cats.set(e.category, (cats.get(e.category) ?? 0) + e.amount));
-  return { spent, income, balance: income - spent, cats: [...cats.entries()].sort((a, b) => b[1] - a[1]), pct: d.budget ? (spent / d.budget) * 100 : 0 };
+  return { spent, income, balance: income - spent, total: totalBalance(d), cats: [...cats.entries()].sort((a, b) => b[1] - a[1]), pct: d.budget ? (spent / d.budget) * 100 : 0 };
 }
-const num = (s: string) => Number(s.replace(',', '.'));
+const addMove = (d: PData, walletId: string, concept: string, amount: number, income: boolean, category: string): PData => ({ ...d, expenses: [{ id: uid(), concept, amount, date: todayISO(), category, income: income || undefined, walletId }, ...d.expenses] });
+const transfer = (d: PData, from: string, to: string, amount: number): PData => { const t = uid(); const fn = d.wallets.find((w) => w.id === from)?.name ?? ''; const tn = d.wallets.find((w) => w.id === to)?.name ?? ''; const base = { amount, date: todayISO(), category: 'Traspaso', transferId: t };
+  return { ...d, expenses: [{ id: uid(), concept: `A ${tn}`, walletId: from, ...base }, { id: uid(), concept: `De ${fn}`, walletId: to, income: true, ...base }, ...d.expenses] }; };
 
-export function Money() {
-  const { data, update } = usePersonal(); const [c, setC] = useState(''); const [a, setA] = useState(''); const [cat, setCat] = useState('Ocio'); const [inc, setInc] = useState(false); const st = monthStats(data);
-  return (<>
-    <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-      <div className="hud-panel !flex-none !p-2"><p className="hud-sub">Ingresos</p><p className="hud-val">{eur(st.income)}</p></div><div className="hud-panel !flex-none !p-2"><p className="hud-sub">Gastos</p><p className="hud-val">{eur(st.spent)}</p></div><div className="hud-panel !flex-none !p-2"><p className="hud-sub">Saldo</p><p className={st.balance < 0 ? 'font-bold text-bad' : 'hud-val'}>{eur(st.balance)}</p></div>
+/** Alta rápida de carpetas: un toque en «Efectivo», «Banco», «Pensión»… */
+function NewFolder({ onDone }: { onDone: (id: string) => void }) {
+  const update = usePersonal((s) => s.update); const [kind, setKind] = useState<WalletKind>('banco'); const [name, setName] = useState(''); const [open, setOpen] = useState('');
+  const add = () => { const k = kindOf(kind); const id = uid(); update((d) => ({ ...d, wallets: [...d.wallets, { id, name: name.trim() || k.label, kind, color: k.color, opening: Math.max(0, num(open) || 0) }] })); setName(''); setOpen(''); onDone(id); };
+  return (
+    <div className="hud-panel !flex-none !p-3" role="group" aria-label="Nueva carpeta de dinero">
+      <p className="hud-sub mb-2">Nueva carpeta</p>
+      <div className="mb-3 flex flex-wrap gap-2">{KINDS.map((k) => <button key={k.id} type="button" aria-pressed={kind === k.id} onClick={() => setKind(k.id)} className="hud-chip hover:!text-white" style={kind === k.id ? { borderColor: k.color, color: '#fff', background: `${k.color}33` } : undefined}><k.icon size={12} aria-hidden />{k.label}</button>)}</div>
+      <div className="flex flex-wrap gap-2"><F label="Nombre" w="flex-1 min-w-32"><input className="hud-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={kindOf(kind).label} aria-label="Nombre de la carpeta" /></F><F label="Dinero que hay ahora (€)" w="w-44"><input className="hud-input" inputMode="decimal" value={open} onChange={(e) => setOpen(e.target.value)} placeholder="0" aria-label="Saldo inicial" /></F><button className="hud-btn self-end" onClick={add}><Plus size={14} className="mr-1 inline" aria-hidden />Crear</button></div>
     </div>
-    <F label="Presupuesto mensual de gastos (€)" w="w-64"><input className="hud-input mb-3" inputMode="decimal" value={data.budget || ''} onChange={(e) => update((d) => ({ ...d, budget: Math.max(0, num(e.target.value) || 0) }))} /></F>
-    {data.budget > 0 && <div className="mb-4"><Bar pct={st.pct} tone={st.pct > 100 ? 'bad' : st.pct > 80 ? 'warn' : undefined} /><p className="mt-1 text-xs text-muted">{eur(Math.max(0, data.budget - st.spent))} disponibles de {eur(data.budget)}</p></div>}
-    <AddForm label={inc ? 'Ingreso' : 'Gasto'} onAdd={() => { const n = num(a); if (!c.trim() || !(n > 0)) return false; update((d) => ({ ...d, expenses: [{ id: uid(), concept: c.trim(), amount: n, date: todayISO(), category: inc ? 'Ingreso' : cat, income: inc || undefined }, ...d.expenses] })); setC(''); setA(''); }}>
-      <F label="Tipo" w="w-32"><div className="hud-seg" role="group" aria-label="Tipo de movimiento"><button type="button" aria-pressed={!inc} onClick={() => setInc(false)}>Gasto</button><button type="button" aria-pressed={inc} onClick={() => setInc(true)}>Ingreso</button></div></F>
-      <F label="Concepto"><input className="hud-input" value={c} onChange={(e) => setC(e.target.value)} placeholder={inc ? 'Beca, paga…' : 'Café, libro…'} /></F><F label="Importe (€)" w="w-28"><input className="hud-input" inputMode="decimal" value={a} onChange={(e) => setA(e.target.value)} /></F>
-      {!inc && <F label="Categoría" w="w-32"><select className="hud-input" value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select></F>}
-    </AddForm>
+  );
+}
+
+export function Money({ sel, setSel }: { sel: string; setSel: (id: string) => void }) {
+  const { data, update } = usePersonal(); const [mode, setMode] = useState<'gasto' | 'ingreso' | 'traspaso' | null>(null); const [c, setC] = useState(''); const [a, setA] = useState(''); const [cat, setCat] = useState('Ocio'); const [to, setTo] = useState(''); const [adding, setAdding] = useState(data.wallets.length === 0); const [edit, setEdit] = useState(false);
+  const st = monthStats(data); const w = data.wallets.find((x) => x.id === sel); const list = data.expenses.filter((e) => sel === 'all' || e.walletId === sel); const wn = (id?: string) => data.wallets.find((x) => x.id === id);
+  const others = data.wallets.filter((x) => x.id !== sel);
+  const submit = () => { const n = num(a); if (!w || !(n > 0) || !mode) return; if (mode === 'traspaso') { if (!to || to === w.id) return; update((d) => transfer(d, w.id, to, n)); } else { const inc = mode === 'ingreso'; const label = c.trim() || (inc ? 'Ingreso' : cat); update((d) => addMove(d, w.id, label, n, inc, inc ? 'Ingreso' : cat)); } setC(''); setA(''); setMode(null); };
+  return (<>
+    <div className="mb-4 text-center"><p className="hud-sub">Todo tu dinero</p><p className={`text-4xl font-bold tabular-nums ${st.total < 0 ? 'text-bad' : 'hud-val'}`}>{eur(st.total)}</p><p className="mt-1 text-xs text-muted">Este mes: <span className="text-ok">+{eur(st.income)}</span> · <span>−{eur(st.spent)}</span></p></div>
+    <div className="mb-3 grid grid-cols-2 gap-2">
+      {data.wallets.map((x) => { const k = kindOf(x.kind); const b = walletBalance(data, x.id); return (
+        <button key={x.id} onClick={() => { setSel(x.id); setMode(null); setEdit(false); }} aria-pressed={sel === x.id} aria-label={`Carpeta ${x.name}: ${eur(b)}`} className="wallet-card" style={{ ['--c' as string]: x.color }}>
+          <k.icon size={16} aria-hidden /><span className="truncate text-sm font-semibold">{x.name}</span><b className={`tabular-nums ${b < 0 ? 'text-bad' : ''}`}>{eur(b)}</b></button>); })}
+      <button onClick={() => setAdding(!adding)} aria-expanded={adding} className="wallet-card dashed"><Plus size={16} aria-hidden /><span className="text-sm">Nueva carpeta</span></button>
+    </div>
+    {adding && <div className="mb-4"><NewFolder onDone={(id) => { setSel(id); setAdding(false); }} /></div>}
+    {data.wallets.length === 0 && <Empty text="Crea tu primera carpeta (por ejemplo «Efectivo» o tu banco) y apunta cuánto dinero hay en ella." />}
+    {w && (<div className="mb-4">
+      <div className="mb-2 flex items-center gap-2"><b className="flex-1 truncate">{w.name}</b><span className={`tabular-nums ${walletBalance(data, w.id) < 0 ? 'text-bad' : 'hud-val'}`}>{eur(walletBalance(data, w.id))}</span><button className="hud-ghost" onClick={() => setEdit(!edit)} aria-label="Editar carpeta"><Pencil size={14} aria-hidden /></button></div>
+      {edit && (<div className="hud-panel !flex-none !p-3 mb-3"><div className="flex flex-wrap gap-2"><F label="Nombre" w="flex-1 min-w-32"><input className="hud-input" value={w.name} onChange={(e) => update((d) => ({ ...d, wallets: d.wallets.map((x) => x.id === w.id ? { ...x, name: e.target.value } : x) }))} aria-label="Renombrar carpeta" /></F>
+        <F label="Saldo inicial (€)" w="w-36"><input className="hud-input" inputMode="decimal" defaultValue={w.opening} onBlur={(e) => update((d) => ({ ...d, wallets: d.wallets.map((x) => x.id === w.id ? { ...x, opening: num(e.target.value) || 0 } : x) }))} aria-label="Saldo inicial" /></F></div>
+        <button className="hud-ghost mt-2 !text-bad" onClick={() => { if (window.confirm(`¿Eliminar la carpeta «${w.name}» y sus movimientos?`)) { update((d) => ({ ...d, wallets: d.wallets.filter((x) => x.id !== w.id), expenses: d.expenses.filter((e) => e.walletId !== w.id && !(e.transferId && d.expenses.some((o) => o.transferId === e.transferId && o.walletId === w.id))) })); setSel('all'); setEdit(false); } }}><Trash2 size={13} className="mr-1 inline" aria-hidden />Eliminar carpeta</button></div>)}
+      <div className="mb-3 grid grid-cols-3 gap-2" role="group" aria-label="Acciones de la carpeta">
+        <button className="hud-btn" aria-pressed={mode === 'ingreso'} onClick={() => setMode(mode === 'ingreso' ? null : 'ingreso')}><TrendingUp size={13} className="mr-1 inline" aria-hidden />Meter</button>
+        <button className="hud-btn" aria-pressed={mode === 'gasto'} onClick={() => setMode(mode === 'gasto' ? null : 'gasto')}><TrendingDown size={13} className="mr-1 inline" aria-hidden />Sacar</button>
+        <button className="hud-btn" disabled={others.length === 0} aria-pressed={mode === 'traspaso'} onClick={() => { setMode(mode === 'traspaso' ? null : 'traspaso'); setTo(others[0]?.id ?? ''); }}><ArrowLeftRight size={13} className="mr-1 inline" aria-hidden />Mover</button></div>
+      {mode && (<form className="hud-panel !flex-none !p-3" onSubmit={(e: FormEvent) => { e.preventDefault(); submit(); }}>
+        <p className="hud-sub mb-2">{mode === 'ingreso' ? `Meter dinero en ${w.name}` : mode === 'gasto' ? `Sacar dinero de ${w.name}` : `Mover dinero desde ${w.name}`}</p>
+        <div className="flex flex-wrap gap-2"><F label="Importe (€)" w="w-28"><input className="hud-input" autoFocus inputMode="decimal" value={a} onChange={(e) => setA(e.target.value)} aria-label="Importe" /></F>
+          {mode === 'traspaso' ? <F label="A la carpeta"><select className="hud-input" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Carpeta de destino">{others.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></F> : <>
+            <F label={mode === 'ingreso' ? 'De qué (opcional)' : 'En qué (opcional)'}><input className="hud-input" value={c} onChange={(e) => setC(e.target.value)} placeholder={mode === 'ingreso' ? 'Beca, paga…' : 'Café, libro…'} aria-label="Concepto" /></F>
+            {mode === 'gasto' && <F label="Categoría" w="w-32"><select className="hud-input" value={cat} onChange={(e) => setCat(e.target.value)}>{CATS.map((x) => <option key={x}>{x}</option>)}</select></F>}</>}
+          <button className="hud-btn self-end" type="submit" disabled={!(num(a) > 0)}>Confirmar</button></div></form>)}
+    </div>)}
+    <div className="mb-3 flex gap-2" role="group" aria-label="Ver movimientos"><button className="hud-chip" aria-pressed={sel === 'all'} onClick={() => setSel('all')} style={sel === 'all' ? { color: '#fff', borderColor: 'var(--hud)' } : undefined}>Todos los movimientos</button></div>
     {st.cats.length > 0 && <div className="mb-4"><p className="hud-sub mb-2">Gasto por categoría (este mes)</p>{st.cats.slice(0, 5).map(([k, v]) => <div key={k} className="mb-1.5"><div className="mb-0.5 flex justify-between text-xs"><span>{k}</span><span className="hud-val">{eur(v)}</span></div><Bar pct={(v / st.cats[0][1]) * 100} /></div>)}</div>}
-    <p className="hud-sub mb-1">Movimientos</p>
-    {data.expenses.length === 0 && <Empty text="Sin movimientos todavía." />}
-    {data.expenses.slice(0, 40).map((e) => <Row key={e.id} label={e.concept} onDelete={() => update((d) => ({ ...d, expenses: d.expenses.filter((x) => x.id !== e.id) }))}><span className="w-12 flex-none text-xs text-muted">{e.date.slice(5)}</span><span className="truncate">{e.concept}</span><span className="hud-sub">{e.category}</span><span className={`ml-auto flex-none ${e.income ? 'text-ok' : 'hud-val'}`}>{e.income ? '+' : '−'}{eur(e.amount)}</span></Row>)}
+    <F label="Presupuesto mensual de gastos (€)" w="w-64"><input className="hud-input mb-2" inputMode="decimal" value={data.budget || ''} onChange={(e) => update((d) => ({ ...d, budget: Math.max(0, num(e.target.value) || 0) }))} /></F>
+    {data.budget > 0 && <div className="mb-4"><Bar pct={st.pct} tone={st.pct > 100 ? 'bad' : st.pct > 80 ? 'warn' : undefined} /><p className="mt-1 text-xs text-muted">{eur(Math.max(0, data.budget - st.spent))} disponibles de {eur(data.budget)}</p></div>}
+    <p className="hud-sub mb-1">Movimientos{w ? ` de ${w.name}` : ''}</p>
+    {list.length === 0 && <Empty text="Sin movimientos todavía." />}
+    {list.slice(0, 50).map((e) => <Row key={e.id} label={e.concept} onDelete={() => update((d) => ({ ...d, expenses: d.expenses.filter((x) => x.id !== e.id && !(e.transferId && x.transferId === e.transferId)) }))}><span className="w-12 flex-none text-xs text-muted">{e.date.slice(5)}</span><span className="truncate">{e.concept}</span>{sel === 'all' && wn(e.walletId) && <span className="hud-sub">{wn(e.walletId)!.name}</span>}<span className="hud-sub">{e.transferId ? '⇄' : e.category}</span><span className={`ml-auto flex-none ${e.income ? 'text-ok' : 'hud-val'}`}>{e.income ? '+' : '−'}{eur(e.amount)}</span></Row>)}
   </>);
 }
 
-export function FinancePanel({ onOpen }: { onOpen: () => void }) {
-  const { data, update } = usePersonal(); const sound = useHud((s) => s.sound); const st = monthStats(data); const [c, setC] = useState(''); const [a, setA] = useState(''); const [inc, setInc] = useState(false);
-  const add = (e: FormEvent) => { e.preventDefault(); const n = num(a); if (!c.trim() || !(n > 0)) return; update((d) => ({ ...d, expenses: [{ id: uid(), concept: c.trim(), amount: n, date: todayISO(), category: inc ? 'Ingreso' : 'Otros', income: inc || undefined }, ...d.expenses] })); setC(''); setA(''); blip('tick', sound); hudBus.emit('pulse'); };
+/** Panel de portada: total y carpetas de un vistazo; un toque abre la carpeta. */
+export function FinancePanel({ onOpen }: { onOpen: (id?: string) => void }) {
+  const { data, update } = usePersonal(); const sound = useHud((s) => s.sound); const st = monthStats(data); const [wid, setWid] = useState(''); const [c, setC] = useState(''); const [a, setA] = useState(''); const [inc, setInc] = useState(false);
+  const cur = data.wallets.find((w) => w.id === wid) ?? data.wallets[0];
+  const add = (e: FormEvent) => { e.preventDefault(); const n = num(a); if (!cur || !(n > 0)) return; update((d) => addMove(d, cur.id, c.trim() || (inc ? 'Ingreso' : 'Gasto'), n, inc, inc ? 'Ingreso' : 'Otros')); setC(''); setA(''); blip('tick', sound); hudBus.emit('pulse'); };
   return (
-    <Panel title="Finanzas del mes" right={<span className="hud-sub">{format(new Date(), 'MMMM', { locale: es })}</span>} onOpen={onOpen} grow={1.5}>
-      <div className="flex items-end justify-between gap-2"><div><p className="hud-sub">Saldo</p><p className={`text-2xl font-bold tabular-nums ${st.balance < 0 ? 'text-bad' : 'hud-val'}`}>{eur(st.balance)}</p></div>
-        <div className="text-right text-xs"><p className="text-ok"><TrendingUp size={11} className="mr-1 inline" aria-hidden />{eur(st.income)}</p><p className="text-muted"><TrendingDown size={11} className="mr-1 inline" aria-hidden />{eur(st.spent)}</p></div></div>
-      {data.budget > 0 && <div className="mt-2"><Bar pct={st.pct} tone={st.pct > 100 ? 'bad' : st.pct > 80 ? 'warn' : undefined} /><p className="mt-1 text-[11px] text-muted">{Math.round(st.pct)}% del presupuesto · quedan {eur(Math.max(0, data.budget - st.spent))}</p></div>}
-      <form onSubmit={add} className="my-2 flex gap-1.5"><button type="button" className="hud-icon !h-9 !w-9 flex-none text-base" onClick={() => setInc(!inc)} aria-label={inc ? 'Ingreso (pulsa para gasto)' : 'Gasto (pulsa para ingreso)'} title={inc ? 'Ingreso' : 'Gasto'}>{inc ? '+' : '−'}</button><input className="hud-input" value={c} onChange={(e) => setC(e.target.value)} placeholder="Concepto" aria-label="Concepto del movimiento" /><input className="hud-input !w-20 flex-none" inputMode="decimal" value={a} onChange={(e) => setA(e.target.value)} placeholder="€" aria-label="Importe" /><button className="hud-btn !px-3" type="submit" aria-label="Añadir movimiento" disabled={!c.trim() || !(num(a) > 0)}><Plus size={15} aria-hidden /></button></form>
-      {data.expenses.length === 0 ? <Empty text="Apunta tu primer gasto o ingreso arriba." /> : data.expenses.slice(0, 4).map((e) => <div key={e.id} className="hud-row"><span className="truncate">{e.concept}</span><span className="hud-sub">{e.category}</span><span className={`ml-auto flex-none text-xs ${e.income ? 'text-ok' : ''}`}>{e.income ? '+' : '−'}{eur(e.amount)}</span></div>)}
+    <Panel title="Mi dinero" right={<span className="hud-sub">{data.wallets.length} {data.wallets.length === 1 ? 'carpeta' : 'carpetas'}</span>} onOpen={() => onOpen()} grow={1.5}>
+      <div className="flex items-end justify-between gap-2"><div><p className="hud-sub">Total</p><p className={`text-2xl font-bold tabular-nums ${st.total < 0 ? 'text-bad' : 'hud-val'}`}>{eur(st.total)}</p></div>
+        <div className="text-right text-[11px]"><p className="text-ok"><TrendingUp size={11} className="mr-1 inline" aria-hidden />{eur(st.income)}</p><p className="text-muted"><TrendingDown size={11} className="mr-1 inline" aria-hidden />{eur(st.spent)}</p></div></div>
+      {data.wallets.length === 0 ? <Empty text="Crea carpetas para tu dinero: efectivo, tu banco, la pensión… Pulsa + para empezar." /> : <>
+        <div className="mt-2 flex flex-wrap gap-1.5">{data.wallets.map((w) => { const k = kindOf(w.kind); const b = walletBalance(data, w.id); return (
+          <button key={w.id} onClick={() => onOpen(w.id)} aria-label={`Abrir carpeta ${w.name}`} className="wallet-mini" style={{ ['--c' as string]: w.color }}><k.icon size={12} aria-hidden /><span className="truncate">{w.name}</span><b className={`tabular-nums ${b < 0 ? 'text-bad' : ''}`}>{eur(b)}</b></button>); })}</div>
+        <form onSubmit={add} className="mt-2 flex gap-1.5"><select className="hud-input !w-28 flex-none" value={cur?.id} onChange={(e) => setWid(e.target.value)} aria-label="Carpeta del movimiento">{data.wallets.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
+          <button type="button" className="hud-icon !h-9 !w-9 flex-none text-base" onClick={() => setInc(!inc)} aria-label={inc ? 'Ingreso (pulsa para gasto)' : 'Gasto (pulsa para ingreso)'} title={inc ? 'Ingreso' : 'Gasto'}>{inc ? '+' : '−'}</button>
+          <input className="hud-input" value={c} onChange={(e) => setC(e.target.value)} placeholder="Concepto" aria-label="Concepto del movimiento" /><input className="hud-input !w-16 flex-none" inputMode="decimal" value={a} onChange={(e) => setA(e.target.value)} placeholder="€" aria-label="Importe" />
+          <button className="hud-btn !px-3" type="submit" aria-label="Añadir movimiento" disabled={!(num(a) > 0)}><Plus size={15} aria-hidden /></button></form></>}
     </Panel>
   );
 }
