@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import type { User } from '../src/types';
-import { mockAIProvider } from '../src/lib/ai';
+import { askClaude, claudeEnabled } from './claude';
 import { createRepos } from '../src/services/repositories';
 import { getDatabase, installDatabase } from '../src/services/database';
 import { logActivity } from '../src/services/activity';
@@ -88,7 +88,7 @@ export function buildApp(store: Store) {
   };
   const need = (req: FastifyRequest, reply: FastifyReply) => { const u = auth(req); if (!u) { fail(reply, 401, 'Sesión no válida o caducada.'); return null; } return u; };
 
-  app.get('/api/health', async () => ({ ok: true }));
+  app.get('/api/health', async () => ({ ok: true, ai: claudeEnabled() ? 'claude' : 'local' }));
 
   app.get('/api/demo-accounts', async (_req, reply) => {
     if (!config.seedDemo) return fail(reply, 404, 'No disponible');
@@ -154,7 +154,7 @@ export function buildApp(store: Store) {
     const p = aiBody.safeParse(req.body); if (!p.success) return fail(reply, 400, 'Pregunta no válida');
     // El contexto lo construye el servidor con el alcance y permisos del usuario autenticado (nunca el cliente).
     const snapshot = await createRepos(getDatabase(), u).snapshot();
-    return mockAIProvider.ask({ question: p.data.question, history: p.data.history ?? [], snapshot, user: u });
+    return askClaude({ question: p.data.question, history: p.data.history ?? [], snapshot, user: u });
   });
 
   app.setErrorHandler((err, req, reply) => { req.log.error(err); const code = (err as { statusCode?: number }).statusCode; reply.code(code && code < 500 ? code : 500).send({ error: code && code < 500 ? 'Petición no válida' : 'Error interno' }); });

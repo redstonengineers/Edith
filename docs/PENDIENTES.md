@@ -10,16 +10,16 @@ Marca cada punto cuando esté hecho.
 - [ ] Token de GitHub con permisos de creación de repos si quieres que la sesión cree repos nuevos por sí sola (hoy hay que crearlos a mano).
 
 ## 2. Servicios externos (cada uno necesita una cuenta o clave tuya)
-- [ ] **Email transaccional** (recuperación de contraseña, avisos, recibos): elegir proveedor (Resend, Postmark, SES) y facilitar la clave por el formulario seguro de credenciales.
+- [ ] **Email (Resend)**: el código ya está (`server/mailer.ts`, canal «Correo electrónico»). Falta: cuenta en resend.com, verificar un dominio (SPF/DKIM en el DNS) y definir en Coolify `RESEND_API_KEY` y `MAIL_FROM` en la app del servidor.
 - [ ] **WhatsApp / SMS / push**: hoy los canales están simulados y marcados como tal. Requiere WhatsApp Business API (Meta o proveedor como Twilio) y plantillas aprobadas.
-- [ ] **IA real para JARVIS**: hoy responde con un motor de intenciones sobre los datos. Para un modelo de lenguaje hay que dar una clave de API; irá solo en el servidor (`/api/ai/chat`).
+- [ ] **JARVIS con Claude**: el código ya está (`server/claude.ts`). Falta crear una clave en console.anthropic.com y definir en Coolify `ANTHROPIC_API_KEY` (y opcionalmente `ANTHROPIC_MODEL`) en la app del servidor. Sin clave usa el motor local.
 - [ ] **Pagos online** (cobro con tarjeta, domiciliación SEPA): Stripe o Redsys; hoy los pagos se registran a mano.
 - [ ] **Almacenamiento de documentos**: hoy solo se guardan metadatos. Hace falta un bucket S3-compatible (o volumen) y claves.
 - [ ] **Facturación SaaS** (suscripciones y MRR de la plataforma): cifras orientativas; depende del proveedor de pagos anterior.
 
 ## 3. Producto y negocio (decisiones tuyas)
 - [ ] **Qué sectores se venden primero.** Hay 18 plantillas (ver `docs/VERTICALES.md`). Elegir 2-3 y definir precio por sector.
-- [ ] **Autoescuelas: traer las funciones de Volanta** (firma táctil offline, vehículos con ITV/seguro/taller, parte mensual de prácticas, avisos push). Es trabajo de desarrollo grande: confirmar prioridad y si se reutiliza el código de `redstonengineers/volanta`.
+- [x] **Autoescuelas / Volanta**: hecho por integración (módulo «Prácticas y vehículos» que abre Volanta, ya desplegada). Pendiente: inicio de sesión único y alumnos compartidos entre EDITH y Volanta (requiere unificar usuarios), o portarlo por completo a EDITH.
 - [ ] **Textos legales**: política de privacidad, aviso legal y contrato de encargado de tratamiento (RGPD), imprescindibles al guardar datos de alumnos, menores y, en clínicas, datos de salud. Revisión por un abogado.
 - [ ] **Marca**: logo y nombre definitivo (EDITH), favicon e iconos PWA propios.
 - [ ] **Dominio por cliente** (white-label): decidir si cada academia tendrá subdominio propio (`cliente.edith…`) o dominio propio.

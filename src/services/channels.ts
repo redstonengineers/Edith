@@ -12,3 +12,6 @@ export const CHANNELS: Record<Channel, ChannelAdapter> = {
   app: { id: 'app', label: 'En la app', live: true, async send() { return { delivered: true }; } },
   email: simulated('email', 'Correo electrónico'), whatsapp: simulated('whatsapp', 'WhatsApp'), sms: simulated('sms', 'SMS'), push: simulated('push', 'Notificación push'),
 };
+
+/** El servidor sustituye aquí los adaptadores simulados por proveedores reales. */
+export function registerChannel(a: ChannelAdapter) { CHANNELS[a.id] = a; }

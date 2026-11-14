@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, GraduationCap, UsersRound, CalendarDays, BookOpen, Clock, FileText, Award,
   CheckSquare, Inbox, Hourglass, ClipboardCheck, CreditCard, Receipt, FolderOpen, AlertTriangle,
   MessageSquare, Megaphone, Bell, BarChart3, FileBarChart, Settings, UserCog, ShieldCheck, Palette,
-  Sparkles, Building2,
+  Sparkles, Building2, Car,
 } from 'lucide-react';
 import type { LabelKey, ModuleId } from '@/types';
 import type { Permission } from '@/lib/permissions';
@@ -50,6 +50,7 @@ export const MODULES: ModuleDef[] = [
   { id: 'enrollments', path: '/matriculas', icon: ClipboardCheck, section: 'admission', title: 'Matrículas', labelKey: 'enrollment', permission: 'enrollments:read', phase: 4, description: 'Flujo de matrícula.' },
   { id: 'payments', path: '/pagos', icon: CreditCard, section: 'admin', title: 'Pagos', labelKey: 'payment', permission: 'payments:read', phase: 4, description: 'Cobros, pendientes y vencidos.' },
   { id: 'billing', path: '/facturacion', icon: Receipt, section: 'admin', title: 'Facturación', permission: 'billing:read', phase: 4, description: 'Facturas y recibos.' },
+  { id: 'practicas', path: '/practicas', icon: Car, section: 'admin', title: 'Prácticas y vehículos', labelKey: 'class', permission: 'practicas:read', phase: 10, description: 'Calendario de prácticas, firma táctil, vehículos y parte mensual (Volanta).' },
   { id: 'documents', path: '/documentos', icon: FolderOpen, section: 'admin', title: 'Documentos', labelKey: 'document', permission: 'documents:read', phase: 4, description: 'Archivo documental por entidad.' },
   { id: 'incidents', path: '/incidencias', icon: AlertTriangle, section: 'admin', title: 'Incidencias', labelKey: 'incident', permission: 'incidents:read', phase: 4, description: 'Seguimiento de incidencias.' },
   { id: 'messages', path: '/mensajes', icon: MessageSquare, section: 'communication', title: 'Mensajes', permission: 'messages:read', phase: 4, description: 'Mensajería interna.' },

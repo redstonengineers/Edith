@@ -5,6 +5,8 @@ import { installDatabase, getDatabase } from '../src/services/database';
 import { DEFAULT_LABELS } from '../src/config/presets';
 import { MODULES } from '../src/config/modules';
 import { buildApp } from './app';
+import { registerChannel } from '../src/services/channels';
+import { emailChannel, mailEnabled } from './mailer';
 import { config } from './config';
 import { scryptHasher } from './password';
 import { Store } from './store';
@@ -32,6 +34,7 @@ else if (config.seedDemo) {
 installDatabase(db, () => store.flush(getDatabase()));
 store.flush(db);
 
+if (mailEnabled()) registerChannel(emailChannel);
 const app = buildApp(store);
 await app.listen({ port: config.port, host: config.host });
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => void app.close().then(() => process.exit(0)));

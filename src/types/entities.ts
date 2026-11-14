@@ -41,7 +41,7 @@ export type LabelKey =
 export type ModuleId =
   | 'dashboard' | 'students' | 'teachers' | 'groups' | 'classes' | 'subjects' | 'schedule'
   | 'exams' | 'grades' | 'attendance' | 'applications' | 'waitlist' | 'enrollments'
-  | 'payments' | 'billing' | 'documents' | 'incidents' | 'messages' | 'announcements'
+  | 'payments' | 'billing' | 'documents' | 'practicas' | 'incidents' | 'messages' | 'announcements'
   | 'notifications' | 'statistics' | 'reports' | 'ai' | 'settings' | 'users' | 'permissions'
   | 'customization' | 'platform';
 

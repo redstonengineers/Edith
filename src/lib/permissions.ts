@@ -3,14 +3,14 @@ import type { RoleId, User } from '@/types';
 export type Resource =
   | 'dashboard' | 'students' | 'teachers' | 'groups' | 'classes' | 'subjects' | 'schedule' | 'exams'
   | 'grades' | 'attendance' | 'applications' | 'waitlist' | 'enrollments' | 'payments' | 'billing'
-  | 'documents' | 'incidents' | 'messages' | 'announcements' | 'notifications' | 'statistics'
+  | 'documents' | 'practicas' | 'incidents' | 'messages' | 'announcements' | 'notifications' | 'statistics'
   | 'reports' | 'ai' | 'settings' | 'users' | 'permissions' | 'customization' | 'platform';
 export type Action = 'read' | 'write';
 export type Permission = `${Resource}:${Action}`;
 
 const ALL: Resource[] = [
   'dashboard', 'students', 'teachers', 'groups', 'classes', 'subjects', 'schedule', 'exams', 'grades',
-  'attendance', 'applications', 'waitlist', 'enrollments', 'payments', 'billing', 'documents',
+  'attendance', 'applications', 'waitlist', 'enrollments', 'payments', 'billing', 'documents', 'practicas',
   'incidents', 'messages', 'announcements', 'notifications', 'statistics', 'reports', 'ai', 'settings',
   'users', 'permissions', 'customization',
 ];
@@ -24,12 +24,12 @@ export const ROLE_PERMISSIONS: Record<RoleId, ReadonlySet<Permission>> = {
   ADMIN: new Set(rw(...ALL)),
   SECRETARIA: new Set([
     ...rw('dashboard', 'students', 'groups', 'classes', 'schedule', 'applications', 'waitlist', 'enrollments',
-      'payments', 'billing', 'documents', 'incidents', 'messages', 'announcements', 'notifications', 'attendance', 'ai'),
+      'payments', 'billing', 'documents', 'practicas', 'incidents', 'messages', 'announcements', 'notifications', 'attendance', 'ai'),
     ...ro('teachers', 'subjects', 'exams', 'grades', 'statistics'),
   ]),
   PROFESOR: new Set([
     ...rw('attendance', 'grades', 'exams', 'incidents', 'messages'),
-    ...ro('dashboard', 'students', 'groups', 'classes', 'schedule', 'subjects', 'documents', 'announcements', 'notifications', 'ai'),
+    ...ro('dashboard', 'students', 'groups', 'classes', 'schedule', 'subjects', 'documents', 'practicas', 'announcements', 'notifications', 'ai'),
   ]),
   ALUMNO: new Set(ro('dashboard', 'schedule', 'exams', 'grades', 'attendance', 'payments', 'announcements', 'messages', 'notifications', 'documents')),
   TUTOR: new Set(ro('dashboard', 'schedule', 'exams', 'grades', 'attendance', 'payments', 'announcements', 'messages', 'notifications', 'documents')),
