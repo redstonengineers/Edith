@@ -2,13 +2,14 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { addDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BellRing, CalendarDays, Home, MoreHorizontal, ChevronLeft, CheckSquare, Clock, HelpCircle, Loader2, LogOut, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Volume2, VolumeX, Wallet } from 'lucide-react';
+import { Building2, BellRing, CalendarDays, Home, MoreHorizontal, ChevronLeft, CheckSquare, Clock, HelpCircle, Loader2, LogOut, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Volume2, VolumeX, Wallet } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Drawer } from '@/components/ui/Overlay';
 import { PROFILES, uid, usePersonal, type Profile } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
 import { AddForm, Bar, Empty, F, Panel, Row, eur, todayISO, useDevice } from './shared';
 import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, AgendaCal, CalendarPanel, monthStats, useReminderAlerts } from './life';
+import { Clients } from './clients';
 import { Schedule, SchedulePanel, classesOn, mins } from './timetable';
 import { createScene, type HudScene } from './scene';
 import { THEMES, applyTheme, clearTheme, themeOf, useHud, type Quality } from './themes';
@@ -20,10 +21,10 @@ import './hud.css';
 
 
 /* ───────────── Módulos ───────────── */
-type Mod = 'schedule' | 'reminders' | 'agenda' | 'tasks' | 'money' | 'study';
+type Mod = 'schedule' | 'reminders' | 'agenda' | 'tasks' | 'money' | 'study' | 'clients';
 const MODS: { id: Mod; label: string; icon: typeof CheckSquare }[] = [
   { id: 'schedule', label: 'Horario', icon: Clock }, { id: 'reminders', label: 'Recordatorios', icon: BellRing }, { id: 'agenda', label: 'Agenda', icon: CalendarDays }, { id: 'tasks', label: 'Tareas', icon: CheckSquare },
-  { id: 'money', label: 'Finanzas', icon: Wallet }, { id: 'study', label: 'Estudio', icon: TimerIcon },
+  { id: 'money', label: 'Finanzas', icon: Wallet }, { id: 'study', label: 'Estudio', icon: TimerIcon }, { id: 'clients', label: 'Clientes', icon: Building2 },
 ];
 
 /* ───────────── Escena 3D: núcleo central ───────────── */
@@ -191,7 +192,7 @@ function StudyCard({ timer, studyToday, onOpen }: { timer: Timer; studyToday: nu
 /** «Más»: el resto de módulos y ajustes en una cuadrícula grande y fácil de tocar (móvil). */
 function MoreBody({ go, onSettings, onHelp, onSwitch, onLogout }: { go: (m: Mod) => void; onSettings: () => void; onHelp: () => void; onSwitch: () => void; onLogout: () => void }) {
   const tiles: { label: string; icon: typeof Home; run: () => void }[] = [
-    ...(['reminders', 'agenda', 'tasks', 'study'] as Mod[]).map((id) => { const m = MODS.find((x) => x.id === id)!; return { label: m.label, icon: m.icon, run: () => go(id) }; }),
+    ...(['reminders', 'agenda', 'tasks', 'study', 'clients'] as Mod[]).map((id) => { const m = MODS.find((x) => x.id === id)!; return { label: m.label, icon: m.icon, run: () => go(id) }; }),
     { label: 'Ajustes', icon: Settings, run: onSettings }, { label: 'Ayuda', icon: HelpCircle, run: onHelp }, { label: 'Cambiar perfil', icon: Users, run: onSwitch }, { label: 'Cerrar sesión', icon: LogOut, run: onLogout },
   ];
   return <div className="grid grid-cols-3 gap-3">{tiles.map((t) => <button key={t.label} onClick={t.run} className="more-tile"><t.icon size={24} aria-hidden /><span>{t.label}</span></button>)}</div>;
@@ -204,7 +205,7 @@ function Hud() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement; if (el.closest('input, textarea, select, [contenteditable]') || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (/^[1-6]$/.test(e.key)) { setOpen(MODS[Number(e.key) - 1].id); blip('open', sound); hudBus.emit('pulse'); } else if (e.key === '/') { e.preventDefault(); chatRef.current?.focus(); } else if (e.key === ',') setPanel('settings'); else if (e.key === '?') setPanel('help');
+      if (/^[1-7]$/.test(e.key)) { setOpen(MODS[Number(e.key) - 1].id); blip('open', sound); hudBus.emit('pulse'); } else if (e.key === '/') { e.preventDefault(); chatRef.current?.focus(); } else if (e.key === ',') setPanel('settings'); else if (e.key === '?') setPanel('help');
     };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   }, [sound]);
@@ -214,7 +215,7 @@ function Hud() {
   const pendingRem = data.reminders.filter((r) => !r.done).length; const pendingTasks = data.tasks.filter((x) => !x.done).length;
   const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
   const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
-  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money sel={finSel} setSel={setFinSel} />, study: <StudyPanel timer={timer} /> };
+  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money sel={finSel} setSel={setFinSel} />, study: <StudyPanel timer={timer} />, clients: <Clients /> };
   const openMod = (m: Mod) => () => setOpen(m);
   const phoneMode = dev.phone; const W = Math.max(1180, dev.w); const z = dev.w / W; const Hd = z < 1 ? Math.min(dev.h / z, 1000) : dev.h; const top0 = z < 1 ? Math.max(0, (dev.h - Hd * z) / 2) : 0;
   return (
@@ -282,7 +283,7 @@ function Hud() {
       </div>
       </div>
       )}
-      <Drawer open={open !== null} onClose={() => setOpen(null)} hideClose={dev.phone} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className={dev.phone ? 'w-full max-w-none' : open === 'schedule' ? 'w-full max-w-[min(1240px,97vw)]' : 'w-full max-w-xl'}>
+      <Drawer open={open !== null} onClose={() => setOpen(null)} hideClose={dev.phone} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className={dev.phone ? 'w-full max-w-none' : open === 'schedule' ? 'w-full max-w-[min(1240px,97vw)]' : open === 'clients' ? 'w-full max-w-[min(760px,97vw)]' : 'w-full max-w-xl'}>
         <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5">{dev.phone && <button className="ph-back" onClick={() => setOpen(null)}><ChevronLeft size={18} aria-hidden />Volver</button>}<h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
       </Drawer>
       <Drawer open={panel !== null} onClose={() => setPanel(null)} hideClose={dev.phone} label={{ settings: 'Ajustes', help: 'Ayuda', more: 'Más', chat: 'EDITH' }[panel ?? 'help']} className={dev.phone ? 'w-full max-w-none' : 'w-full max-w-md'}>

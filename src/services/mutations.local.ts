@@ -1,3 +1,5 @@
+import type { Academy } from '@/types';
+import { changeAcademyPlan, platformRows } from './platform';
 import type { Group, ID, NoticeSettings, Practice, Student, StudentStatus, Subject, Teacher, Vehicle } from '@/types';
 import type { User } from '@/types';
 import { can, type Permission } from '@/lib/permissions';
@@ -598,25 +600,16 @@ export function resetRolePermissions(user: User, role: RoleId) {
 
 // ── Plataforma (Super Admin) ──
 const needPlatform = (user: User) => { if (user.role !== 'SUPER_ADMIN' || !can(user, 'platform:write')) throw new DomainError('Acción reservada al propietario de la plataforma.'); };
-export function platformOverview(user: User) {
-  needPlatform(user); const db = getDatabase();
-  return db.academies.map((a) => {
-    const st = db.settings.find((s) => s.academyId === a.id);
-    const mine = <T extends { academyId: string }>(rows: T[]) => rows.filter((r) => r.academyId === a.id);
-    const last = mine(db.activity)[0]?.at;
-    const ym = (d: Date) => d.toISOString().slice(0, 7); const now = new Date(); const prev = new Date(now.getFullYear(), now.getMonth() - 1, 15);
-    const waMonth = a.waUsage?.[ym(now)] ?? 0; const waPrev = a.waUsage?.[ym(prev)] ?? 0;
-    return { waMonth, waPrev, academy: a, users: mine(db.users).length, students: mine(db.students).filter((s) => s.status !== 'baja').length, teachers: mine(db.teachers).length, groups: mine(db.groups).length, modules: Object.values(st?.modules ?? {}).filter(Boolean).length, storageKb: mine(db.documents).reduce((x, d) => x + d.sizeKb, 0), lastActivity: last };
-  });
-}
+export function platformOverview(user: User) { needPlatform(user); return platformRows(getDatabase()); }
+
 export function setAcademyStatus(user: User, id: ID, status: 'active' | 'suspended') {
   needPlatform(user); const a = getDatabase().academies.find((x) => x.id === id); if (!a) throw new DomainError('Academia no encontrada.');
   if (id === user.academyId && status === 'suspended') throw new DomainError('No puedes suspender tu propia academia.');
   a.status = status; logActivity(user, 'modificó', 'academy', `${user.name} ${status === 'active' ? 'reactivó' : 'suspendió'} la academia ${a.name}`, id); return done(a);
 }
-export function setAcademyPlan(user: User, id: ID, plan: 'trial' | 'basic' | 'pro') {
-  needPlatform(user); const a = getDatabase().academies.find((x) => x.id === id); if (!a) throw new DomainError('Academia no encontrada.');
-  a.plan = plan; logActivity(user, 'modificó', 'academy', `${user.name} cambió el plan de ${a.name} a ${plan}`, id); return done(a);
+export function setAcademyPlan(user: User, id: ID, plan: Academy['plan'], applyModules = false) {
+  needPlatform(user); const r = changeAcademyPlan(getDatabase(), id, plan, applyModules);
+  logActivity(user, 'modificó', 'academy', `${user.name} cambió el plan de ${r.academy.name} a ${plan}${r.disabled.length ? ` (módulos desactivados: ${r.disabled.join(', ')})` : ''}`, id); return done(r.academy);
 }
 
 /** Alta de una academia nueva (onboarding autoservicio). Crea tenant, ajustes y primer administrador. */

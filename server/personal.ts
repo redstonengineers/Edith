@@ -31,7 +31,14 @@ function issue(reply: FastifyReply, p: Profile | null) {
   reply.setCookie(COOKIE, `${body}.${sign(body)}`, { httpOnly: true, sameSite: 'strict', secure: config.cookieSecure, path: '/api/personal', maxAge: TTL / 1000 });
 }
 
-export function registerPersonal(app: FastifyInstance, store: Store, lim: ((k: string) => void) & { blocked: (k: string) => boolean; clear: (k: string) => void }, fail: (r: FastifyReply, c: number, e: string) => FastifyReply) {
+/** Gestión de los negocios cliente desde el modo personal del propietario (la lógica vive en app.ts, con la base y la cola de escritura). */
+export interface ClientsOps {
+  list: () => unknown;
+  setPlan: (id: string, plan: 'trial' | 'basic' | 'pro' | 'premium', applyModules: boolean) => Promise<{ name: string; plan: string; disabled: string[] }>;
+  setStatus: (id: string, status: 'active' | 'suspended') => Promise<{ name: string; status: string }>;
+}
+
+export function registerPersonal(app: FastifyInstance, store: Store, lim: ((k: string) => void) & { blocked: (k: string) => boolean; clear: (k: string) => void }, fail: (r: FastifyReply, c: number, e: string) => FastifyReply, clients: ClientsOps) {
   if (!PASS) return;
   const secure = (req: FastifyRequest, reply: FastifyReply) => { const s = read(req); if (!s) { fail(reply, 401, 'Sesión personal no válida.'); return null; } return s; };
 
@@ -49,6 +56,19 @@ export function registerPersonal(app: FastifyInstance, store: Store, lim: ((k: s
     const s = secure(req, reply); if (!s) return reply;
     const b = z.object({ profile: z.enum(PROFILES) }).safeParse(req.body); if (!b.success) return fail(reply, 400, 'Perfil no válido');
     issue(reply, b.data.profile); return { ok: true, profile: b.data.profile };
+  });
+
+  // Panel de clientes: ver y cambiar la suscripción de cada negocio. Solo cifras de uso, nunca datos personales de sus alumnos.
+  app.get('/api/personal/clients', async (req, reply) => { if (!secure(req, reply)) return reply; return clients.list(); });
+  app.post<{ Params: { id: string } }>('/api/personal/clients/:id/plan', async (req, reply) => {
+    if (!secure(req, reply)) return reply;
+    const b = z.object({ plan: z.enum(['trial', 'basic', 'pro', 'premium']), applyModules: z.boolean().optional() }).safeParse(req.body); if (!b.success) return fail(reply, 400, 'Plan no válido');
+    try { return { ok: true, ...(await clients.setPlan(req.params.id, b.data.plan, !!b.data.applyModules)) }; } catch (e) { return fail(reply, 404, (e as Error).message); }
+  });
+  app.post<{ Params: { id: string } }>('/api/personal/clients/:id/status', async (req, reply) => {
+    if (!secure(req, reply)) return reply;
+    const b = z.object({ status: z.enum(['active', 'suspended']) }).safeParse(req.body); if (!b.success) return fail(reply, 400, 'Estado no válido');
+    try { return { ok: true, ...(await clients.setStatus(req.params.id, b.data.status)) }; } catch (e) { return fail(reply, 404, (e as Error).message); }
   });
 
   app.post('/api/personal/logout', async (_req, reply) => { reply.clearCookie(COOKIE, { path: '/api/personal' }); return { ok: true }; });

@@ -4,13 +4,13 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/primitives';
 import { useAction, useUser } from '@/hooks';
+import { PLANS, PLAN_IDS, type PlanId } from '@/config/plans';
 import { PRESETS } from '@/config/presets';
 import { platformOverview, setAcademyPlan, setAcademyStatus } from '@/services/mutations';
 import { useSession } from '@/store/session';
 import { fmtAgo, fmtMoney } from '@/utils/format';
 
 /** Precios orientativos para la estimación de ingresos recurrentes (el cobro real de suscripciones llegará con el backend). */
-const PRICE = { trial: 0, basic: 39, pro: 79 } as const;
 /** Uso razonable de WhatsApp: por encima de esto por alumno activo y mes, conviene hablar con el cliente (no se bloquea nada). */
 const WA_FAIR_PER_STUDENT = 8;
 export default function PlatformPage() {
@@ -18,10 +18,10 @@ export default function PlatformPage() {
   type R = Awaited<ReturnType<typeof platformOverview>>[number];
   const [rows, setRows] = useState<R[]>([]);
   useEffect(() => { let off = false; void Promise.resolve(platformOverview(user)).then((r) => { if (!off) setRows(r as R[]); }); return () => { off = true; }; }, [user, data]);
-  const mrr = rows.filter((r) => r.academy.status === 'active').reduce((a, r) => a + PRICE[r.academy.plan], 0);
+  const mrr = rows.filter((r) => r.academy.status === 'active').reduce((a, r) => a + PLANS[r.academy.plan].price, 0);
   const cols: Column<R>[] = [
     { key: 'n', header: 'Academia', sort: (a, b) => a.academy.name.localeCompare(b.academy.name, 'es'), cell: (r) => <div><p className="font-medium">{r.academy.name}</p><p className="text-xs text-muted">{PRESETS[r.academy.type].label} · {r.academy.id}</p></div> },
-    { key: 'p', header: 'Plan', cell: (r) => <select aria-label={`Plan de ${r.academy.name}`} value={r.academy.plan} onChange={(e) => void run(() => setAcademyPlan(user, r.academy.id, e.target.value as 'trial' | 'basic' | 'pro'), 'Plan actualizado')} className="h-8 rounded-md border border-line bg-bg px-1.5 text-xs"><option value="trial">Prueba</option><option value="basic">Básico</option><option value="pro">Pro</option></select> },
+    { key: 'p', header: 'Plan', cell: (r) => <select aria-label={`Plan de ${r.academy.name}`} value={r.academy.plan} onChange={(e) => void run(() => setAcademyPlan(user, r.academy.id, e.target.value as PlanId), 'Plan actualizado')} className="h-8 rounded-md border border-line bg-bg px-1.5 text-xs">{PLAN_IDS.map((id) => <option key={id} value={id}>{PLANS[id].label}</option>)}</select> },
     { key: 's', header: 'Estado', cell: (r) => <Badge tone={r.academy.status === 'active' ? 'ok' : 'bad'}>{r.academy.status === 'active' ? 'Activa' : 'Suspendida'}</Badge> },
     { key: 'u', header: 'Usuarios', hide: 'md', sort: (a, b) => a.users - b.users, cell: (r) => <span className="tnum">{r.users}</span> },
     { key: 'st', header: 'Alumnos', hide: 'md', sort: (a, b) => a.students - b.students, cell: (r) => <span className="tnum">{r.students}</span> },
@@ -37,7 +37,7 @@ export default function PlatformPage() {
       <PageHeader title="Plataforma" description="Panel del propietario del SaaS. Solo ves cifras de uso, nunca los datos personales de cada academia." />
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">{kpi.map(([k, v]) => <div key={k} className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">{k}</p><p className="tnum mt-1 text-2xl font-semibold">{v}</p></div>)}</div>
       <DataTable label="Academias" rows={rows} columns={cols} rowKey={(r) => r.academy.id} defaultSort={{ key: 'n', dir: 'asc' }} empty={{ icon: Building2, title: 'Sin academias' }} />
-      <p className="mt-3 text-xs text-muted">MRR estimado con precios orientativos (Básico 39 €, Pro 79 €). WhatsApp (mes) cuenta los avisos automáticos enviados; «Uso alto» es solo un aviso para ti (más de {WA_FAIR_PER_STUDENT} por alumno activo y mes), no limita nada. La facturación real de suscripciones se conectará con el backend.</p>
+      <p className="mt-3 text-xs text-muted">MRR estimado con los precios de cada plan (Esencial 39 €, Profesional 69 €, Premium 99 €). WhatsApp (mes) cuenta los avisos automáticos enviados; «Uso alto» es solo un aviso para ti (más de {WA_FAIR_PER_STUDENT} por alumno activo y mes), no limita nada. La facturación real de suscripciones se conectará con el backend.</p>
     </>
   );
 }

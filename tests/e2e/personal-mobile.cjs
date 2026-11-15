@@ -9,7 +9,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   for (const dev of ['iPad (gen 7)', 'iPad (gen 7) landscape']) { const t = await open(dev); await t.waitForSelector('.hud-cols'); await t.waitForTimeout(800);
     ok(await t.locator('.hud-cols').count() === 1 && await t.locator('.hud-phone').count() === 0, `${dev}: misma disposición que el ordenador`);
     ok(await t.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${dev}: sin desbordes horizontales`);
-    ok(await t.getByRole('navigation', { name: 'Módulos' }).getByRole('button').count() === 6, `${dev}: los 6 módulos accesibles`); }
+    ok(await t.getByRole('navigation', { name: 'Módulos' }).getByRole('button').count() === 7, `${dev}: los 7 módulos accesibles`); }
   // iPhone
   const p = await open('iPhone 14'); await p.waitForSelector('.hud-phone'); await p.waitForTimeout(800); const tab = (n) => p.locator('.ph-tabs').getByRole('button', { name: n, exact: true });
   ok(await p.locator('.hud-cols').count() === 0 && await p.locator('.ph-tabs').count() === 1, 'iPhone: vista compacta con barra de pestañas');

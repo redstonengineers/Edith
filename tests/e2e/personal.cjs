@@ -20,7 +20,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   const dock = (n) => p.locator('nav[aria-label="Módulos"]').getByRole('button', { name: n });
   // Tareas, asignaturas, notas, agenda, hábito, gasto, objetivo
   await dock('Tareas').click(); await p.getByPlaceholder('Entregar práctica de física…').fill('Entregar práctica'); await p.locator('[role=dialog]').getByRole('button', { name: /Añadir/ }).click(); ok(await p.getByText('Entregar práctica').count() >= 1, 'crear tarea'); await p.keyboard.press('Escape');
-  ok(await p.locator('nav[aria-label="Módulos"]').getByRole('button').count() === 6 && await dock('Notas').count() === 0 && await dock('Apuntes').count() === 0, 'sin Apuntes ni Notas: quedan 6 módulos');
+  ok(await p.locator('nav[aria-label="Módulos"]').getByRole('button').count() === 7 && await dock('Clientes').count() === 1 && await dock('Notas').count() === 0 && await dock('Apuntes').count() === 0, 'sin Apuntes ni Notas: 6 módulos personales + Clientes');
   await dock('Agenda').click(); await p.getByPlaceholder('Examen de cálculo').fill('Examen de cálculo'); await p.locator('[role=dialog]').getByRole('button', { name: /Añadir/ }).click(); ok(await p.locator('[role=dialog]').getByText('Examen de cálculo').count() >= 1, 'crear evento'); await p.keyboard.press('Escape');
   const dlg = p.locator('[role=dialog]');
   await dock('Horario').click(); const col = p.locator('.tt-col').nth(0); await col.click({ position: { x: 30, y: 150 } }); await p.getByPlaceholder('Cálculo I').last().fill('Física'); await p.getByRole('button', { name: 'Guardar' }).click();

@@ -12,7 +12,7 @@ export interface Academy {
   id: ID;
   name: string;
   type: AcademyType;
-  plan: 'trial' | 'basic' | 'pro';
+  plan: 'trial' | 'basic' | 'pro' | 'premium';
   status: 'active' | 'suspended';
   /** Identificador público del negocio en la pantalla de acceso (p. ej. «atlanta»). */
   slug?: string;

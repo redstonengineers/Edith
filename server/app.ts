@@ -17,6 +17,7 @@ import { mailEnabled, sendMail } from './mailer';
 import { PublicApplyError, publicApplyInfo, submitPublicApplication, type PublicApplyResult } from '../src/services/publicApply';
 import { can } from '../src/lib/permissions';
 import { publicTenants } from '../src/data/tenants';
+import { changeAcademyPlan, platformRows } from '../src/services/platform';
 import { aiBody, loginBody, onboardingBody, RPC } from './validators';
 import type { Store } from './store';
 
@@ -201,7 +202,12 @@ export function buildApp(store: Store) {
     return askClaude({ question: p.data.question, history: p.data.history ?? [], snapshot, user: u });
   });
 
-  registerPersonal(app, store, loginLimit, fail);
+  const audit = (academyId: string, summary: string, id: string) => getDatabase().activity.unshift({ academyId, id: `${academyId}_log_${Date.now().toString(36)}`, at: new Date().toISOString(), actorId: 'owner', actorName: 'Propietario de la plataforma', action: 'modificó', entityType: 'academy', entityId: id, summary });
+  registerPersonal(app, store, loginLimit, fail, {
+    list: () => ({ clients: platformRows(getDatabase()).map((r) => ({ id: r.academy.id, name: r.academy.name, slug: r.academy.slug, type: r.academy.type, plan: r.academy.plan, status: r.academy.status, createdAt: r.academy.createdAt, users: r.users, students: r.students, modules: r.modules, storageKb: r.storageKb, lastActivity: r.lastActivity, waMonth: r.waMonth, waPrev: r.waPrev })) }),
+    setPlan: (id, plan, applyModules) => serial(() => { const r = changeAcademyPlan(getDatabase(), id, plan, applyModules); audit(id, `Plan cambiado a ${plan}${r.disabled.length ? ` (módulos desactivados: ${r.disabled.join(', ')})` : ''}`, id); flush(); return { name: r.academy.name, plan: r.academy.plan, disabled: r.disabled as string[] }; }),
+    setStatus: (id, status) => serial(() => { const a = getDatabase().academies.find((x) => x.id === id); if (!a) throw new Error('Negocio no encontrado.'); a.status = status; audit(id, status === 'active' ? 'Negocio reactivado' : 'Negocio suspendido', id); flush(); return { name: a.name, status: a.status }; }),
+  });
   app.setErrorHandler((err, req, reply) => { req.log.error(err); const code = (err as { statusCode?: number }).statusCode; reply.code(code && code < 500 ? code : 500).send({ error: code && code < 500 ? 'Petición no válida' : 'Error interno' }); });
   app.addHook('onClose', async () => { store.close(); });
   setInterval(() => store.purgeSessions(Date.now()), 3_600_000).unref();
