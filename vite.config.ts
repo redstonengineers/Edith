@@ -7,7 +7,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const api = env.VITE_DATA_MODE === 'api';
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), {
+      // Lista de archivos compilados que el service worker guarda para abrir la app sin conexión.
+      name: 'precache-list', apply: 'build',
+      generateBundle(_o, bundle) { this.emitFile({ type: 'asset', fileName: 'precache.json', source: JSON.stringify(Object.keys(bundle).filter((f) => /\.(js|css|woff2?)$/.test(f)).map((f) => `/${f}`)) }); },
+    }],
     resolve: {
       alias: [
         // En modo API las mutaciones se ejecutan en el servidor (generado por scripts-gen-remote.mjs).

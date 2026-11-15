@@ -719,11 +719,14 @@ export function cancelPractice(user: User, id: ID, cancelled = true) {
   return done(p);
 }
 /** Marca la práctica como hecha, anota los kilómetros y los suma al cuentakilómetros del coche. */
-export function completePractice(user: User, id: ID, data: { km?: number; notes?: string; studentSig?: string; teacherSig?: string }) {
+export function completePractice(user: User, id: ID, data: { km?: number; notes?: string; studentSig?: string; teacherSig?: string; opId?: string; signedAt?: string }) {
   need(user, 'practicas:write'); const db = getDatabase(); const p = own(user, db.practices.find((x) => x.id === id), 'Práctica');
   if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes cerrar tus prácticas.');
+  // Idempotente: un reintento del mismo cierre (p. ej. enviado sin conexión y repetido al volver la red) no suma kilómetros dos veces.
+  if (data.opId && p.closureId === data.opId) return done(p);
   if (p.status === 'cancelada') throw new DomainError('La práctica está cancelada.');
   const wasDone = p.status === 'hecha'; const prevKm = p.km ?? 0; p.status = 'hecha'; p.km = data.km ?? p.km; if (data.notes !== undefined) p.notes = data.notes; if (data.studentSig) p.studentSig = data.studentSig; if (data.teacherSig) p.teacherSig = data.teacherSig;
+  if (data.opId) { p.closureId = data.opId; p.signedAt = data.signedAt ?? new Date().toISOString(); }
   const v = p.vehicleId ? db.vehicles.find((x) => x.id === p.vehicleId && x.academyId === user.academyId) : undefined; if (v) v.km = Math.max(0, v.km + (p.km ?? 0) - (wasDone ? prevKm : 0));
   logActivity(user, 'registró', 'practice', `${user.name} cerró la práctica de ${practiceNames(user).student(p.studentId)} (${p.date})`, p.id);
   return done(p);

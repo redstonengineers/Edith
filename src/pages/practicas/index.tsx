@@ -24,7 +24,7 @@ export default function PracticasPage() {
   const hue = (id: string) => snap.teachers.find((t) => t.id === id)?.avatarHue ?? 220;
   const events: CalEvent[] = useMemo(() => snap.practices.filter((p) => !fTeacher || p.teacherId === fTeacher).map((p) => {
     const t = snap.teachers.find((x) => x.id === p.teacherId); const v = snap.vehicles.find((x) => x.id === p.vehicleId);
-    return { id: p.id, date: p.date, start: p.start, end: p.end, title: names.student(p.studentId), subtitle: `${t ? t.firstName : ''}${v ? ` · ${v.plate}` : ''}${p.status === 'hecha' ? ' · ✓ hecha' : ''}`, color: `hsl(${hue(p.teacherId)} 70% 58%)`, cancelled: p.status === 'cancelada', draggable: write && p.status === 'programada' };
+    return { id: p.id, date: p.date, start: p.start, end: p.end, title: names.student(p.studentId), subtitle: `${t ? t.firstName : ''}${v ? ` · ${v.plate}` : ''}${p.status === 'hecha' ? (p.pendingSync ? ' · ⟳ por enviar' : ' · ✓ hecha') : ''}`, color: `hsl(${hue(p.teacherId)} 70% 58%)`, cancelled: p.status === 'cancelada', draggable: write && p.status === 'programada' };
   }), [snap, fTeacher, names, write]);
   const cancelled = snap.practices.filter((p) => p.status === 'cancelada').length;
 

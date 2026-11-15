@@ -52,7 +52,7 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   createVehicle: z.tuple([vehicleSchema]), updateVehicle: z.tuple([id, vehicleSchema.partial()]),
   createPractice: z.tuple([practiceSchema, z.boolean().optional()]), createPracticeSeries: z.tuple([practiceSchema, z.number().int().min(2).max(26), z.boolean().optional()]),
   updatePractice: z.tuple([id, practiceSchema, z.boolean().optional()]), cancelPractice: z.tuple([id, z.boolean().optional()]),
-  completePractice: z.tuple([id, z.object({ km: z.number().int().min(0).max(1000).optional(), notes: z.string().max(500).optional(), studentSig: dataUrl.optional(), teacherSig: dataUrl.optional() })]), getPracticeSignatures: z.tuple([id]),
+  completePractice: z.tuple([id, z.object({ km: z.number().int().min(0).max(1000).optional(), notes: z.string().max(500).optional(), studentSig: dataUrl.optional(), teacherSig: dataUrl.optional(), opId: z.string().min(8).max(64).regex(/^[\w-]+$/).optional(), signedAt: z.string().datetime().optional() })]), getPracticeSignatures: z.tuple([id]),
   addDrivingExam: z.tuple([id, z.object({ kind: z.enum(['teorico', 'practico']), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), result: z.enum(['pendiente', 'aprobado', 'suspendido']) })]),
   setDrivingExamResult: z.tuple([id, id, z.enum(['pendiente', 'aprobado', 'suspendido'])]), deleteDrivingExam: z.tuple([id, id]),
   importStudents: z.tuple([z.array(studentSchema).min(1).max(500)]),

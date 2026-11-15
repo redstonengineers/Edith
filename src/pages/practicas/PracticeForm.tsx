@@ -90,7 +90,8 @@ export function PracticeForm({ open, onClose, practice, defaults }: { open: bool
               <Button onClick={() => void run(() => completePractice(user, practice.id, { km: km ? Number(km) : undefined, notes: f.notes }), 'Práctica terminada').then((r) => r && onClose())}><CheckCircle2 size={15} />{done ? 'Guardar km' : 'Marcar como hecha'}</Button>
               {!done && <Button variant="primary" onClick={() => setSign(true)}><PenLine size={15} />Terminar y firmar</Button>}
               {!done && <Button variant="danger" onClick={() => setConfirmCancel(true)}><Ban size={15} />Cancelar práctica</Button>}</div>
-            {practice.signed && <p className="flex items-center gap-1.5 text-xs text-ok"><CheckCircle2 size={13} aria-hidden />Firmada por alumno y profesor</p>}
+            {practice.pendingSync && <p className="flex items-center gap-1.5 text-xs text-warn" role="status">⟳ Firmada en este móvil · se enviará al volver la conexión</p>}
+            {practice.signed && !practice.pendingSync && <p className="flex items-center gap-1.5 text-xs text-ok"><CheckCircle2 size={13} aria-hidden />Firmada por alumno y profesor</p>}
           </div>)}
         {practice && !done && <div className="border-t border-line pt-3"><Button onClick={() => setWa(true)}><MessageCircle size={15} />Avisar por WhatsApp</Button></div>}
         {practice && write && cancelled && <Button onClick={() => void run(() => cancelPractice(user, practice.id, false), 'Práctica restaurada').then((r) => r && onClose())}><RotateCcw size={15} />Restaurar</Button>}

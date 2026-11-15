@@ -46,6 +46,7 @@ Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/pr
 - [ ] **Firma sin conexión**: cola offline que envía las firmas al recuperar la red.
 - [ ] Alta real del tenant «Autoescuela Atlanta» desde el onboarding (la demo `@atlanta.demo` solo existe con `SEED_DEMO=1`).
 - [ ] Avisos push de clases y copias de seguridad (equivalentes a los de Volanta).
+- [x] **Modo sin conexión (como Volanta)**: app instalable (manifiesto + service worker), abre sin red con la última copia de datos (IndexedDB, se borra al cerrar sesión) y aviso «Sin conexión». Los cierres de práctica con firma se guardan en el móvil y se envían solos al volver la red (cada cierre lleva un `opId`: el servidor lo reconoce y no duplica km ni firmas; guarda la hora real de la firma). Si el servidor rechaza un cierre (p. ej. práctica cancelada) se conserva con aviso Reintentar / Descartar. Crear/mover prácticas y el resto de acciones siguen necesitando conexión. Test: `tests/e2e/offline.cjs`. Pendiente: probar en un iPad/móvil real (instalar en pantalla de inicio) y, si se quiere, cola offline también para «Marcar como hecha» sin firma.
 
 ## Autoescuela Atlanta — fase 3 (hecha)
 - Exámenes de conducir (teórico/práctico, resultado) en la ficha del alumno y «Exámenes del mes» con % de aprobados en el parte mensual.

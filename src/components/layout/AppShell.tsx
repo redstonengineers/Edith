@@ -11,6 +11,7 @@ import { useSettings } from '@/hooks';
 import { applyBranding } from '@/lib/branding';
 import { useUi } from '@/store/ui';
 import { Header } from './Header';
+import { OfflineBanner } from './OfflineBanner';
 import { MobileNav } from './MobileNav';
 import { Sidebar } from './Sidebar';
 
@@ -38,6 +39,7 @@ export function AppShell() {
       <Sidebar />
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Header theme={theme} />
+        <OfflineBanner />
         <main ref={main} id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto px-4 pt-6 pb-24 outline-none sm:px-6 lg:px-8 lg:pb-10">
           <div key={pathname} className="anim-rise mx-auto w-full max-w-[1400px]">
             <ErrorBoundary><Suspense fallback={<LoadingState />}><Outlet /></Suspense></ErrorBoundary>

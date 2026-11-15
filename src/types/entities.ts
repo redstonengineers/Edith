@@ -207,4 +207,6 @@ export type PracticeStatus = 'programada' | 'hecha' | 'cancelada';
 export interface Practice extends Tenant { id: ID; studentId: ID; teacherId: ID; vehicleId?: ID; date: ISODate; start: string; end: string; status: PracticeStatus; km?: number; notes?: string; seriesId?: ID;
   /** Cuándo se envió el recordatorio automático (para no repetirlo). */ remindedAt?: ISODateTime;
   /** Firmas táctiles (PNG en data URL). En el snapshot solo viaja `signed`; las imágenes se piden aparte. */
-  studentSig?: string; teacherSig?: string; signed?: boolean }
+  studentSig?: string; teacherSig?: string; signed?: boolean;
+  /** Cierre con firma enviado desde el móvil (puede llegar tarde, sin conexión): id para no repetirlo e instante real de la firma. */ closureId?: string; signedAt?: ISODateTime;
+  /** Solo en el cliente: el cierre está guardado en este dispositivo y aún no ha llegado al servidor. */ pendingSync?: boolean }
