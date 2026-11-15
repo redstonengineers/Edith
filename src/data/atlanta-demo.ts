@@ -17,7 +17,11 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z]/g, 
  */
 export function fillAtlantaDemo(db: Database, academyId: string, today: Date = new Date()): boolean {
   const A = academyId; const acad = db.academies.find((a) => a.id === A); if (!acad || acad.demoSeeded) return false;
-  if (db.students.some((s) => s.academyId === A) || db.practices.some((p) => p.academyId === A)) return false;
+  /* Fichas «de relleno» que crea el alta de cuentas (alumno/profesor/tutor vacíos) no cuentan como datos reales. */
+  const ph = (x: { id: string }) => /_(stu|tea|gua)_demo$/.test(x.id);
+  if (db.students.some((s) => s.academyId === A && !ph(s)) || db.practices.some((p) => p.academyId === A) || db.teachers.some((t) => t.academyId === A && !ph(t))) return false;
+  const drop = <T extends { id: string; academyId: string }>(arr: T[]) => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i].academyId === A && ph(arr[i])) arr.splice(i, 1); };
+  drop(db.students); drop(db.teachers); drop(db.guardians);
   const rng = createRng(5150); const uid = (p: string, i: number) => `${A}_dm_${p}_${String(i + 1).padStart(3, '0')}`; const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()); const todayS = d(t0);
 
   /* Profesores */

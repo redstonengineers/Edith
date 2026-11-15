@@ -7,7 +7,7 @@ html.hud {
 html.hud, html.hud body { background: #02060f; }
 .hud-root { position: relative; height: 100dvh; min-height: 560px; color: var(--text); overflow: hidden; background: radial-gradient(1200px 800px at 50% 40%, rgb(var(--h2) / .22), transparent 62%), radial-gradient(800px 600px at 100% 100%, rgb(var(--h) / .12), transparent 60%), #02060f; }
 .hud-scroll { overflow: auto; height: auto; min-height: 100dvh; }
-.hud-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; mix-blend-mode: screen; }
+.hud-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hud-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgb(0 0 0 / .65) 100%), repeating-linear-gradient(0deg, rgb(var(--h) / .025) 0 1px, transparent 1px 3px); }
 .hud-stage { position: relative; z-index: 3; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; padding: 12px 18px 14px; pointer-events: none; perspective: 1600px; }
 .hud-stage > * { pointer-events: none; } .hud-stage button, .hud-stage input, .hud-stage select, .hud-stage textarea, .hud-stage a, .hud-stage .hud-panel, .hud-stage .hud-top > * { pointer-events: auto; }

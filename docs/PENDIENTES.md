@@ -70,5 +70,5 @@ Canales (se activan solos con sus claves en Coolify): correo (`RESEND_API_KEY`, 
 
 ## Datos de demostración de Autoescuela Atlanta (para enseñarla a clientes)
 Al arrancar, si Atlanta está vacía (sin alumnos ni prácticas) se llena **una sola vez** con datos ficticios: 4 profesores, 5 vehículos (uno en el taller, ITV y seguros próximos), 46 alumnos con permisos B, A2 y AM (algunos menores con tutor), grupos de teórico, ~6 semanas de prácticas hechas (con firmas) y 2 de programadas, exámenes de la DGT con resultados y repeticiones (parte mensual con % de aprobados), ~140 cobros (algunos vencidos), incidencias y avisos. La cuenta «alumno» ve a un alumno modelo (14 de 20 h, teórico aprobado, práctico fijado) y «padre» a un menor con sus clases.
-- No pisa datos reales: si ya hay alumnos o prácticas no hace nada, y no vuelve a rellenarse aunque se borren (marca `demoSeeded`).
+- No pisa datos reales: si ya hay alumnos (las ffichas de relleno del alta de cuentas no cuentan), profesores o prácticas no hace nada, y no vuelve a rellenarse aunque se borren (marca `demoSeeded`).
 - Para quitarla antes de usar la academia de verdad: borrar los alumnos/prácticas desde la app, o usar `ATLANTA_DEMO=0` en Coolify **antes** del primer arranque para no crearla.

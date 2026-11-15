@@ -2,12 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { addDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BellRing, CalendarDays, Home, MoreHorizontal, ChevronLeft, CheckSquare, Clock, GraduationCap, HelpCircle, Loader2, LogOut, NotebookPen, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Volume2, VolumeX, Wallet, X } from 'lucide-react';
+import { BellRing, CalendarDays, Home, MoreHorizontal, ChevronLeft, CheckSquare, Clock, HelpCircle, Loader2, LogOut, Pause, Play, RotateCcw, Send, Settings, Timer as TimerIcon, Users, Volume2, VolumeX, Wallet } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Drawer } from '@/components/ui/Overlay';
-import { PROFILES, uid, usePersonal, type Profile, type PData } from '@/store/personal';
+import { PROFILES, uid, usePersonal, type Profile } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
-import { AddForm, Bar, COLORS, Empty, F, Panel, Row, eur, todayISO, useDevice } from './shared';
+import { AddForm, Bar, Empty, F, Panel, Row, eur, todayISO, useDevice } from './shared';
 import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, AgendaCal, CalendarPanel, monthStats, useReminderAlerts } from './life';
 import { Schedule, SchedulePanel, classesOn, mins } from './timetable';
 import { createScene, type HudScene } from './scene';
@@ -16,15 +16,14 @@ import { blip, hudBus } from './fx';
 import { listVoices, speak, stopSpeaking, voiceSupported } from './voice';
 import './hud.css';
 
-const gradeAvg = (d: PData, id: string) => { const g = d.grades.filter((x) => x.subjectId === id); const w = g.reduce((a, x) => a + x.weight, 0); return w ? g.reduce((a, x) => a + x.score * x.weight, 0) / w : null; };
 
 
 
 /* ───────────── Módulos ───────────── */
-type Mod = 'schedule' | 'reminders' | 'agenda' | 'tasks' | 'money' | 'study' | 'notes' | 'subjects';
+type Mod = 'schedule' | 'reminders' | 'agenda' | 'tasks' | 'money' | 'study';
 const MODS: { id: Mod; label: string; icon: typeof CheckSquare }[] = [
   { id: 'schedule', label: 'Horario', icon: Clock }, { id: 'reminders', label: 'Recordatorios', icon: BellRing }, { id: 'agenda', label: 'Agenda', icon: CalendarDays }, { id: 'tasks', label: 'Tareas', icon: CheckSquare },
-  { id: 'money', label: 'Finanzas', icon: Wallet }, { id: 'study', label: 'Estudio', icon: TimerIcon }, { id: 'notes', label: 'Apuntes', icon: NotebookPen }, { id: 'subjects', label: 'Notas', icon: GraduationCap },
+  { id: 'money', label: 'Finanzas', icon: Wallet }, { id: 'study', label: 'Estudio', icon: TimerIcon },
 ];
 
 /* ───────────── Escena 3D: núcleo central ───────────── */
@@ -79,38 +78,20 @@ function Choose() {
 
 
 function Tasks() {
-  const { data, update } = usePersonal(); const [title, setTitle] = useState(''); const [due, setDue] = useState(''); const [subj, setSubj] = useState(''); const [pr, setPr] = useState<'alta' | 'media' | 'baja'>('media');
+  const { data, update } = usePersonal(); const [title, setTitle] = useState(''); const [due, setDue] = useState(''); const [pr, setPr] = useState<'alta' | 'media' | 'baja'>('media');
   const sorted = [...data.tasks].sort((a, b) => Number(a.done) - Number(b.done) || (a.due ?? '9').localeCompare(b.due ?? '9'));
   return (<>
-    <AddForm onAdd={() => { if (!title.trim()) return; update((d) => ({ ...d, tasks: [...d.tasks, { id: uid(), title: title.trim(), due: due || undefined, subjectId: subj || undefined, priority: pr, done: false }] })); setTitle(''); setDue(''); }}>
+    <AddForm onAdd={() => { if (!title.trim()) return; update((d) => ({ ...d, tasks: [...d.tasks, { id: uid(), title: title.trim(), due: due || undefined, priority: pr, done: false }] })); setTitle(''); setDue(''); }}>
       <F label="Tarea" w="w-full"><input className="hud-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Entregar práctica de física…" /></F>
       <F label="Fecha límite"><input className="hud-input" type="date" value={due} onChange={(e) => setDue(e.target.value)} /></F>
-      <F label="Asignatura"><select className="hud-input" value={subj} onChange={(e) => setSubj(e.target.value)}><option value="">—</option>{data.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></F>
       <F label="Prioridad" w="w-28"><select className="hud-input" value={pr} onChange={(e) => setPr(e.target.value as typeof pr)}><option>alta</option><option>media</option><option>baja</option></select></F>
     </AddForm>
     {sorted.length === 0 && <Empty text="Sin tareas. Añade la primera arriba." />}
     {sorted.map((t) => <Row key={t.id} label={t.title} onDelete={() => update((d) => ({ ...d, tasks: d.tasks.filter((x) => x.id !== t.id) }))}>
       <input type="checkbox" className="hud-check" checked={t.done} onChange={() => { if (!t.done) hudBus.emit('success'); update((d) => ({ ...d, tasks: d.tasks.map((x) => x.id === t.id ? { ...x, done: !x.done } : x) })); }} aria-label={`Completar ${t.title}`} />
       <span className={t.done ? 'text-muted line-through' : ''}>{t.title}</span>
-      <span className="hud-sub">{data.subjects.find((s) => s.id === t.subjectId)?.name}</span>
       {t.due && <span className={`ml-2 text-xs ${!t.done && t.due < todayISO() ? 'text-bad' : 'text-muted'}`}>{format(parseISO(t.due), 'd MMM', { locale: es })}</span>}
       <span className={`text-[10px] uppercase ${t.priority === 'alta' ? 'text-bad' : 'text-muted'}`}>{t.priority}</span></Row>)}
-  </>);
-}
-function Subjects() {
-  const { data, update } = usePersonal(); const [name, setName] = useState(''); const [sid, setSid] = useState(''); const [t, setT] = useState(''); const [score, setScore] = useState(''); const [w, setW] = useState('1');
-  return (<>
-    <AddForm label="Asignatura" onAdd={() => { if (!name.trim()) return; update((d) => ({ ...d, subjects: [...d.subjects, { id: uid(), name: name.trim(), color: COLORS[d.subjects.length % COLORS.length] }] })); setName(''); }}>
-      <F label="Nueva asignatura" w="w-full"><input className="hud-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Cálculo I" /></F></AddForm>
-    <AddForm label="Nota" onAdd={() => { const n = Number(score.replace(',', '.')); if (!sid || !t.trim() || Number.isNaN(n) || n < 0 || n > 10) return; update((d) => ({ ...d, grades: [...d.grades, { id: uid(), subjectId: sid, title: t.trim(), score: n, weight: Math.max(0.1, Number(w) || 1), date: todayISO() }] })); setT(''); setScore(''); }}>
-      <F label="Asignatura"><select className="hud-input" value={sid} onChange={(e) => setSid(e.target.value)}><option value="">—</option>{data.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></F>
-      <F label="Examen / trabajo"><input className="hud-input" value={t} onChange={(e) => setT(e.target.value)} placeholder="Parcial 1" /></F>
-      <F label="Nota (0-10)" w="w-24"><input className="hud-input" inputMode="decimal" value={score} onChange={(e) => setScore(e.target.value)} /></F><F label="Peso" w="w-20"><input className="hud-input" inputMode="decimal" value={w} onChange={(e) => setW(e.target.value)} /></F>
-    </AddForm>
-    {data.subjects.length === 0 && <Empty text="Añade tus asignaturas para llevar la media ponderada." />}
-    {data.subjects.map((s) => { const a = gradeAvg(data, s.id); return (
-      <div key={s.id} className="mb-3"><Row label={s.name} onDelete={() => update((d) => ({ ...d, subjects: d.subjects.filter((x) => x.id !== s.id), grades: d.grades.filter((g) => g.subjectId !== s.id) }))}><span style={{ color: s.color }}>●</span><b>{s.name}</b><span className="hud-val ml-3">{a === null ? '—' : a.toFixed(2)}</span></Row>
-        {data.grades.filter((g) => g.subjectId === s.id).map((g) => <div key={g.id} className="flex items-center gap-2 pl-6 text-xs text-muted"><span>{g.title}</span><span className="hud-val">{g.score}</span><span>×{g.weight}</span><button className="hud-ghost ml-auto" aria-label={`Eliminar nota ${g.title}`} onClick={() => update((d) => ({ ...d, grades: d.grades.filter((x) => x.id !== g.id) }))}><X size={12} aria-hidden /></button></div>)}</div>); })}
   </>);
 }
 /** Nombre y duración del temporizador, editables (con atajos de duración). */
@@ -129,21 +110,9 @@ function StudyPanel({ timer }: { timer: Timer }) {
   return (<>
     <div className="mb-5"><p className="hud-title mb-3 text-center text-5xl" aria-live="off">{mm}:{ss}</p>
       <TimerControls timer={timer} presets />
-      <div className="mt-3 flex flex-wrap items-center gap-2"><select className="hud-input w-48" value={timer.subjectId} onChange={(e) => timer.setSubjectId(e.target.value)} aria-label="Asignatura de la sesión"><option value="">Sin asignatura</option>{data.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-        <button className="hud-btn" onClick={timer.toggle}>{timer.running ? 'Pausar' : 'Iniciar'}</button><button className="hud-btn" onClick={timer.reset}>Reiniciar</button></div></div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">        <button className="hud-btn" onClick={timer.toggle}>{timer.running ? 'Pausar' : 'Iniciar'}</button><button className="hud-btn" onClick={timer.reset}>Reiniciar</button></div></div>
     <p className="hud-sub mb-2">Últimos 7 días · {week.reduce((a, s) => a + s.minutes, 0)} min</p>
-    {data.subjects.map((s) => { const m = week.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.minutes, 0); return <div key={s.id} className="mb-2"><div className="mb-1 flex justify-between text-xs"><span>{s.name}</span><span className="hud-val">{m} min</span></div><Bar pct={Math.min(100, m / 3)} /></div>; })}
     {recent.length > 0 && <><p className="hud-sub mt-4 mb-1">Últimas sesiones</p>{recent.map((r) => <Row key={r.id} label={r.name ?? 'sesión'} onDelete={() => update((d) => ({ ...d, study: d.study.filter((x) => x.id !== r.id) }))}><span className="w-12 flex-none text-xs text-muted">{r.date.slice(5)}</span><span className="truncate">{r.name || 'Estudio'}</span><span className="hud-sub">{data.subjects.find((x) => x.id === r.subjectId)?.name}</span><span className="hud-val ml-auto flex-none">{r.minutes} min</span></Row>)}</>}
-  </>);
-}
-
-function Notes() {
-  const { data, update } = usePersonal(); const [title, setTitle] = useState(''); const [body, setBody] = useState('');
-  return (<>
-    <AddForm onAdd={() => { if (!title.trim()) return; update((d) => ({ ...d, notes: [{ id: uid(), title: title.trim(), body, updated: todayISO() }, ...d.notes] })); setTitle(''); setBody(''); }}>
-      <F label="Título" w="w-full"><input className="hud-input" value={title} onChange={(e) => setTitle(e.target.value)} /></F><F label="Apunte" w="w-full"><textarea className="hud-input h-24 py-2" value={body} onChange={(e) => setBody(e.target.value)} /></F></AddForm>
-    {data.notes.length === 0 && <Empty text="Sin apuntes." />}
-    {data.notes.map((n) => <div key={n.id} className="mb-3 border-l-2 border-line-strong pl-3"><Row label={n.title} onDelete={() => update((d) => ({ ...d, notes: d.notes.filter((x) => x.id !== n.id) }))}><b>{n.title}</b><span className="hud-sub">{n.updated}</span></Row><p className="whitespace-pre-wrap text-sm text-muted">{n.body}</p></div>)}
   </>);
 }
 
@@ -222,7 +191,7 @@ function StudyCard({ timer, studyToday, onOpen }: { timer: Timer; studyToday: nu
 /** «Más»: el resto de módulos y ajustes en una cuadrícula grande y fácil de tocar (móvil). */
 function MoreBody({ go, onSettings, onHelp, onSwitch, onLogout }: { go: (m: Mod) => void; onSettings: () => void; onHelp: () => void; onSwitch: () => void; onLogout: () => void }) {
   const tiles: { label: string; icon: typeof Home; run: () => void }[] = [
-    ...(['reminders', 'agenda', 'tasks', 'study', 'notes', 'subjects'] as Mod[]).map((id) => { const m = MODS.find((x) => x.id === id)!; return { label: m.label, icon: m.icon, run: () => go(id) }; }),
+    ...(['reminders', 'agenda', 'tasks', 'study'] as Mod[]).map((id) => { const m = MODS.find((x) => x.id === id)!; return { label: m.label, icon: m.icon, run: () => go(id) }; }),
     { label: 'Ajustes', icon: Settings, run: onSettings }, { label: 'Ayuda', icon: HelpCircle, run: onHelp }, { label: 'Cambiar perfil', icon: Users, run: onSwitch }, { label: 'Cerrar sesión', icon: LogOut, run: onLogout },
   ];
   return <div className="grid grid-cols-3 gap-3">{tiles.map((t) => <button key={t.label} onClick={t.run} className="more-tile"><t.icon size={24} aria-hidden /><span>{t.label}</span></button>)}</div>;
@@ -235,7 +204,7 @@ function Hud() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement; if (el.closest('input, textarea, select, [contenteditable]') || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (/^[1-8]$/.test(e.key)) { setOpen(MODS[Number(e.key) - 1].id); blip('open', sound); hudBus.emit('pulse'); } else if (e.key === '/') { e.preventDefault(); chatRef.current?.focus(); } else if (e.key === ',') setPanel('settings'); else if (e.key === '?') setPanel('help');
+      if (/^[1-6]$/.test(e.key)) { setOpen(MODS[Number(e.key) - 1].id); blip('open', sound); hudBus.emit('pulse'); } else if (e.key === '/') { e.preventDefault(); chatRef.current?.focus(); } else if (e.key === ',') setPanel('settings'); else if (e.key === '?') setPanel('help');
     };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   }, [sound]);
@@ -245,7 +214,7 @@ function Hud() {
   const pendingRem = data.reminders.filter((r) => !r.done).length; const pendingTasks = data.tasks.filter((x) => !x.done).length;
   const syncLabel = { ok: 'Guardado', saving: 'Guardando…', error: 'Sin conexión', conflict: 'Conflicto' }[sync];
   const studyToday = data.study.filter((s) => s.date === todayISO()).reduce((a, s) => a + s.minutes, 0);
-  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money sel={finSel} setSel={setFinSel} />, study: <StudyPanel timer={timer} />, notes: <Notes />, subjects: <Subjects /> };
+  const ModBody = { schedule: <Schedule />, reminders: <Reminders />, agenda: <AgendaCal day={calDay} setDay={setCalDay} />, tasks: <Tasks />, money: <Money sel={finSel} setSel={setFinSel} />, study: <StudyPanel timer={timer} /> };
   const openMod = (m: Mod) => () => setOpen(m);
   const phoneMode = dev.phone; const W = Math.max(1180, dev.w); const z = dev.w / W; const Hd = z < 1 ? Math.min(dev.h / z, 1000) : dev.h; const top0 = z < 1 ? Math.max(0, (dev.h - Hd * z) / 2) : 0;
   return (

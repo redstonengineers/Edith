@@ -62,15 +62,15 @@ const PLASMA_FS = /* glsl */`uniform float uT; uniform float uE; uniform vec3 uA
 ${NOISE}
 void main(){
   vec3 p=normalize(vP);
-  float n=fbm(p*2.3+vec3(0.,uT*.22,uT*.14)); float n2=fbm(p*5.2-vec3(uT*.38,0.,uT*.2));
+  float n=fbm(p*2.3+vec3(0.,uT*.07,uT*.045)); float n2=fbm(p*4.4-vec3(uT*.1,0.,uT*.06));
   float plasma=smoothstep(.22,.82,n*.72+n2*.5);
   float vein=pow(1.-abs(n2*2.-1.),6.);
   float fres=pow(1.-max(dot(vN,vV),0.),2.2);
-  vec3 col=mix(uB,uA,plasma)*(.12+plasma*.62)+uA*vein*.5;
+  vec3 col=mix(uB,uA,plasma)*(.12+plasma*.62)+uA*vein*.18;
   col+=uA*fres*.95;
   float hot=pow(max(dot(vN,vV),0.),3.)*(.35+uE*.9);
   col=mix(col,vec3(1.),clamp(hot*.3,0.,1.));
-  gl_FragColor=vec4(col*(1.+uE*.9),1.);
+  gl_FragColor=vec4(col*(1.+uE*.35),1.);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }`;
@@ -94,10 +94,14 @@ void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,.0,d); a*=a
 
 export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScene {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-  renderer.setClearColor(0x000000, 1); /* el canvas se funde con el fondo mediante mix-blend-mode: screen */
-  const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x000000, 0.04);
+  renderer.setClearColor(0x02060f, 1);
+  const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x02060f, 0.04);
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 80); camera.position.set(0, 0.2, 8);
   const colA = new THREE.Color(opts.hex); const colB = new THREE.Color(opts.hex2);
+  /* Fondo pintado en la propia escena (degradado con el color del tema): estático, sin mezclas del navegador. */
+  const bgCanvas = document.createElement('canvas'); bgCanvas.width = 512; bgCanvas.height = 512; const bgTex = new THREE.CanvasTexture(bgCanvas); bgTex.colorSpace = THREE.SRGBColorSpace; scene.background = bgTex;
+  const paintBg = () => { const g = bgCanvas.getContext('2d')!; const rgb = (c: THREE.Color, a: number) => `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${a})`; const sr = (c: THREE.Color) => new THREE.Color().copy(c).convertLinearToSRGB(); g.fillStyle = '#02060f'; g.fillRect(0, 0, 512, 512); let r = g.createRadialGradient(256, 210, 0, 256, 210, 330); r.addColorStop(0, rgb(sr(colB), .2)); r.addColorStop(1, rgb(sr(colB), 0)); g.fillStyle = r; g.fillRect(0, 0, 512, 512); r = g.createRadialGradient(512, 512, 0, 512, 512, 300); r.addColorStop(0, rgb(sr(colA), .1)); r.addColorStop(1, rgb(sr(colA), 0)); g.fillStyle = r; g.fillRect(0, 0, 512, 512); bgTex.needsUpdate = true; };
+  paintBg();
   type Tint = THREE.Material & { color: THREE.Color };
   const mats: { m: Tint; role: 'a' | 'b' }[] = []; const extra: { dispose: () => void }[] = [];
   const reg = <T extends THREE.Material>(m: T, role: 'a' | 'b' = 'a'): T => { (m as unknown as Tint).color.copy(role === 'a' ? colA : colB); mats.push({ m: m as unknown as Tint, role }); return m; };
@@ -188,16 +192,17 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
       composer.addPass(new RenderPass(scene, camera)); bloom = new UnrealBloomPass(new THREE.Vector2(w / 2, h / 2), .42, .5, .62); composer.addPass(bloom); composer.addPass(new OutputPass());
     } catch { composer = null; bloom = null; bloomBroken = true; }
   };
-  const size = () => {
-    const p = canvas.parentElement ?? canvas; const w = Math.max(1, p.clientWidth); const h = Math.max(1, p.clientHeight); const pr = Math.min(window.devicePixelRatio || 1, Q[quality].dpr, degrade >= 2 ? 1 : 9);
+  let lw = 0; let lh = 0;
+  const size = (force = false) => {
+    const p = canvas.parentElement ?? canvas; const w = Math.max(1, p.clientWidth); const h = Math.max(1, p.clientHeight); if (!force && w === lw && h === lh) return; lw = w; lh = h; const pr = Math.min(window.devicePixelRatio || 1, Q[quality].dpr, degrade >= 2 ? 1 : 9);
     renderer.setPixelRatio(pr); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     swirlMat.uniforms.uScale.value = (h * pr) / (2 * Math.tan((camera.fov * Math.PI) / 360));
     if (composer) { composer.setPixelRatio(pr); composer.setSize(w, h); bloom?.resolution.set(w * pr / 2, h * pr / 2); }
   };
-  const apply = () => { buildStars(Q[quality].stars); buildNet(Q[quality].net); buildSwirl(Q[quality].swirl); buildDials(); buildComposer(); size(); };
+  const apply = () => { buildStars(Q[quality].stars); buildNet(Q[quality].net); buildSwirl(Q[quality].swirl); buildDials(); buildComposer(); size(true); };
   const onMove = (e: PointerEvent) => { mouse.tx = (e.clientX / window.innerWidth) * 2 - 1; mouse.ty = -((e.clientY / window.innerHeight) * 2 - 1); };
   window.addEventListener('pointermove', onMove, { passive: true });
-  const ro = new ResizeObserver(size); ro.observe(canvas.parentElement ?? canvas);
+  const ro = new ResizeObserver(() => size()); ro.observe(canvas.parentElement ?? canvas);
   apply();
 
   const clock = new THREE.Clock(); let raf = 0; let alive = true;
@@ -206,28 +211,28 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
     if (document.hidden) { clock.getDelta(); return; }
     const raw = clock.getDelta(); const dt = Math.min(raw, .05); const t = clock.elapsedTime; const ts = motion ? 1 : .08;
     /* Si el equipo va justo, se degrada solo: primero sin brillo (bloom), luego con menos resolución. */
-    seen++; if (seen > 3 && degrade < 2 && (raw > .2 || (seen >= 45 && sumDt / 30 > .06))) { degrade++; if (degrade === 1) { bloomBroken = true; buildComposer(); } size(); seen = 0; sumDt = 0; } else if (seen > 15) { sumDt += raw; if (seen >= 45) { seen = 0; sumDt = 0; } }
-    speed += ((thinking ? 3.6 : hover ? .2 : 1) - speed) * Math.min(1, dt * 3); energy *= Math.pow(.02, dt);
-    voice += ((speaking ? .45 + .35 * Math.sin(t * 12.5) * Math.sin(t * 4.1 + 1) + .2 * Math.sin(t * 27) : 0) - voice) * Math.min(1, dt * 12);
-    const lvl = Math.max(0, energy + voice * .7 + (thinking ? .25 + .1 * Math.sin(t * 9) : 0)); const k = dt * ts * speed;
+    seen++; if (seen > 8 && degrade < 2 && (raw > .5 || (seen >= 45 && sumDt / 30 > .06))) { degrade++; if (degrade === 1) { bloomBroken = true; buildComposer(); } size(true); seen = 0; sumDt = 0; } else if (seen > 15) { sumDt += raw; if (seen >= 45) { seen = 0; sumDt = 0; } }
+    speed += ((thinking ? 2 : hover ? .2 : 1) - speed) * Math.min(1, dt * 3); energy *= Math.pow(.12, dt);
+    voice += ((speaking ? .5 + .18 * Math.sin(t * 3.2) : 0) - voice) * Math.min(1, dt * 3);
+    const lvl = Math.max(0, energy * .7 + voice * .5 + (thinking ? .2 : 0)); const k = dt * ts * speed;
     mouse.x += (mouse.tx - mouse.x) * Math.min(1, dt * 3); mouse.y += (mouse.ty - mouse.y) * Math.min(1, dt * 3);
     const par = motion ? 1 : 0; camera.position.z = opts.compact ? 8 : 8 * Math.max(1, 1.5 / camera.aspect); camera.position.x = mouse.x * 1.1 * par; camera.position.y = .2 + mouse.y * .6 * par; camera.lookAt(0, .2, 0);
     coreRoot.rotation.y += ((mouse.x * .35 * par) - coreRoot.rotation.y) * Math.min(1, dt * 2.5); coreRoot.rotation.x += ((-mouse.y * .2 * par) - coreRoot.rotation.x) * Math.min(1, dt * 2.5);
     uni.uT.value += k; uni.uE.value = lvl; swirlT += k; swirlMat.uniforms.uT.value = swirlT;
     lat.rotation.y += k * .12; lat.rotation.x += k * .05; latPts.rotation.copy(lat.rotation); lat2.rotation.y -= k * .22; lat2.rotation.z += k * .1; plasma.rotation.y += k * .05;
-    core.scale.setScalar(cs * (1 + Math.sin(t * 1.6) * .025 + lvl * .12)); halo.scale.setScalar(4.6 + lvl * 3); heart.scale.setScalar(.7 + lvl * .6 + Math.sin(t * 2.2) * .04); streak.scale.set(9 + lvl * 5, 1.1 + lvl * .5, 1);
-    (streak.material as THREE.SpriteMaterial).opacity = .3 + lvl * .5; (halo.material as THREE.SpriteMaterial).opacity = .2 + lvl * .3;
+    core.scale.setScalar(cs * (1 + Math.sin(t * .8) * .015 + lvl * .05)); halo.scale.setScalar(4.6 + lvl * 1.2); heart.scale.setScalar(.7 + lvl * .3); streak.scale.set(9 + lvl * 1.5, 1.1, 1);
+    (streak.material as THREE.SpriteMaterial).opacity = .25 + lvl * .2; (halo.material as THREE.SpriteMaterial).opacity = .2 + lvl * .12;
     dials.forEach((d, i) => { d.spin.rotation.z += k * d.speed * (1 + (thinking ? .8 : 0)); d.tilt.rotation.x += Math.sin(t * .3 + i) * .0006 * ts; });
     net.rotation.y += k * .02; net.rotation.x = Math.sin(t * .1) * .05; if (stars) stars.rotation.y += k * .01;
     grid.position.z = (t * .4 * ts) % 1;
-    waves.forEach((w) => { if (w.t >= 1) return; w.t += dt / 1.4; const e = 1 - Math.pow(1 - Math.min(w.t, 1), 3); w.m.scale.setScalar(1.2 + e * 5.2); (w.m.material as THREE.MeshBasicMaterial).opacity = (1 - w.t) * .75; if (w.t >= 1) w.m.visible = false; });
-    if (bloom) bloom.strength = .5 + lvl * .7;
+    waves.forEach((w) => { if (w.t >= 1) return; w.t += dt / 1.4; const e = 1 - Math.pow(1 - Math.min(w.t, 1), 3); w.m.scale.setScalar(1.2 + e * 5.2); (w.m.material as THREE.MeshBasicMaterial).opacity = (1 - w.t) * .35; if (w.t >= 1) w.m.visible = false; });
+    if (bloom) bloom.strength = .45 + lvl * .25;
     if (composer) composer.render(dt); else renderer.render(scene, camera);
   };
   frame();
 
   return {
-    setColors(a, b) { colA.set(a); colB.set(b); mats.forEach((m) => m.m.color.copy(m.role === 'a' ? colA : colB)); },
+    setColors(a, b) { colA.set(a); colB.set(b); mats.forEach((m) => m.m.color.copy(m.role === 'a' ? colA : colB)); paintBg(); },
     setQuality(q) { quality = q; apply(); }, setMotion(m) { motion = m; }, setThinking(b) { thinking = b; }, setSpeaking(b) { speaking = b; }, setHover(on) { hover = on; },
     pulse() { energy = 1; const w = waves[waveI++ % waves.length]; w.t = 0; w.m.visible = true; },
     dispose() {
