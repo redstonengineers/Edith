@@ -27,21 +27,21 @@ const MODS: { id: Mod; label: string; icon: typeof CheckSquare }[] = [
   { id: 'money', label: 'Finanzas', icon: Wallet }, { id: 'study', label: 'Estudio', icon: TimerIcon }, { id: 'notes', label: 'Apuntes', icon: NotebookPen }, { id: 'subjects', label: 'Notas', icon: GraduationCap },
 ];
 
-/* ───────────── Escena 3D de fondo + nodos orbitales ───────────── */
-function Stage({ onOpen, orbit, compact }: { onOpen?: (m: Mod) => void; orbit: boolean; compact?: boolean }) {
-  const canvas = useRef<HTMLCanvasElement>(null); const nodes = useRef<(HTMLButtonElement | null)[]>([]); const sc = useRef<HudScene | null>(null);
-  const { theme, quality, motion, sound } = useHud(); const [failed, setFailed] = useState(false);
+/* ───────────── Escena 3D: núcleo central ───────────── */
+function Stage({ compact, view }: { compact?: boolean; view?: 'choose' }) {
+  const canvas = useRef<HTMLCanvasElement>(null); const sc = useRef<HudScene | null>(null);
+  const { theme, quality, motion } = useHud(); const [failed, setFailed] = useState(false);
   useEffect(() => {
     const t = themeOf(theme);
     try {
-      sc.current = createScene(canvas.current!, { quality, motion, hex: t.hex, hex2: t.hex2, nodes: orbit ? MODS.length : 0, compact, onNodes: (ns) => ns.forEach((n, i) => { const el = nodes.current[i]; if (!el) return; el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) scale(${n.scale})`; el.style.opacity = String(Math.min(1, .45 + n.scale * .6)); el.style.zIndex = String(Math.round(n.depth * 10 + 50)); }) });
+      sc.current = createScene(canvas.current!, { quality, motion, hex: t.hex, hex2: t.hex2, compact, view });
     } catch { setFailed(true); }
-    const off = hudBus.on((e) => { if (e === 'pulse' || e === 'success') sc.current?.pulse(); if (e === 'think-on') sc.current?.setThinking(true); if (e === 'think-off') sc.current?.setThinking(false); });
+    const off = hudBus.on((e) => { if (e === 'pulse' || e === 'success') sc.current?.pulse(); if (e === 'think-on') sc.current?.setThinking(true); if (e === 'think-off') sc.current?.setThinking(false); if (e === 'speak-on') sc.current?.setSpeaking(true); if (e === 'speak-off') sc.current?.setSpeaking(false); });
     const move = (e: PointerEvent) => { const s = document.documentElement.style; s.setProperty('--mx', String((e.clientX / window.innerWidth) * 2 - 1)); s.setProperty('--my', String((e.clientY / window.innerHeight) * 2 - 1)); };
     window.addEventListener('pointermove', move, { passive: true });
     return () => { off(); window.removeEventListener('pointermove', move); sc.current?.dispose(); sc.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orbit, compact]);
+  }, [compact, view]);
   useEffect(() => { const t = themeOf(theme); sc.current?.setColors(t.hex, t.hex2); }, [theme]);
   useEffect(() => { sc.current?.setQuality(quality); }, [quality]);
   useEffect(() => { sc.current?.setMotion(motion); }, [motion]);
@@ -49,11 +49,6 @@ function Stage({ onOpen, orbit, compact }: { onOpen?: (m: Mod) => void; orbit: b
     <canvas ref={canvas} className="hud-canvas" aria-hidden />
     {failed && <p className="sr-only">La escena 3D no está disponible en este dispositivo.</p>}
     <div className="hud-vignette" aria-hidden />
-    {orbit && <div className="hud-nodes" role="group" aria-label="Módulos">
-      {MODS.map((m, i) => <button key={m.id} ref={(el) => { nodes.current[i] = el; }} className="hud-node" aria-label={`${m.label} (tecla ${i + 1})`} onClick={() => { blip('open', sound); hudBus.emit('pulse'); onOpen?.(m.id); }}
-        onPointerEnter={() => { sc.current?.setHover(true); blip('hover', sound); }} onPointerLeave={() => sc.current?.setHover(false)}>
-        <span className="orb"><m.icon size={20} aria-hidden /></span><span className="lbl">{m.label}</span></button>)}
-    </div>}
   </>);
 }
 
@@ -63,7 +58,7 @@ function Choose() {
   const go = async (p: Profile) => { setBusy(p); setErr(''); hudBus.emit('think-on'); try { await choose(p); } catch (e) { setErr((e as Error).message); setBusy(null); } finally { hudBus.emit('think-off'); } };
   return (
     <main className="hud-root">
-      <Stage orbit={false} />
+      <Stage view="choose" />
       <div className="absolute inset-x-0 top-[7vh] z-10 text-center" style={{ textShadow: '0 0 10px #000' }}>
         <div className="mb-4 flex justify-center drop-shadow-[0_0_28px_var(--hud)]"><Logo size={84} /></div><h1 className="hud-title text-5xl md:text-6xl">E.D.I.T.H.</h1><p className="hud-sub mt-3">Tu sistema personal</p></div>
       <div className="absolute inset-x-0 bottom-[7vh] z-10 p-4 text-center">
@@ -255,7 +250,7 @@ function Hud() {
   const phoneMode = dev.phone; const W = Math.max(1180, dev.w); const z = dev.w / W; const Hd = z < 1 ? Math.min(dev.h / z, 1000) : dev.h; const top0 = z < 1 ? Math.max(0, (dev.h - Hd * z) / 2) : 0;
   return (
     <div className={`hud-root ${phoneMode ? 'hud-root-phone' : ''}`} onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon, .ph-tab, .ph-fab')) blip('tick', sound); }}>
-      <Stage orbit={!phoneMode} compact={phoneMode} onOpen={setOpen} />
+      <Stage compact={phoneMode} />
       <AlertStack ctl={alerts} />
       {phoneMode ? (
       <div className="hud-phone">

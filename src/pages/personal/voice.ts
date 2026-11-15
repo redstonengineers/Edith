@@ -1,3 +1,5 @@
+import { hudBus } from './fx';
+
 /** Voz de EDITH: síntesis de voz del sistema (Web Speech API, speechSynthesis). Sin servicios externos ni claves. */
 export const voiceSupported = () => typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
 
@@ -12,7 +14,7 @@ export function speakable(t: string) {
   return t.replace(/```[\s\S]*?```/g, ' ').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/https?:\/\/\S+/g, ' enlace ').replace(/[*_`#>~|]/g, '').replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim();
 }
 
-export function stopSpeaking() { if (voiceSupported()) speechSynthesis.cancel(); }
+export function stopSpeaking() { if (voiceSupported()) speechSynthesis.cancel(); hudBus.emit('speak-off'); }
 
 /** Habla `text` (cancela lo anterior). `voiceURI` vacío = mejor voz española disponible. */
 export function speak(text: string, opts: { voiceURI?: string; rate?: number; onEnd?: () => void } = {}) {
@@ -20,6 +22,6 @@ export function speak(text: string, opts: { voiceURI?: string; rate?: number; on
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(clean.slice(0, 1500)); const vs = listVoices();
   const v = vs.find((x) => x.voiceURI === opts.voiceURI) ?? vs.find((x) => x.lang.toLowerCase().startsWith('es')); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'es-ES';
-  u.rate = opts.rate ?? 1; u.pitch = 0.95; u.onend = u.onerror = () => opts.onEnd?.();
+  u.rate = opts.rate ?? 1; u.pitch = 0.95; u.onstart = () => hudBus.emit('speak-on'); u.onend = u.onerror = () => { hudBus.emit('speak-off'); opts.onEnd?.(); };
   speechSynthesis.speak(u); return true;
 }

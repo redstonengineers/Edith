@@ -1,5 +1,5 @@
 /** Eventos y sonido del HUD: el núcleo 3D reacciona a lo que haces. */
-type Ev = 'pulse' | 'success' | 'think-on' | 'think-off';
+type Ev = 'pulse' | 'success' | 'think-on' | 'think-off' | 'speak-on' | 'speak-off';
 const subs = new Set<(e: Ev) => void>();
 export const hudBus = { on(fn: (e: Ev) => void) { subs.add(fn); return () => { subs.delete(fn); }; }, emit(e: Ev) { subs.forEach((f) => f(e)); } };
 
