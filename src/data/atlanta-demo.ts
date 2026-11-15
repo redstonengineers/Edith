@@ -17,12 +17,16 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z]/g, 
  */
 export function fillAtlantaDemo(db: Database, academyId: string, today: Date = new Date()): boolean {
   const A = academyId; const acad = db.academies.find((a) => a.id === A); if (!acad || acad.demoSeeded) return false;
-  /* Fichas «de relleno» que crea el alta de cuentas (alumno/profesor/tutor vacíos) no cuentan como datos reales. */
-  const ph = (x: { id: string; email?: string }) => /_(stu|tea|gua)_demo$/.test(x.id) || /^(alumno|profesor|padre)@[^@]+\.(local|demo)$/i.test(x.email ?? '');
-  if (db.students.some((s) => s.academyId === A && !ph(s)) || db.practices.some((p) => p.academyId === A) || db.teachers.some((t) => t.academyId === A && !ph(t))) return false;
-  const drop = <T extends { id: string; academyId: string; email?: string }>(arr: T[]) => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i].academyId === A && ph(arr[i])) arr.splice(i, 1); };
-  const gone = new Set(db.students.filter((x) => x.academyId === A && ph(x)).map((x) => x.id)); drop(db.students); drop(db.teachers); drop(db.guardians);
-  for (let i = db.enrollments.length - 1; i >= 0; i--) if (gone.has(db.enrollments[i].studentId as string)) db.enrollments.splice(i, 1);
+  /* Fichas «de relleno» que crean las altas de cuentas (alumno/profesor/tutor vacíos, de cualquier versión) y lo que cuelga de ellas
+     (prácticas de prueba, cobros…) no cuentan como datos reales. */
+  const ph = (x: { id: string; email?: string; firstName?: string; lastName?: string; name?: string }) => /_(stu|tea|gua)_demo$/.test(x.id) || /^(alumno|profesor|padre)@[^@]+\.(local|demo)$/i.test(x.email ?? '')
+    || (/^(alumno|profesor)$/i.test(x.firstName ?? '') && /^(atlanta)?$/i.test((x.lastName ?? '').trim())) || /^padre( atlanta)?$/i.test((x.name ?? '').trim());
+  const gone = new Set<string>([...db.students.filter((x) => x.academyId === A && ph(x)).map((x) => x.id), ...db.teachers.filter((x) => x.academyId === A && ph(x)).map((x) => x.id)]);
+  const mine = (t: { academyId: string }[]) => t.filter((x) => x.academyId === A);
+  if (db.students.some((s) => s.academyId === A && !gone.has(s.id)) || db.teachers.some((t) => t.academyId === A && !gone.has(t.id)) || db.practices.some((p) => p.academyId === A && !gone.has(p.studentId) && !gone.has(p.teacherId)) || mine(db.vehicles).length) return false;
+  const drop = <T extends { academyId: string }>(arr: T[], dead: (x: T) => boolean) => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i].academyId === A && dead(arr[i])) arr.splice(i, 1); };
+  drop(db.students, (x) => gone.has(x.id)); drop(db.teachers, (x) => gone.has(x.id)); drop(db.guardians, (x) => ph(x)); drop(db.practices, (x) => gone.has(x.studentId) || gone.has(x.teacherId)); drop(db.payments, (x) => gone.has(x.studentId));
+  drop(db.enrollments, (x) => gone.has(x.studentId as string)); drop(db.attendance, (x) => gone.has(x.studentId as string)); drop(db.grades, (x) => gone.has(x.studentId as string));
   const rng = createRng(5150); const uid = (p: string, i: number) => `${A}_dm_${p}_${String(i + 1).padStart(3, '0')}`; const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()); const todayS = d(t0);
 
   /* Profesores */
