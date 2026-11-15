@@ -16,6 +16,8 @@ export interface Academy {
   status: 'active' | 'suspended';
   /** Identificador público del negocio en la pantalla de acceso (p. ej. «atlanta»). */
   slug?: string;
+  /** Se rellenó con datos ficticios de demostración (no se vuelve a hacer aunque se borren). */
+  demoSeeded?: boolean;
   createdAt: ISODate;
 }
 export type AcademyType = 'educativa' | 'idiomas' | 'musica' | 'oposiciones' | 'refuerzo' | 'autoescuela' | 'fisioterapia' | 'psicologia' | 'fitness' | 'danza' | 'deportiva' | 'infantil' | 'formacion' | 'nautica' | 'canina' | 'estetica' | 'artes' | 'otro';
