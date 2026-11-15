@@ -72,3 +72,10 @@ Canales (se activan solos con sus claves en Coolify): correo (`RESEND_API_KEY`, 
 Al arrancar, si Atlanta está vacía (sin alumnos ni prácticas) se llena **una sola vez** con datos ficticios: 4 profesores, 5 vehículos (uno en el taller, ITV y seguros próximos), 46 alumnos con permisos B, A2 y AM (algunos menores con tutor), grupos de teórico, ~6 semanas de prácticas hechas (con firmas) y 2 de programadas, exámenes de la DGT con resultados y repeticiones (parte mensual con % de aprobados), ~140 cobros (algunos vencidos), incidencias y avisos. La cuenta «alumno» ve a un alumno modelo (14 de 20 h, teórico aprobado, práctico fijado). Atlanta ya no tiene perfil «padre».
 - No pisa datos reales: si ya hay alumnos (las ffichas de relleno del alta de cuentas no cuentan), profesores o prácticas no hace nada, y no vuelve a rellenarse aunque se borren (marca `demoSeeded`).
 - Para quitarla antes de usar la academia de verdad: borrar los alumnos/prácticas desde la app, o usar `ATLANTA_DEMO=0` en Coolify **antes** del primer arranque para no crearla.
+
+## Formulario público de solicitud de matrícula (todos los negocios)
+Cada negocio tiene un enlace público `/matricula/<slug o id>` (Atlanta: `/matricula/atlanta`) para que cualquiera pida plaza sin cuenta. Las solicitudes llegan a **Matrículas → Solicitud** con la etiqueta «Web», el mensaje y, si es menor, los datos del tutor. El formulario se adapta al negocio (logo, colores y la pregunta «qué te interesa»: permiso, motivo de consulta, actividad…).
+- Control desde Matrículas (tarjeta «Formulario público»): copiar enlace, activar/desactivar, texto de bienvenida y opciones. Activo por defecto en todos los negocios.
+- Antispam: señuelo oculto, tiempo mínimo de relleno, 6 envíos por hora y red, 80 al día por negocio, sin duplicados (mismo correo o teléfono en 7 días) y consentimiento RGPD obligatorio.
+- Avisos: notificación dentro de la app siempre; con correo conectado (Resend) también correo al director/secretaría y acuse al interesado.
+- Pendiente: texto legal propio de privacidad enlazado en el formulario; QR del enlace para carteles.

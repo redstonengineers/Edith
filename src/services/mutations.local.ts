@@ -783,6 +783,12 @@ export function updateNoticeSettings(user: User, patch: NoticeSettings) {
   st.notices = { events, channels: patch.channels, reminderHours: patch.reminderHours, quiet: patch.quiet };
   logActivity(user, 'modificó', 'settings', `${user.name} cambió los ajustes de avisos a alumnos`); return done(st);
 }
+/** Formulario público de solicitud de matrícula: activarlo/desactivarlo, texto de bienvenida y opciones de «qué te interesa». */
+export function updateApplySettings(user: User, patch: { enabled: boolean; message?: string; interests?: string[] }) {
+  need(user, 'settings:write'); const st = settingsOf(user);
+  st.apply = { enabled: patch.enabled, message: patch.message?.trim() || undefined, interests: (patch.interests ?? []).map((x) => x.trim()).filter(Boolean).slice(0, 30) };
+  logActivity(user, 'modificó', 'settings', `${user.name} ${patch.enabled ? 'activó' : 'desactivó'} el formulario público de matrícula`); return done(st);
+}
 /** Reintenta un aviso que falló (o lo deja listo para enviarlo a mano). */
 export function retryNotice(user: User, id: ID) {
   need(user, 'practicas:write'); const n = own(user, (getDatabase().outbox ?? []).find((x) => x.id === id), 'Aviso');

@@ -12,6 +12,7 @@ import type { Enrollment, EnrollmentStatus } from '@/types';
 import { fmtDate } from '@/utils/format';
 import { ApplicationForm } from './ApplicationsPage';
 import { AssignGroupModal } from './shared';
+import { PublicFormCard } from './PublicFormCard';
 
 export const STAGES: { id: EnrollmentStatus; label: string; next?: string; hint: string }[] = [
   { id: 'solicitud', label: 'Solicitud', next: 'Pasar a revisión', hint: 'Recibida' },
@@ -38,6 +39,7 @@ export default function EnrollmentsPage() {
     <>
       <PageHeader title={L.enrollment.plural} description="Del primer contacto al alumno activo, sin reescribir datos."
         actions={can('applications:write') && <Button variant="primary" onClick={() => setAdding(true)}><Plus size={16} />Nueva solicitud</Button>} />
+      <PublicFormCard />
       <ol aria-label="Etapas" className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
         {STAGES.map((s, i) => <li key={s.id} className="flex items-center gap-2">{i > 0 && <ArrowRight size={12} aria-hidden />}{s.label}</li>)}
       </ol>
@@ -52,7 +54,9 @@ export default function EnrollmentsPage() {
                 {shown.map((e) => (
                   <li key={e.id} className="rounded-lg border border-line bg-surface-2/50 p-3">
                     <p className="text-sm font-medium">{e.studentId ? <Link to={`/alumnos/${e.studentId}`} className="hover:text-brand-text">{enrollmentName(snap, e)}</Link> : enrollmentName(snap, e)}</p>
-                    <p className="text-xs text-muted">{e.applicant?.course ?? snap.groups.find((g) => g.id === e.groupId)?.name ?? ''} · {fmtDate(e.createdAt)}</p>
+                    <p className="text-xs text-muted">{e.applicant?.course ?? snap.groups.find((g) => g.id === e.groupId)?.name ?? ''} · {fmtDate(e.createdAt)}{e.applicant?.source === 'web' && <Badge className="ml-1.5">Web</Badge>}</p>
+                    {e.applicant?.message && <p className="mt-1 line-clamp-2 text-xs text-muted" title={e.applicant.message}>«{e.applicant.message}»</p>}
+                    {e.applicant?.guardianName && <p className="mt-1 text-[11px] text-muted">Tutor: {e.applicant.guardianName} · {e.applicant.guardianPhone}</p>}
                     {write && st.next && (
                       <div className="mt-2.5 flex gap-1.5">
                         <Button size="sm" variant="primary" onClick={() => (e.status === 'matriculada' ? setAssign(e) : void act.advance(e))}>{st.next}</Button>

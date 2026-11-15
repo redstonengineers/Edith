@@ -70,6 +70,7 @@ function Protected() {
 }
 
 const AccesoNegocio = lazy(() => import('@/pages/AccesoNegocio'));
+const Matricula = lazy(() => import('@/pages/Matricula'));
 
 export default function App() {
   const init = useSession((s) => s.init);
@@ -79,6 +80,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/acceso/:slug" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><AccesoNegocio /></Suspense>} />
+        <Route path="/matricula/:key" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><Matricula /></Suspense>} />
         <Route path="/personal" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><PersonalPage /></Suspense>} />
         <Route path="/onboarding" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><OnboardingPage /></Suspense>} />
         <Route element={<Protected />}>

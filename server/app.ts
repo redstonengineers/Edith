@@ -13,7 +13,8 @@ import { verifyPassword } from '../src/services/crypto';
 import * as M from '../src/services/mutations.local';
 import { config } from './config';
 import { deliverOutbox, queueReminders, testChannels, webhookEnabled, whatsappEnabled } from './notifier';
-import { mailEnabled } from './mailer';
+import { mailEnabled, sendMail } from './mailer';
+import { PublicApplyError, publicApplyInfo, submitPublicApplication, type PublicApplyResult } from '../src/services/publicApply';
 import { can } from '../src/lib/permissions';
 import { publicTenants } from '../src/data/tenants';
 import { aiBody, loginBody, onboardingBody, RPC } from './validators';
@@ -96,6 +97,29 @@ export function buildApp(store: Store) {
   app.get('/api/health', async () => ({ ok: true, ai: claudeEnabled() ? 'claude' : 'local', personal: personalEnabled() }));
 
   app.get('/api/public/tenants', async () => ({ tenants: publicTenants(getDatabase()) }));
+
+  // Formulario público de solicitud de matrícula (cualquier negocio, sin cuenta). Límites por red y por negocio contra el spam.
+  const applyIp = limiter(6, 60 * 60_000); const applyDay = limiter(80, 24 * 60 * 60_000);
+  const keyOf = (req: FastifyRequest) => String((req.params as { key?: string }).key ?? '').slice(0, 80);
+  const realMail = (e?: string) => !!e && !/@(horizonte|atlas|atlanta|vitalia)\.demo$|\.(demo|local|test)$/i.test(e);
+  /** Correo al equipo (director y secretaría) y acuse al interesado. Solo si el correo está conectado; los fallos no afectan a la solicitud. */
+  const announceApplication = async (r: PublicApplyResult) => {
+    if (!mailEnabled()) return; const db = getDatabase(); const e = db.enrollments.find((x) => x.id === r.enrollmentId); if (!e?.applicant) return; const ap = e.applicant;
+    const staff = [...new Set(db.users.filter((u) => u.academyId === r.academyId && !u.disabled && (u.role === 'ADMIN' || u.role === 'SECRETARIA') && realMail(u.email)).map((u) => u.email))];
+    const lines = [`Nombre: ${ap.name}`, `Teléfono: ${ap.phone}`, `Correo: ${ap.email}`, `Interés: ${ap.course}`, ap.birthDate ? `Nacimiento: ${ap.birthDate}` : '', ap.guardianName ? `Tutor: ${ap.guardianName} (${ap.guardianPhone})` : '', ap.message ? `Mensaje: ${ap.message}` : ''].filter(Boolean);
+    if (staff.length) await sendMail(staff, `Nueva solicitud de matrícula · ${ap.name}`, `Has recibido una solicitud desde el formulario web de ${r.academyName}:\n\n${lines.join('\n')}\n\nEstá en Matrículas, en la columna «Solicitud».`);
+    if (realMail(ap.email)) await sendMail([ap.email], `Hemos recibido tu solicitud · ${r.academyName}`, `Hola ${ap.name.split(' ')[0]},\n\nHemos recibido tu solicitud (${ap.course}). ${r.academyName} se pondrá en contacto contigo lo antes posible.\n\nGracias.`);
+  };
+  app.get('/api/public/apply/:key', async (req, reply) => { const info = publicApplyInfo(getDatabase(), keyOf(req)); return info ? { info } : fail(reply, 404, 'Este formulario no está disponible.'); });
+  app.post('/api/public/apply/:key', async (req, reply) => {
+    const key = keyOf(req);
+    if (applyIp(`${req.ip}|${key}`)) return fail(reply, 429, 'Has enviado varias solicitudes seguidas. Inténtalo de nuevo más tarde.');
+    if (applyDay(key)) return fail(reply, 429, 'Este formulario ha recibido muchas solicitudes hoy. Por favor, llama directamente.');
+    return serial(() => {
+      try { const r = submitPublicApplication(getDatabase(), key, req.body); if (r.created) { flush(); void announceApplication(r).catch((e) => req.log.warn(e)); } return { ok: true }; }
+      catch (e) { if (e instanceof PublicApplyError) return fail(reply, e.status, e.message); req.log.error(e); return fail(reply, 500, 'Error interno'); }
+    });
+  });
   app.get('/api/demo-accounts', async (_req, reply) => {
     if (!config.seedDemo) return fail(reply, 404, 'No disponible');
     const db = getDatabase();

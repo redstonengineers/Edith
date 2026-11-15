@@ -73,6 +73,7 @@ export const importStudents = ((_user: unknown, ...args: unknown[]) => rpc('impo
 export const markNoticeSent = ((_user: unknown, ...args: unknown[]) => rpc('markNoticeSent', args)) as unknown as typeof L.markNoticeSent;
 export const dismissNotice = ((_user: unknown, ...args: unknown[]) => rpc('dismissNotice', args)) as unknown as typeof L.dismissNotice;
 export const updateNoticeSettings = ((_user: unknown, ...args: unknown[]) => rpc('updateNoticeSettings', args)) as unknown as typeof L.updateNoticeSettings;
+export const updateApplySettings = ((_user: unknown, ...args: unknown[]) => rpc('updateApplySettings', args)) as unknown as typeof L.updateApplySettings;
 export const retryNotice = ((_user: unknown, ...args: unknown[]) => rpc('retryNotice', args)) as unknown as typeof L.retryNotice;
 
 /** Alta pública de academia (onboarding): endpoint propio, sin sesión previa. */

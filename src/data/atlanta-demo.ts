@@ -1,6 +1,6 @@
 import { addDays, differenceInCalendarDays, format, subYears } from 'date-fns';
 import type { Database } from './db';
-import type { DrivingExam, Guardian, Incident, Payment, Practice, Student, Teacher, Vehicle } from '@/types';
+import type { DrivingExam, Enrollment, Guardian, Incident, Payment, Practice, Student, Teacher, Vehicle } from '@/types';
 import { createRng } from './rng';
 
 const d = (x: Date) => format(x, 'yyyy-MM-dd');
@@ -155,5 +155,31 @@ export function fillAtlantaDemo(db: Database, academyId: string, today: Date = n
     { academyId: A, id: uid('ntf', 3), title: 'Resultados de examen', body: 'Se han anotado nuevos resultados de la DGT.', level: 'success', createdAt: nowIso, read: true, href: '/alumnos' },
   );
   acad.demoSeeded = true;
+  return true;
+}
+
+/** Solicitudes de matrícula ficticias (web y presenciales) en todos los estados, para que Matrículas se vea viva. Solo si no hay ninguna. */
+export function fillAtlantaEnrollments(db: Database, academyId: string, today: Date = new Date()): boolean {
+  const A = academyId; const acad = db.academies.find((a) => a.id === A); if (!acad?.demoSeeded || db.enrollments.some((e) => e.academyId === A)) return false;
+  const day = (off: number) => format(addDays(today, off), 'yyyy-MM-dd'); const mine = db.students.filter((s) => s.academyId === A).sort((a, b) => b.enrolledAt.localeCompare(a.enrolledAt));
+  const grp = db.groups.find((g) => g.academyId === A)?.id;
+  type Row = { n: string; e: string; p: string; b?: string; c: string; st: Enrollment['status']; off: number; src: 'web' | 'presencial'; msg?: string; g?: [string, string]; stu?: number };
+  const rows: Row[] = [
+    { n: 'Nerea Campos Gil', e: 'nerea.campos@correo.test', p: '611 204 587', b: '2004-03-12', c: 'Permiso B', st: 'solicitud', off: 0, src: 'web', msg: 'Trabajo por las mañanas, ¿tenéis clases de tarde? Me gustaría empezar este mes.' },
+    { n: 'Pablo Serrano Ruiz', e: 'pablo.serrano@correo.test', p: '622 118 903', b: '1999-11-02', c: 'Permiso B', st: 'solicitud', off: -1, src: 'web' },
+    { n: 'Hugo Prieto Lara', e: 'familia.prieto@correo.test', p: '633 770 142', b: d(subYears(today, 16)), c: 'Permiso AM', st: 'solicitud', off: -1, src: 'web', msg: 'Es para mi hijo, quiere sacarse el AM en verano.', g: ['Marta Lara Ortiz', '633 770 142'] },
+    { n: 'Sofía Delgado Mora', e: 'sofia.delgado@correo.test', p: '644 391 276', b: '2001-07-25', c: 'Permiso A2', st: 'revision', off: -3, src: 'web', msg: '¿Qué precio tiene el pack de moto?' },
+    { n: 'Iván Molina Vega', e: 'ivan.molina@correo.test', p: '655 062 418', b: '1995-01-30', c: 'Permiso B', st: 'revision', off: -4, src: 'presencial' },
+    { n: 'Carla Navarro Peña', e: 'carla.navarro@correo.test', p: '666 845 093', b: '2003-09-08', c: 'Permiso B', st: 'aceptada', off: -6, src: 'web' },
+    { n: 'Rubén Castillo Soto', e: 'ruben.castillo@correo.test', p: '677 513 720', b: '1998-05-17', c: 'Permiso B', st: 'matriculada', off: -9, src: 'presencial', stu: 0 },
+    { n: 'Alba Herrera Cano', e: 'alba.herrera@correo.test', p: '688 427 361', b: '2002-12-21', c: 'Permiso B', st: 'activa', off: -20, src: 'web', stu: 1 },
+    { n: 'Diego Romero Aguilar', e: 'diego.romero@correo.test', p: '699 306 854', b: '1997-04-04', c: 'Permiso B', st: 'activa', off: -26, src: 'presencial', stu: 2 },
+    { n: 'Lola Ibáñez Cortés', e: 'lola.ibanez@correo.test', p: '610 998 235', b: '1990-08-14', c: 'Permiso B', st: 'rechazada', off: -12, src: 'web', msg: 'Busco clases solo los fines de semana.' },
+  ];
+  rows.forEach((r, i) => {
+    const stu = r.stu !== undefined ? mine[r.stu] : undefined; const at = day(r.off);
+    db.enrollments.push({ academyId: A, id: `${A}_dm_enr_${String(i + 1).padStart(3, '0')}`, status: r.st, createdAt: at, updatedAt: day(Math.min(0, r.off + (r.st === 'solicitud' ? 0 : 2))), studentId: stu?.id, groupId: r.st === 'activa' ? grp : undefined,
+      applicant: { name: r.n, email: r.e, phone: r.p, birthDate: r.b, course: r.c, source: r.src, message: r.msg, guardianName: r.g?.[0], guardianPhone: r.g?.[1], consentAt: r.src === 'web' ? at : undefined } });
+  });
   return true;
 }

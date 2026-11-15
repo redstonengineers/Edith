@@ -1,7 +1,7 @@
 import { PRESETS } from '../src/config/presets';
 import { applyTenantAccounts, TENANTS } from '../src/data/tenants';
 import { buildShowcase } from '../src/data/seed';
-import { fillAtlantaDemo } from '../src/data/atlanta-demo';
+import { fillAtlantaDemo, fillAtlantaEnrollments } from '../src/data/atlanta-demo';
 import { hashPassword, verifyPassword } from '../src/services/crypto';
 import { getDatabase } from '../src/services/database';
 
@@ -19,6 +19,7 @@ export async function provisionTenants(opts: { password: string; atlantaAdminEma
   const atl = atlantaAdmin ? db.academies.find((a) => a.id === atlantaAdmin.academyId) : undefined;
   if (atl && atl.slug !== 'atlanta') { atl.slug = 'atlanta'; log.push('Atlanta'); }
   if (atl && opts.atlantaDemo !== false && fillAtlantaDemo(db, atl.id)) log.push('datos ficticios de Atlanta (alumnos, prácticas, exámenes, cobros)');
+  if (atl && opts.atlantaDemo !== false && fillAtlantaEnrollments(db, atl.id)) log.push('solicitudes de matrícula de ejemplo (Atlanta)');
   for (const slug of ['academia', 'clinica'] as const) {
     if (db.academies.some((a) => a.slug === slug)) continue;
     buildShowcase(db, slug); const a = db.academies.find((x) => x.id === (slug === 'academia' ? 'acad_001' : 'acad_clinica')); if (a) { a.slug = slug; log.push(`negocio de ejemplo «${slug}»`); }

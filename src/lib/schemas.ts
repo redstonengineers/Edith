@@ -95,3 +95,14 @@ export const practiceSchema = z.object({
   date, start: z.string().regex(/^\d{2}:\d{2}$/, 'Hora no válida'), end: z.string().regex(/^\d{2}:\d{2}$/, 'Hora no válida'), notes: z.string().max(500).optional(),
 }).refine((v) => v.start < v.end, { path: ['end'], message: 'El fin debe ser posterior al inicio' });
 export type PracticeInput = z.infer<typeof practiceSchema>;
+
+/** Formulario público de solicitud de matrícula (lo rellena una persona sin cuenta). */
+export const publicApplySchema = z.object({
+  name: text('Nombre completo', 3), email, phone, birthDate: date.refine((d) => d <= new Date().toISOString().slice(0, 10) && d >= '1900-01-01', 'Fecha no válida').optional().or(z.literal('')),
+  interest: z.string().trim().min(2, 'Indica qué te interesa').max(80), message: z.string().trim().max(500, 'Máximo 500 caracteres').optional().or(z.literal('')),
+  guardianName: z.string().trim().max(80).optional().or(z.literal('')), guardianPhone: z.string().trim().max(16).optional().or(z.literal('')),
+  consent: z.literal(true, { error: 'Debes aceptar el tratamiento de tus datos' }),
+  /** Señuelo anti-spam: un humano no lo ve ni lo rellena (si llega relleno se descarta en silencio). */ website: z.string().max(300).optional(),
+  /** Milisegundos que tardó en rellenarlo (un robot lo envía al instante). */ elapsed: z.number().min(0).max(86_400_000).optional(),
+});
+export type PublicApplyInput = z.infer<typeof publicApplySchema>;

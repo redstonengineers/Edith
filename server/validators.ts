@@ -64,6 +64,7 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
     reminderHours: z.number().int().min(0).max(168).optional(),
     quiet: z.object({ enabled: z.boolean().optional(), from: z.string().regex(/^\d{2}:\d{2}$/).optional(), to: z.string().regex(/^\d{2}:\d{2}$/).optional() }).optional(),
   })]),
+  updateApplySettings: z.tuple([z.object({ enabled: z.boolean(), message: z.string().max(400).optional(), interests: z.array(z.string().max(60)).max(30).optional() })]),
   recordExport: z.tuple([z.string().min(1).max(200)]),
 };
 

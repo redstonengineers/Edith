@@ -62,7 +62,11 @@ export interface Settings extends Tenant {
   permissionOverrides?: Partial<Record<RoleId, Record<string, boolean>>>;
   /** Avisos automáticos a alumnos: qué eventos se avisan, con qué texto y por qué canales. */
   notices?: NoticeSettings;
+  /** Formulario público de solicitud de matrícula (enlace `/matricula/<negocio>`). Activo salvo que se desactive. */
+  apply?: ApplySettings;
 }
+
+export interface ApplySettings { enabled?: boolean; /** Texto de bienvenida del formulario. */ message?: string; /** Opciones de «¿qué te interesa?» (si se dejan vacías se usan las asignaturas/permisos). */ interests?: string[] }
 
 export interface NoticeSettings {
   /** Por evento: activado y/o texto propio (con variables como {nombre}, {fecha}, {hora}). */
@@ -141,7 +145,9 @@ export interface ClassSession extends Tenant {
 
 export type EnrollmentStatus = 'solicitud' | 'revision' | 'aceptada' | 'matriculada' | 'activa' | 'baja' | 'rechazada';
 /** Datos del solicitante mientras aún no existe como alumno. */
-export interface Applicant { name: string; email: string; phone: string; birthDate?: ISODate; course: string; source?: 'web' | 'lista_espera' | 'presencial' }
+export interface Applicant { name: string; email: string; phone: string; birthDate?: ISODate; course: string; source?: 'web' | 'lista_espera' | 'presencial';
+  /** Solicitudes del formulario público: mensaje libre, tutor (si es menor) y cuándo aceptó el tratamiento de datos. */
+  message?: string; guardianName?: string; guardianPhone?: string; consentAt?: ISODate }
 export interface Enrollment extends Tenant {
   id: ID; studentId?: ID; applicant?: Applicant; groupId?: ID; status: EnrollmentStatus; createdAt: ISODate; updatedAt: ISODate;
 }
