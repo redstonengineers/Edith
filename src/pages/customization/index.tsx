@@ -10,7 +10,7 @@ import { PRESETS } from '@/config/presets';
 import { useAction, useCan, useSettings, useSnapshot, useUser } from '@/hooks';
 import { contrast, onColor, SURFACES } from '@/lib/color';
 import { brandingSchema, fieldErrors, labelSchema } from '@/lib/schemas';
-import { applyPreset, MAX_LOGO_KB, setModules, updateBranding, updateLabels } from '@/services/mutations';
+import { applyPreset, MAX_LOGO_KB, MODULE_DEPS, setModules, updateBranding, updateLabels } from '@/services/mutations';
 import { useUi } from '@/store/ui';
 import type { AcademyType, EntityLabel, LabelKey, ModuleId, ThemeMode } from '@/types';
 import { cn } from '@/utils/cn';
@@ -98,6 +98,14 @@ function LabelsTab() {
   );
 }
 
+/** Activa un módulo junto con los que necesita, o desactiva un módulo junto con los que dependen de él. */
+function toggleModule(mods: Partial<Record<ModuleId, boolean>>, id: ModuleId, on: boolean): Partial<Record<ModuleId, boolean>> {
+  const next = { ...mods, [id]: on };
+  const need = (m: ModuleId) => { for (const d of MODULE_DEPS[m] ?? []) if (!next[d]) { next[d] = true; need(d); } };
+  const drop = (m: ModuleId) => { for (const [k, deps] of Object.entries(MODULE_DEPS) as [ModuleId, ModuleId[]][]) if (deps.includes(m) && next[k]) { next[k] = false; drop(k); } };
+  if (on) need(id); else drop(id);
+  return next;
+}
 function ModulesTab() {
   const st = useSettings(); const user = useUser(); const run = useAction(); const toast = useUi((s) => s.toast);
   const [mods, setMods] = useState<Partial<Record<ModuleId, boolean>>>({ ...st.modules });
@@ -109,7 +117,7 @@ function ModulesTab() {
           {MODULES.filter((m) => m.section === sec && m.id !== 'dashboard' && m.id !== 'platform').map((m) => { const on = m.core || mods[m.id] === true; const Icon = m.icon; return (
             <li key={m.id} className="flex items-center gap-3 px-5 py-3"><Icon size={17} className="shrink-0 text-muted" aria-hidden /><div className="min-w-0 flex-1"><p className="text-sm font-medium">{m.title}</p><p className="text-xs text-muted">{m.description}</p></div>
               {m.core ? <Badge><Lock size={10} aria-hidden />Siempre activo</Badge> : (
-                <button role="switch" aria-checked={on} aria-label={`${on ? 'Desactivar' : 'Activar'} ${m.title}`} onClick={() => setMods({ ...mods, [m.id]: !on })} className={cn('relative h-6 w-11 shrink-0 rounded-full border transition-colors', on ? 'border-brand bg-brand' : 'border-line-strong bg-surface-2')}><span className={cn('absolute top-0.5 left-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-transform', on && 'translate-x-5')} style={{ width: 18, height: 18 }} /></button>)}</li>); })}</ul></Panel>))}
+                <button role="switch" aria-checked={on} aria-label={`${on ? 'Desactivar' : 'Activar'} ${m.title}`} onClick={() => setMods(toggleModule(mods, m.id, !on))} className={cn('relative h-6 w-11 shrink-0 rounded-full border transition-colors', on ? 'border-brand bg-brand' : 'border-line-strong bg-surface-2')}><span className={cn('absolute top-0.5 left-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-transform', on && 'translate-x-5')} style={{ width: 18, height: 18 }} /></button>)}</li>); })}</ul></Panel>))}
       <div className="flex justify-end"><Button variant="primary" onClick={() => void save()}>Guardar módulos</Button></div>
     </div>
   );

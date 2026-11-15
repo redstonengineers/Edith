@@ -43,7 +43,7 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   updateBranding: z.tuple([brandingSchema.extend({ logoUrl: dataUrl.nullable().optional(), faviconUrl: dataUrl.nullable().optional() })]),
   updateLabels: z.tuple([z.object(Object.fromEntries(labelKeys.map((k) => [k, labelSchema])))]),
   applyPreset: z.tuple([academyType]),
-  setModules: z.tuple([z.record(z.enum(moduleIds), z.boolean())]),
+  setModules: z.tuple([z.partialRecord(z.enum(moduleIds), z.boolean())]),
   updateGeneral: z.tuple([generalSchema]),
   createUser: z.tuple([userSchema]),
   updateUser: z.tuple([id, z.object({ role: role.optional(), disabled: z.boolean().optional(), teacherId: id.optional() })]),
