@@ -80,3 +80,6 @@ Cada negocio tiene un enlace público `/matricula/<slug o id>` (Atlanta: `/matri
 - Antispam: señuelo oculto, tiempo mínimo de relleno, 6 envíos por hora y red, 80 al día por negocio, sin duplicados (mismo correo o teléfono en 7 días) y consentimiento RGPD obligatorio.
 - Avisos: notificación dentro de la app siempre; con correo conectado (Resend) también correo al director/secretaría y acuse al interesado.
 - Pendiente: texto legal propio de privacidad enlazado en el formulario; QR del enlace para carteles.
+
+- [x] **Planes y precios**: `docs/EDITH-planes-y-precios.pdf` (Esencial 39 €/mes, Profesional 79 €/mes, Premium 149 €/mes; altas 590 / 1.190 / 2.200 €; sin IVA). WhatsApp automático incluido en Profesional y Premium **sin tope visible**; cláusula de uso razonable en el contrato. Contador interno: `Academy.waUsage` («AAAA-MM» → avisos enviados por la API de WhatsApp), visible solo en Plataforma (columna «WhatsApp (mes)», aviso «Uso alto» si > 8 por alumno activo, no bloquea). Test: `tests/e2e/wa-contador.cjs`.
+- [ ] Control de plan por negocio (módulos y topes de sedes/usuarios/alumnos según contrato): hoy los límites del PDF no los aplica el programa; los planes de Plataforma son prueba/básico/pro (sin «premium» aún).

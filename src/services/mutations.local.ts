@@ -604,7 +604,9 @@ export function platformOverview(user: User) {
     const st = db.settings.find((s) => s.academyId === a.id);
     const mine = <T extends { academyId: string }>(rows: T[]) => rows.filter((r) => r.academyId === a.id);
     const last = mine(db.activity)[0]?.at;
-    return { academy: a, users: mine(db.users).length, students: mine(db.students).filter((s) => s.status !== 'baja').length, teachers: mine(db.teachers).length, groups: mine(db.groups).length, modules: Object.values(st?.modules ?? {}).filter(Boolean).length, storageKb: mine(db.documents).reduce((x, d) => x + d.sizeKb, 0), lastActivity: last };
+    const ym = (d: Date) => d.toISOString().slice(0, 7); const now = new Date(); const prev = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+    const waMonth = a.waUsage?.[ym(now)] ?? 0; const waPrev = a.waUsage?.[ym(prev)] ?? 0;
+    return { waMonth, waPrev, academy: a, users: mine(db.users).length, students: mine(db.students).filter((s) => s.status !== 'baja').length, teachers: mine(db.teachers).length, groups: mine(db.groups).length, modules: Object.values(st?.modules ?? {}).filter(Boolean).length, storageKb: mine(db.documents).reduce((x, d) => x + d.sizeKb, 0), lastActivity: last };
   });
 }
 export function setAcademyStatus(user: User, id: ID, status: 'active' | 'suspended') {

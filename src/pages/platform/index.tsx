@@ -10,7 +10,9 @@ import { useSession } from '@/store/session';
 import { fmtAgo, fmtMoney } from '@/utils/format';
 
 /** Precios orientativos para la estimación de ingresos recurrentes (el cobro real de suscripciones llegará con el backend). */
-const PRICE = { trial: 0, basic: 49, pro: 99 } as const;
+const PRICE = { trial: 0, basic: 39, pro: 79 } as const;
+/** Uso razonable de WhatsApp: por encima de esto por alumno activo y mes, conviene hablar con el cliente (no se bloquea nada). */
+const WA_FAIR_PER_STUDENT = 8;
 export default function PlatformPage() {
   const user = useUser(); const run = useAction(); const data = useSession((s) => s.data);
   type R = Awaited<ReturnType<typeof platformOverview>>[number];
@@ -23,6 +25,7 @@ export default function PlatformPage() {
     { key: 's', header: 'Estado', cell: (r) => <Badge tone={r.academy.status === 'active' ? 'ok' : 'bad'}>{r.academy.status === 'active' ? 'Activa' : 'Suspendida'}</Badge> },
     { key: 'u', header: 'Usuarios', hide: 'md', sort: (a, b) => a.users - b.users, cell: (r) => <span className="tnum">{r.users}</span> },
     { key: 'st', header: 'Alumnos', hide: 'md', sort: (a, b) => a.students - b.students, cell: (r) => <span className="tnum">{r.students}</span> },
+    { key: 'w', header: 'WhatsApp (mes)', hide: 'md', sort: (a, b) => a.waMonth - b.waMonth, cell: (r) => { const high = r.waMonth > Math.max(100, r.students * WA_FAIR_PER_STUDENT); return <span className="tnum" title={`Mes anterior: ${r.waPrev}`}>{r.waMonth}{high && <Badge tone="warn" className="ml-1.5">Uso alto</Badge>}<span className="ml-1.5 text-xs text-muted">({r.waPrev} mes ant.)</span></span>; } },
     { key: 'm', header: 'Módulos', hide: 'lg', cell: (r) => <span className="tnum">{r.modules}</span> },
     { key: 'k', header: 'Almacenamiento', hide: 'xl', cell: (r) => <span className="tnum text-muted">{r.storageKb >= 1024 ? `${(r.storageKb / 1024).toFixed(1)} MB` : `${r.storageKb} KB`}</span> },
     { key: 'l', header: 'Última actividad', hide: 'lg', cell: (r) => <span className="text-muted">{r.lastActivity ? fmtAgo(r.lastActivity) : '—'}</span> },
@@ -34,7 +37,7 @@ export default function PlatformPage() {
       <PageHeader title="Plataforma" description="Panel del propietario del SaaS. Solo ves cifras de uso, nunca los datos personales de cada academia." />
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">{kpi.map(([k, v]) => <div key={k} className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">{k}</p><p className="tnum mt-1 text-2xl font-semibold">{v}</p></div>)}</div>
       <DataTable label="Academias" rows={rows} columns={cols} rowKey={(r) => r.academy.id} defaultSort={{ key: 'n', dir: 'asc' }} empty={{ icon: Building2, title: 'Sin academias' }} />
-      <p className="mt-3 text-xs text-muted">MRR estimado con precios orientativos (Básico 49 €, Pro 99 €). La facturación real de suscripciones se conectará con el backend.</p>
+      <p className="mt-3 text-xs text-muted">MRR estimado con precios orientativos (Básico 39 €, Pro 79 €). WhatsApp (mes) cuenta los avisos automáticos enviados; «Uso alto» es solo un aviso para ti (más de {WA_FAIR_PER_STUDENT} por alumno activo y mes), no limita nada. La facturación real de suscripciones se conectará con el backend.</p>
     </>
   );
 }

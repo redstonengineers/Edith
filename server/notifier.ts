@@ -81,7 +81,8 @@ export async function deliverOutbox(flush: () => void): Promise<number> {
         if (r.ok) o.emailStatus = 'enviado'; else { notes.push(r.error ?? 'Correo no enviado'); if (o.attempts >= MAX_ATTEMPTS) o.emailStatus = 'fallido'; }
       }
       if (o.waStatus === 'pendiente') {
-        const errs: string[] = []; for (const t of o.to) if (t.phone) { const e = await sendWhatsapp(t.phone, o.body); if (e) errs.push(e); }
+        const errs: string[] = []; const acad = db.academies.find((a) => a.id === o.academyId);
+        for (const t of o.to) if (t.phone) { const e = await sendWhatsapp(t.phone, o.body); if (e) errs.push(e); else if (acad) { const m = localNow().date.slice(0, 7); acad.waUsage = { ...acad.waUsage, [m]: (acad.waUsage?.[m] ?? 0) + 1 }; } }
         if (!errs.length) o.waStatus = 'enviado'; else { notes.push(errs[0]); if (o.attempts >= MAX_ATTEMPTS) o.waStatus = 'fallido'; }
       }
       if (o.hookStatus === 'pendiente') {

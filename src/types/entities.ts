@@ -18,6 +18,8 @@ export interface Academy {
   slug?: string;
   /** Se rellenó con datos ficticios de demostración (no se vuelve a hacer aunque se borren). */
   demoSeeded?: boolean;
+  /** Contador interno (solo lo ve el propietario de la plataforma): WhatsApp automáticos enviados por mes («AAAA-MM» → nº). */
+  waUsage?: Record<string, number>;
   createdAt: ISODate;
 }
 export type AcademyType = 'educativa' | 'idiomas' | 'musica' | 'oposiciones' | 'refuerzo' | 'autoescuela' | 'fisioterapia' | 'psicologia' | 'fitness' | 'danza' | 'deportiva' | 'infantil' | 'formacion' | 'nautica' | 'canina' | 'estetica' | 'artes' | 'otro';
