@@ -15,6 +15,7 @@ import { addStudentToGroup, removeStudentFromGroup, setStudentStatus, updateStud
 import { fmtMoney, fmtDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { StudentForm } from './StudentForm';
+import { NoticePref } from './NoticePref';
 import { Training } from './Training';
 import { ForbiddenPage } from '../Status';
 
@@ -60,6 +61,7 @@ export default function StudentProfile() {
             ) : row.age < 18 && <p className="mt-4 flex items-center gap-2 border-t border-line pt-4 text-[13px] text-warn"><ShieldAlert size={15} aria-hidden />Menor sin tutor registrado</p>}
           </Panel>
           {snap.settings.modules.practicas && <Training student={s} />}
+          {snap.settings.modules.avisos && !snap.settings.modules.practicas && <NoticePref student={s} />}
           {snap.settings.modules.groups !== false && !(snap.settings.modules.practicas && !snap.settings.modules.groups) && <Panel title={`${L.group.plural} y ${L.teacher.plural.toLowerCase()}`}>
             {row.groups.length === 0 ? <p className="text-sm text-muted">Sin {L.group.plural.toLowerCase()} asignados.</p> : (
               <ul className="space-y-3">{row.groups.map((g) => { const t = snap.teachers.find((x) => x.id === g.teacherId); return (

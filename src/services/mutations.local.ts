@@ -1,10 +1,10 @@
-import type { Group, ID, Practice, Student, StudentStatus, Subject, Teacher, Vehicle } from '@/types';
+import type { Group, ID, NoticeSettings, Practice, Student, StudentStatus, Subject, Teacher, Vehicle } from '@/types';
 import type { User } from '@/types';
 import { can, type Permission } from '@/lib/permissions';
 import { groupConflicts } from '@/lib/conflicts';
 import type { GroupInput, PracticeInput, StudentInput, SubjectInput, TeacherInput, VehicleInput } from '@/lib/schemas';
 import { practiceConflicts, type PracticeConflict } from '@/lib/practices';
-import { addDays, differenceInYears, format, parseISO } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { logActivity } from './activity';
 import { getDatabase, persist } from './database';
@@ -187,7 +187,9 @@ export function updateClass(user: User, id: ID, input: ClassInput) {
   need(user, 'classes:write');
   const c = own(user, getDatabase().classes.find((x) => x.id === id), 'Clase');
   checkSession(user, { ...input, id });
+  const moved = c.date !== input.date || c.start !== input.start || c.end !== input.end;
   Object.assign(c, input);
+  if (moved && c.status === 'programada' && upcoming(c.date)) classAudience(user, c).forEach((sid) => queueNotice(user.academyId, sid, 'clase', 'clase_cambio', c.id, classVars(user, c)));
   logActivity(user, 'modificó', 'class', `${user.name} modificó el horario de ${namesFor(user).group(c.groupId)} (${c.date} ${c.start})`, c.id);
   return done(c);
 }
@@ -196,6 +198,7 @@ export function cancelClass(user: User, id: ID, cancelled = true) {
   const c = own(user, getDatabase().classes.find((x) => x.id === id), 'Clase');
   if (!cancelled) checkSession(user, { ...c, id });
   c.status = cancelled ? 'cancelada' : 'programada';
+  if (cancelled && upcoming(c.date)) classAudience(user, c).forEach((sid) => queueNotice(user.academyId, sid, 'clase', 'clase_cancelada', c.id, classVars(user, c)));
   logActivity(user, cancelled ? 'canceló' : 'restauró', 'class', `${user.name} ${cancelled ? 'canceló' : 'restauró'} la clase de ${namesFor(user).group(c.groupId)} del ${c.date}`, c.id);
   return done(c);
 }
@@ -294,35 +297,19 @@ export function setGrade(user: User, examId: ID, studentId: ID, score: number | 
 import type { Enrollment, EnrollmentStatus, Incident, IncidentStatus, Payment, WaitlistEntry, DocumentFile, DocumentOwner, Message } from '@/types';
 import type { ApplicationInput, IncidentInput, PaymentInput, WaitlistInput } from '@/lib/schemas';
 import { AUTO, CHANNELS } from './channels';
+import { queueNotice } from './notices';
+import { EVENT_BY_KEY } from '@/lib/notices';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const notify = (user: User, title: string, body: string, level: 'info' | 'warning' | 'success', href?: string) =>
   getDatabase().notifications.unshift({ academyId: user.academyId, id: newId(user, 'ntf'), title, body, level, createdAt: new Date().toISOString(), read: false, href });
 
-/**
- * Avisa al alumno (y a su tutor si es menor) de un cambio que le afecta. Deja el aviso en la bandeja de salida;
- * el servidor lo entrega por correo y/o WhatsApp según la preferencia del alumno. Si el cambio llega antes de enviarse el anterior
- * sobre lo mismo (`ref`), se sustituye en vez de duplicar.
- */
-function queueNotice(user: User, studentId: ID, kind: 'practica' | 'examen', ref: ID, subject: string, body: string) {
-  const db = getDatabase(); const s = db.students.find((x) => x.id === studentId && x.academyId === user.academyId); if (!s || s.status === 'baja') return;
-  const via = s.notifyVia ?? 'ambos'; if (via === 'nada') return;
-  const to: { name: string; email?: string; phone?: string }[] = [{ name: s.firstName, email: s.email || undefined, phone: s.phone || undefined }];
-  const g = s.guardianId ? db.guardians.find((x) => x.id === s.guardianId && x.academyId === user.academyId) : undefined;
-  if (g && differenceInYears(new Date(), parseISO(s.birthDate)) < 18) to.push({ name: g.name, email: g.email || undefined, phone: g.phone || undefined });
-  const wantMail = (via === 'ambos' || via === 'correo') && to.some((t) => t.email); const wantWa = (via === 'ambos' || via === 'whatsapp') && to.some((t) => t.phone);
-  if (!wantMail && !wantWa) return;
-  const emailStatus = wantMail && AUTO.email ? 'pendiente' as const : 'no' as const; const waStatus = wantWa ? (AUTO.whatsapp ? 'pendiente' as const : 'manual' as const) : 'no' as const;
-  const box = (db.outbox ??= []); const open = box.find((o) => o.academyId === user.academyId && o.ref === ref && o.emailStatus !== 'enviado' && o.waStatus !== 'enviado' && o.attempts === 0);
-  const school = db.settings.find((x) => x.academyId === user.academyId)?.branding.name ?? db.academies.find((a) => a.id === user.academyId)?.name ?? '';
-  const text = `${body}\n— ${school}`;
-  if (open) { Object.assign(open, { subject, body: text, to, emailStatus, waStatus, createdAt: new Date().toISOString() }); return; }
-  box.unshift({ academyId: user.academyId, id: newId(user, 'avi'), studentId, kind, ref, to, subject, body: text, createdAt: new Date().toISOString(), emailStatus, waStatus, attempts: 0 });
-  if (box.length > 500) box.length = 500;
-}
 const longDay = (iso: string) => format(parseISO(iso), "EEEE d 'de' MMMM", { locale: es });
-const hi = (user: User, studentId: ID) => getDatabase().students.find((x) => x.id === studentId && x.academyId === user.academyId)?.firstName ?? '';
 const teacherName = (user: User, id: ID) => { const t = getDatabase().teachers.find((x) => x.id === id && x.academyId === user.academyId); return t ? `${t.firstName} ${t.lastName}` : 'tu profesor'; };
+/** Alumnos de la clase: los de su grupo. */
+const classAudience = (user: User, c: { groupId: ID }) => getDatabase().students.filter((s) => s.academyId === user.academyId && s.status !== 'baja' && s.groupIds.includes(c.groupId)).map((s) => s.id);
+const classVars = (user: User, c: { groupId: ID; date: string; start: string }) => { const db = getDatabase(); const g = db.groups.find((x) => x.id === c.groupId && x.academyId === user.academyId); const sub = g && db.subjects.find((x) => x.id === g.subjectId); return { materia: sub?.name ?? g?.name ?? 'clase', fecha: longDay(c.date), hora: c.start }; };
+const pvars = (user: User, p: { date: string; start: string; teacherId: ID }) => ({ fecha: longDay(p.date), hora: p.start, profesor: teacherName(user, p.teacherId) });
 const upcoming = (iso: string) => iso >= new Date().toISOString().slice(0, 10);
 const splitName = (full: string) => { const [first, ...rest] = full.trim().split(/\s+/); return { firstName: first, lastName: rest.join(' ') || '—' }; };
 
@@ -693,7 +680,7 @@ export function createPractice(user: User, input: PracticeInput, force = false):
   enforce(checkPractice(user, { ...input, teacherId, id }), force);
   const p: Practice = { academyId: user.academyId, id, status: 'programada', ...input, teacherId };
   getDatabase().practices.push(p); logActivity(user, 'creó', 'practice', `${user.name} apuntó una práctica de ${practiceNames(user).student(p.studentId)} el ${p.date} a las ${p.start}`, p.id);
-  if (upcoming(p.date)) queueNotice(user, p.studentId, 'practica', p.id, 'Nueva práctica de conducir', `Hola ${hi(user, p.studentId)}, tienes una práctica de conducir el ${longDay(p.date)} a las ${p.start} con ${teacherName(user, p.teacherId)}.`);
+  if (upcoming(p.date)) queueNotice(user.academyId, p.studentId, 'practica', 'practica_nueva', p.id, pvars(user, p));
   return done(p);
 }
 /** «Repetir cada semana»: crea N prácticas (2–26). Si alguna choca no se crea nada, salvo que se pida saltar las ocupadas. */
@@ -708,7 +695,7 @@ export function createPracticeSeries(user: User, input: PracticeInput, weeks: nu
     free.push({ academyId: user.academyId, id, status: 'programada', ...input, teacherId, date, seriesId });
   }
   getDatabase().practices.push(...free); logActivity(user, 'creó', 'practice', `${user.name} apuntó ${free.length} prácticas semanales de ${practiceNames(user).student(input.studentId)}`, seriesId);
-  if (free.length) queueNotice(user, input.studentId, 'practica', seriesId, 'Prácticas de conducir cada semana', `Hola ${hi(user, input.studentId)}, te hemos apuntado ${free.length} prácticas de conducir, una por semana: desde el ${longDay(free[0].date)} a las ${input.start} con ${teacherName(user, teacherId)}.`);
+  if (free.length) queueNotice(user.academyId, input.studentId, 'practica', 'practica_serie', seriesId, { ...pvars(user, { date: free[0].date, start: input.start, teacherId }), cantidad: free.length });
   return done({ created: free.length, skipped });
 }
 export function updatePractice(user: User, id: ID, input: PracticeInput, force = false) {
@@ -717,7 +704,7 @@ export function updatePractice(user: User, id: ID, input: PracticeInput, force =
   const teacherId = scopeTeacher(user, input.teacherId); enforce(checkPractice(user, { ...input, teacherId, id }), force);
   const moved = p.date !== input.date || p.start !== input.start || p.end !== input.end || p.teacherId !== teacherId;
   Object.assign(p, input, { teacherId }); logActivity(user, 'modificó', 'practice', `${user.name} modificó la práctica de ${practiceNames(user).student(p.studentId)} (${p.date} ${p.start})`, p.id);
-  if (moved && p.status === 'programada' && upcoming(p.date)) queueNotice(user, p.studentId, 'practica', p.id, 'Cambio en tu práctica de conducir', `Hola ${hi(user, p.studentId)}, hemos cambiado tu práctica de conducir: ahora es el ${longDay(p.date)} a las ${p.start} con ${teacherName(user, p.teacherId)}.`);
+  if (moved && p.status === 'programada' && upcoming(p.date)) queueNotice(user.academyId, p.studentId, 'practica', 'practica_cambio', p.id, pvars(user, p));
   return done(p);
 }
 export function cancelPractice(user: User, id: ID, cancelled = true) {
@@ -726,7 +713,7 @@ export function cancelPractice(user: User, id: ID, cancelled = true) {
   if (p.status === 'hecha') throw new DomainError('Una práctica ya hecha no se puede cancelar.');
   if (!cancelled) enforce(checkPractice(user, p), false);
   p.status = cancelled ? 'cancelada' : 'programada'; logActivity(user, 'modificó', 'practice', `${user.name} ${cancelled ? 'canceló' : 'restauró'} la práctica de ${practiceNames(user).student(p.studentId)} (${p.date})`, p.id);
-  if (upcoming(p.date)) queueNotice(user, p.studentId, 'practica', p.id, cancelled ? 'Práctica de conducir cancelada' : 'Práctica de conducir confirmada', cancelled ? `Hola ${hi(user, p.studentId)}, tenemos que cancelar tu práctica de conducir del ${longDay(p.date)} a las ${p.start}. Te propondremos otra hora enseguida. Disculpa las molestias.` : `Hola ${hi(user, p.studentId)}, tu práctica de conducir del ${longDay(p.date)} a las ${p.start} sigue en pie.`);
+  if (upcoming(p.date)) queueNotice(user.academyId, p.studentId, 'practica', cancelled ? 'practica_cancelada' : 'practica_restaurada', p.id, pvars(user, p));
   return done(p);
 }
 /** Marca la práctica como hecha, anota los kilómetros y los suma al cuentakilómetros del coche. */
@@ -756,7 +743,7 @@ export function getPracticeSignatures(user: User, id: ID): { studentSig?: string
 export function addDrivingExam(user: User, studentId: ID, input: { kind: 'teorico' | 'practico'; date: string; result: 'pendiente' | 'aprobado' | 'suspendido' }) {
   need(user, 'students:write'); const s = own(user, getDatabase().students.find((x) => x.id === studentId), 'Alumno');
   const ex = { id: newId(user, 'exd'), ...input }; (s.driving ??= []).push(ex);
-  if (upcoming(input.date)) queueNotice(user, studentId, 'examen', ex.id, `Examen ${input.kind === 'teorico' ? 'teórico' : 'práctico'}`, `Hola ${s.firstName}, tienes el examen ${input.kind === 'teorico' ? 'teórico' : 'práctico'} de conducir el ${longDay(input.date)}. ¡Mucho ánimo!`);
+  if (upcoming(input.date)) queueNotice(user.academyId, studentId, 'examen', 'examen_nuevo', ex.id, { fecha: longDay(input.date), tipo: input.kind === 'teorico' ? 'teórico' : 'práctico' });
   logActivity(user, 'creó', 'student', `${user.name} anotó un examen ${input.kind} de ${s.firstName} ${s.lastName} (${input.result})`, s.id);
   return done(s);
 }
@@ -764,7 +751,7 @@ export function setDrivingExamResult(user: User, studentId: ID, examId: ID, resu
   need(user, 'students:write'); const s = own(user, getDatabase().students.find((x) => x.id === studentId), 'Alumno');
   const e = (s.driving ?? []).find((x) => x.id === examId); if (!e) throw new Error('Examen no encontrado');
   e.result = result;
-  if (result !== 'pendiente') queueNotice(user, studentId, 'examen', e.id, `Resultado de tu examen ${e.kind === 'teorico' ? 'teórico' : 'práctico'}`, result === 'aprobado' ? `Hola ${s.firstName}, ¡enhorabuena! Has aprobado el examen ${e.kind === 'teorico' ? 'teórico' : 'práctico'} de conducir.` : `Hola ${s.firstName}, el examen ${e.kind === 'teorico' ? 'teórico' : 'práctico'} de conducir no ha salido esta vez. No pasa nada: hablamos para preparar el siguiente.`);
+  if (result !== 'pendiente') queueNotice(user.academyId, studentId, 'examen', result === 'aprobado' ? 'examen_aprobado' : 'examen_suspendido', e.id, { tipo: e.kind === 'teorico' ? 'teórico' : 'práctico' });
   logActivity(user, 'modificó', 'student', `${user.name} marcó el examen ${e.kind} de ${s.firstName} ${s.lastName} como ${result}`, s.id);
   return done(s);
 }
@@ -786,4 +773,21 @@ export function markNoticeSent(user: User, id: ID) {
 }
 export function dismissNotice(user: User, id: ID) {
   need(user, 'practicas:write'); const db = getDatabase(); own(user, (db.outbox ?? []).find((x) => x.id === id), 'Aviso'); db.outbox = db.outbox.filter((x) => x.id !== id); return done(true);
+}
+
+/** Ajustes de los avisos a alumnos: eventos (activados y con texto propio), canales, recordatorio y horas de descanso. */
+export function updateNoticeSettings(user: User, patch: NoticeSettings) {
+  need(user, 'settings:write'); const st = settingsOf(user);
+  const events: NonNullable<NoticeSettings['events']> = {};
+  for (const [k, v] of Object.entries(patch.events ?? {})) if (EVENT_BY_KEY[k]) events[k] = { enabled: v.enabled, subject: v.subject?.trim() || undefined, body: v.body?.trim() || undefined };
+  st.notices = { events, channels: patch.channels, reminderHours: patch.reminderHours, quiet: patch.quiet };
+  logActivity(user, 'modificó', 'settings', `${user.name} cambió los ajustes de avisos a alumnos`); return done(st);
+}
+/** Reintenta un aviso que falló (o lo deja listo para enviarlo a mano). */
+export function retryNotice(user: User, id: ID) {
+  need(user, 'practicas:write'); const n = own(user, (getDatabase().outbox ?? []).find((x) => x.id === id), 'Aviso');
+  if (n.emailStatus === 'fallido') n.emailStatus = AUTO.email ? 'pendiente' : 'no';
+  if (n.waStatus === 'fallido') n.waStatus = AUTO.whatsapp ? 'pendiente' : 'manual';
+  if (n.hookStatus === 'fallido') n.hookStatus = AUTO.webhook ? 'pendiente' : 'no';
+  n.attempts = 0; n.note = undefined; return done(n);
 }

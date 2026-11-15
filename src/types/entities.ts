@@ -110,7 +110,7 @@ export interface DrivingExam { id: ID; kind: 'teorico' | 'practico'; date: ISODa
 /** Aviso al alumno (y a su tutor si es menor) por un cambio que le afecta; el servidor lo entrega por correo y/o WhatsApp. */
 export type DeliveryStatus = 'pendiente' | 'enviado' | 'fallido' | 'manual' | 'no';
 export interface OutboxItem extends Tenant {
-  id: ID; studentId: ID; kind: 'practica' | 'examen'; /** Referencia (id de práctica/examen) para unir cambios seguidos en un solo aviso. */ ref?: ID;
+  id: ID; studentId: ID; kind: 'practica' | 'examen' | 'clase'; /** Referencia (id de práctica/examen) para unir cambios seguidos en un solo aviso. */ ref?: ID;
   to: { name: string; email?: string; phone?: string }[]; subject: string; body: string; createdAt: ISODateTime;
   emailStatus: DeliveryStatus; waStatus: DeliveryStatus; /** Integración propia (webhook firmado hacia otras herramientas). */ hookStatus?: DeliveryStatus; attempts: number; note?: string; event?: string;
 }
@@ -196,5 +196,6 @@ export interface Vehicle extends Tenant { id: ID; plate: string; model: string; 
 /** Autoescuela: práctica 1 a 1 (alumno + profesor + coche). */
 export type PracticeStatus = 'programada' | 'hecha' | 'cancelada';
 export interface Practice extends Tenant { id: ID; studentId: ID; teacherId: ID; vehicleId?: ID; date: ISODate; start: string; end: string; status: PracticeStatus; km?: number; notes?: string; seriesId?: ID;
+  /** Cuándo se envió el recordatorio automático (para no repetirlo). */ remindedAt?: ISODateTime;
   /** Firmas táctiles (PNG en data URL). En el snapshot solo viaja `signed`; las imágenes se piden aparte. */
   studentSig?: string; teacherSig?: string; signed?: boolean }

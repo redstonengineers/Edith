@@ -69,6 +69,12 @@ const rpc = (name, args, cookie) => call('POST', `/rpc/${name}`, { args }, cooki
   ok((await call('POST', '/onboarding', { academyName: 'X', type: 'musica', modules: [], adminName: 'Aria Sol', adminEmail: 'aria@aria.demo', adminPassword: 'Aria2026ok' })).status === 400, 'onboarding validates input');
   ok((await call('POST', '/onboarding', { academyName: 'Otra', type: 'musica', modules: ['students'], adminName: 'Aria Dos', adminEmail: 'aria@aria.demo', adminPassword: 'Aria2026ok' })).status === 422, 'duplicate admin email rejected');
   ok((await call('POST', '/rpc/createStudent', { args: [] }, 'ac_session=forged')).status === 401, 'forged cookie → 401');
+  // Acceso por negocio: la ficha pública no filtra datos de personas ni secretos; un usuario de un negocio no entra en otro
+  const pub = await fetch(B + '/public/tenants'); const pj = await pub.json(); const raw = JSON.stringify(pj);
+  ok(pub.status === 200 && pj.tenants.length === 3 && !/pwd|hash|salt|@|password/i.test(raw), 'public/tenants: 3 negocios y sin correos, hashes ni contraseñas');
+  const own = await login('director', 'demo'); ok(own.r.status === 409 || own.r.status === 401, 'usuario ambiguo sin negocio no entra a ciegas');
+  const lg = await fetch(B + '/auth/login', { method: 'POST', headers: H(null), body: JSON.stringify({ email: 'paciente', password: 'demo', academy: 'atlanta' }) }); ok(lg.status === 401, 'un perfil de la clínica no entra en Atlanta');
+  const badSlug = await fetch(B + '/auth/login', { method: 'POST', headers: H(null), body: JSON.stringify({ email: 'director', password: 'demo', academy: "x'; drop" }) }); ok(badSlug.status === 400, 'slug de negocio con caracteres raros → 400');
   // rate limit (last: locks this ip+email)
   let last; for (let i = 0; i < 10; i++) last = await login('admin@atlas.demo', 'bad' + i); ok(last.r.status === 429, 'brute force → 429');
   console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED'); process.exit(fails ? 1 : 0);

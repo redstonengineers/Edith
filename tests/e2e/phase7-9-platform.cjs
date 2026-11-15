@@ -15,9 +15,8 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   ok(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()) === '#16a34a', 'brand color applied app-wide'); ok(await p.locator('aside').getByText('Academia Horizonte Pro').count() === 1, 'name updated in sidebar');
   await p.getByRole('tab', { name: 'Vocabulario' }).click(); await p.locator('main input').nth(0).fill('Conductor'); await p.locator('main input').nth(1).fill('Conductores'); await p.getByRole('button', { name: 'Guardar vocabulario' }).click(); await p.waitForTimeout(400);
   await p.goto(U + '/alumnos'); await p.locator('main h1').first().waitFor(); ok(await p.getByRole('heading', { name: 'Conductores' }).count() === 1, 'custom vocabulary applied to module title'); ok(await p.locator('aside').getByText('Conductores').count() >= 1, 'vocabulary in sidebar');
-  await p.goto(U + '/personalizacion'); await p.getByRole('tab', { name: 'Módulos' }).click(); await p.getByRole('switch', { name: /Desactivar Exámenes/ }).click(); await p.getByRole('button', { name: 'Guardar módulos' }).click(); await p.waitForTimeout(400);
-  ok(/necesita/.test(await toasts(p)), 'module dependency enforced (grades needs exams)');
-  await p.getByRole('switch', { name: /Desactivar Calificaciones/ }).click(); await p.getByRole('button', { name: 'Guardar módulos' }).click(); await p.waitForTimeout(400); ok(await p.locator('aside').getByText('Exámenes').count() === 0, 'disabled module removed from sidebar');
+  await p.goto(U + '/personalizacion'); await p.getByRole('tab', { name: 'Módulos' }).click(); await p.getByRole('switch', { name: /Desactivar Exámenes/ }).click(); ok(await p.getByRole('switch', { name: /Activar Calificaciones/ }).count() === 1, 'module dependency enforced (turning off exams turns off grades)');
+  await p.getByRole('button', { name: 'Guardar módulos' }).click(); await p.waitForTimeout(400); ok(await p.locator('aside').getByText('Exámenes').count() === 0, 'disabled module removed from sidebar');
   await p.screenshot({ path: out + 'shot-customization.png' });
   // ── Permissions
   await p.goto(U + '/permisos'); await p.waitForSelector('table'); const cb = p.getByRole('checkbox', { name: 'Profesor: ver Pagos' }); ok(!(await cb.isChecked()), 'teacher cannot view payments by default');
@@ -57,7 +56,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   const po = await ctx(); await po.goto(U + '/onboarding'); await po.getByLabel(/Nombre de la academia/).fill('Autoescuela Rumbo'); await po.getByRole('button', { name: 'Continuar' }).click(); await po.getByRole('button', { name: 'Continuar' }).click();
   await po.getByRole('radio', { name: /Autoescuela/ }).click(); await po.getByRole('button', { name: 'Continuar' }).click(); await po.getByRole('button', { name: 'Continuar' }).click();
   await po.getByLabel(/Tu nombre/).fill('Marcos Ibáñez'); await po.getByLabel(/Correo/).fill('marcos@rumbo.demo'); await po.getByLabel(/Contraseña/).fill('Rumbo2026ok'); await po.getByRole('button', { name: 'Crear academia' }).click();
-  await po.waitForSelector('text=Academy Command Center'); await po.waitForTimeout(800);
+  await po.waitForSelector('main h1'); await po.waitForTimeout(800);
   ok(await po.locator('aside').getByText('Autoescuela Rumbo').count() === 1, 'new academy created and logged in'); ok(await po.locator('aside').getByText('Permisos').count() >= 1 && (await po.locator('aside').innerText()).includes('Alumnos / Conductores'), 'autoescuela vocabulary applied');
   await po.screenshot({ path: out + 'shot-newacademy.png' });
   for (const r of ['alumnos', 'horarios', 'estadisticas', 'pagos', 'jarvis', 'informes']) { await po.goto(U + '/' + r); await po.waitForTimeout(500); ok(await po.locator('main h1').count() >= 1 || await po.getByText(/Módulo no activado/).count() === 1, `empty academy /${r} renders without crash`); }

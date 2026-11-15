@@ -12,8 +12,9 @@ import { logActivity } from '../src/services/activity';
 import { verifyPassword } from '../src/services/crypto';
 import * as M from '../src/services/mutations.local';
 import { config } from './config';
-import { deliverOutbox, whatsappEnabled } from './notifier';
+import { deliverOutbox, queueReminders, testChannels, webhookEnabled, whatsappEnabled } from './notifier';
 import { mailEnabled } from './mailer';
+import { can } from '../src/lib/permissions';
 import { publicTenants } from '../src/data/tenants';
 import { aiBody, loginBody, onboardingBody, RPC } from './validators';
 import type { Store } from './store';
@@ -130,8 +131,13 @@ export function buildApp(store: Store) {
 
   app.get('/api/snapshot', async (req, reply) => { const u = need(req, reply); if (!u) return reply; return createRepos(getDatabase(), u).snapshot(); });
 
-  app.get('/api/channels/status', async (req, reply) => { const u = need(req, reply); if (!u) return reply; return { email: mailEnabled(), whatsapp: whatsappEnabled() }; });
-  setInterval(() => void deliverOutbox(flush), 60_000).unref();
+  app.get('/api/channels/status', async (req, reply) => { const u = need(req, reply); if (!u) return reply; return { email: mailEnabled(), whatsapp: whatsappEnabled(), webhook: webhookEnabled() }; });
+  app.post('/api/notices/test', async (req, reply) => {
+    const u = need(req, reply); if (!u) return reply; if (!can(u, 'settings:write')) return fail(reply, 403, 'Sin permiso');
+    const b = (req.body ?? {}) as { email?: unknown; phone?: unknown }; const email = typeof b.email === 'string' && b.email.length < 200 ? b.email.trim() : undefined; const phone = typeof b.phone === 'string' && b.phone.length < 30 ? b.phone.trim() : undefined;
+    return testChannels({ email, phone }, getDatabase().settings.find((s) => s.academyId === u.academyId)?.branding.name ?? 'tu academia');
+  });
+  setInterval(() => { if (queueReminders()) flush(); void deliverOutbox(flush); }, Number(process.env.NOTICES_TICK_MS ?? 60_000)).unref();
 
   app.post<{ Params: { name: string } }>('/api/rpc/:name', async (req, reply) => {
     const u = need(req, reply); if (!u) return reply;

@@ -10,7 +10,7 @@ import { createAcademy } from '../src/services/mutations.local';
 import { buildApp } from './app';
 import { registerChannel } from '../src/services/channels';
 import { emailChannel, mailEnabled } from './mailer';
-import { whatsappEnabled } from './notifier';
+import { webhookEnabled, whatsappEnabled } from './notifier';
 import { AUTO } from '../src/services/channels';
 import { config } from './config';
 import { scryptHasher } from './password';
@@ -46,7 +46,7 @@ if (config.tenants) { const r = await provisionTenants({ password: config.tenant
 store.flush(getDatabase());
 
 if (mailEnabled()) registerChannel(emailChannel);
-AUTO.email = mailEnabled(); AUTO.whatsapp = whatsappEnabled();
+AUTO.email = mailEnabled(); AUTO.whatsapp = whatsappEnabled(); AUTO.webhook = webhookEnabled();
 const app = buildApp(store);
 await app.listen({ port: config.port, host: config.host });
 if (config.backupHours > 0) {

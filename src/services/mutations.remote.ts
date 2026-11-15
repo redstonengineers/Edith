@@ -72,6 +72,8 @@ export const deleteDrivingExam = ((_user: unknown, ...args: unknown[]) => rpc('d
 export const importStudents = ((_user: unknown, ...args: unknown[]) => rpc('importStudents', args)) as unknown as typeof L.importStudents;
 export const markNoticeSent = ((_user: unknown, ...args: unknown[]) => rpc('markNoticeSent', args)) as unknown as typeof L.markNoticeSent;
 export const dismissNotice = ((_user: unknown, ...args: unknown[]) => rpc('dismissNotice', args)) as unknown as typeof L.dismissNotice;
+export const updateNoticeSettings = ((_user: unknown, ...args: unknown[]) => rpc('updateNoticeSettings', args)) as unknown as typeof L.updateNoticeSettings;
+export const retryNotice = ((_user: unknown, ...args: unknown[]) => rpc('retryNotice', args)) as unknown as typeof L.retryNotice;
 
 /** Alta pública de academia (onboarding): endpoint propio, sin sesión previa. */
 export const createAcademy = ((input: unknown) => post('/onboarding', input)) as unknown as typeof L.createAcademy;

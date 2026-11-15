@@ -57,7 +57,13 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   setDrivingExamResult: z.tuple([id, id, z.enum(['pendiente', 'aprobado', 'suspendido'])]), deleteDrivingExam: z.tuple([id, id]),
   importStudents: z.tuple([z.array(studentSchema).min(1).max(500)]),
   setStudentTraining: z.tuple([id, z.object({ targetHours: z.number().min(1).max(200).optional(), permit: z.string().max(10).optional(), assignedTeacherId: id.optional(), notifyVia: z.enum(['ambos', 'correo', 'whatsapp', 'nada']).optional() })]),
-  markNoticeSent: z.tuple([id]), dismissNotice: z.tuple([id]),
+  markNoticeSent: z.tuple([id]), dismissNotice: z.tuple([id]), retryNotice: z.tuple([id]),
+  updateNoticeSettings: z.tuple([z.object({
+    events: z.record(z.string().max(40), z.object({ enabled: z.boolean().optional(), subject: z.string().max(200).optional(), body: z.string().max(1000).optional() })).optional(),
+    channels: z.object({ email: z.boolean().optional(), whatsapp: z.boolean().optional(), webhook: z.boolean().optional() }).optional(),
+    reminderHours: z.number().int().min(0).max(168).optional(),
+    quiet: z.object({ enabled: z.boolean().optional(), from: z.string().regex(/^\d{2}:\d{2}$/).optional(), to: z.string().regex(/^\d{2}:\d{2}$/).optional() }).optional(),
+  })]),
   recordExport: z.tuple([z.string().min(1).max(200)]),
 };
 

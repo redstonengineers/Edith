@@ -15,6 +15,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const snap = async () => (await fetch(U + '/api/snapshot', { headers: { cookie } })).json();
   let s = await snap(); const stu = s.students.find((x) => x.email && x.phone && x.firstName === 'Lucía') || s.students.find((x) => x.email && x.phone); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo');
   const st = await (async () => { const r = await fetch(U + '/api/channels/status', { headers: { cookie } }); return r.json(); })(); ok(st.email === (MODE === 'auto') && st.whatsapp === (MODE === 'auto'), `estado de canales (${MODE})`);
+  await call('updateNoticeSettings', [{ quiet: { enabled: false }, reminderHours: 0 }]); // las horas de descanso por defecto (22:00–08:00) retrasarían el envío
   const base = { studentId: stu.id, teacherId: teacher, vehicleId: veh.id, date: day(20), start: '09:00', end: '10:00' };
   const p = await call('createPractice', [base]);
   await wait(1500); s = await snap(); let ob = s.outbox.filter((o) => o.studentId === stu.id);
@@ -38,7 +39,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Interfaz
   const b = await chromium.launch(); const pg = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
   await pg.goto(U + '/login'); await pg.getByLabel(/Correo o usuario/).fill('director@atlanta.demo'); await pg.getByLabel('Contraseña').fill('demo'); await pg.getByRole('button', { name: /Entrar/ }).click(); await pg.waitForSelector('main h1');
-  await pg.goto(U + '/avisos'); await pg.waitForSelector('main h1'); await pg.waitForTimeout(800); ok(await pg.getByText(/Nueva práctica de conducir|Cambio en tu práctica|Resultado de tu examen/).count() >= 1, 'la página Avisos lista los avisos');
+  await pg.goto(U + '/avisos-alumnos'); await pg.waitForSelector('main h1'); await pg.waitForTimeout(800); ok(await pg.getByText(/Nueva práctica de conducir|Cambio en tu práctica|Resultado de tu examen/).count() >= 1, 'la página Avisos lista los avisos');
   if (MODE === 'manual') { const link = pg.getByRole('link', { name: /Enviar a/ }).first(); ok(/wa\.me\/34\d{9}\?text=/.test(await link.getAttribute('href')), 'WhatsApp manual: enlace wa.me con el mensaje'); }
   else ok(await pg.getByText('WhatsApp · automático').count() === 1, 'la página indica que WhatsApp es automático');
   await pg.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + `/avisos-${MODE}.png` });

@@ -14,7 +14,7 @@ export const CHANNELS: Record<Channel, ChannelAdapter> = {
 };
 
 /** Canales con entrega automática desde el servidor (los fija el servidor según sus claves). En la app sin servidor, ninguno. */
-export const AUTO = { email: false, whatsapp: false };
+export const AUTO = { email: false, whatsapp: false, webhook: false };
 
 /** El servidor sustituye aquí los adaptadores simulados por proveedores reales. */
 export function registerChannel(a: ChannelAdapter) { CHANNELS[a.id] = a; }
