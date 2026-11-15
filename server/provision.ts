@@ -1,6 +1,7 @@
 import { getDatabase } from '../src/services/database';
 import { hashPassword, verifyPassword } from '../src/services/crypto';
 import { createStudent, createTeacher } from '../src/services/mutations.local';
+import { PRESETS } from '../src/config/presets';
 import type { RoleId, User } from '../src/types';
 
 /** Cuentas por defecto de una academia dada de alta: el usuario es el nombre del perfil (director, secretaria, profesor, alumno, padre). */
@@ -10,6 +11,9 @@ export const DEFAULT_ACCOUNTS: [string, RoleId, string][] = [['director', 'ADMIN
 export async function ensureAccounts(academyId: string, password: string, accounts = DEFAULT_ACCOUNTS): Promise<string[]> {
   const db = getDatabase(); const done: string[] = []; const mine = () => db.users.filter((u) => u.academyId === academyId);
   const admin = mine().find((u) => u.role === 'ADMIN'); if (!admin) return done;
+  // Módulos nuevos del perfil de la academia: se activan solos si nunca se decidió sobre ellos (no pisa lo que se haya apagado).
+  const st = db.settings.find((x) => x.academyId === academyId); const type = db.academies.find((a) => a.id === academyId)?.type;
+  if (st && type) for (const m of PRESETS[type].modules) if (st.modules[m] === undefined) { st.modules[m] = true; done.push(`módulo ${m}`); }
   const slug = academyId.replace(/^acad_/, '');
   const upsert = async (username: string, role: RoleId, name: string, extra: Partial<User> = {}) => {
     let u = mine().find((x) => x.username === username) ?? (role === 'ADMIN' ? admin : undefined);

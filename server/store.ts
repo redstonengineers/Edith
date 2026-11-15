@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import type { Database } from '../src/data/db';
 
 type Row = { academyId?: string; id?: string };
-const TABLES = ['academies', 'settings', 'users', 'students', 'guardians', 'teachers', 'subjects', 'classrooms', 'groups', 'classes', 'enrollments', 'waitlist', 'attendance', 'exams', 'grades', 'payments', 'incidents', 'documents', 'notifications', 'messages', 'activity', 'vehicles', 'practices'] as const;
+const TABLES = ['academies', 'settings', 'users', 'students', 'guardians', 'teachers', 'subjects', 'classrooms', 'groups', 'classes', 'enrollments', 'waitlist', 'attendance', 'exams', 'grades', 'payments', 'incidents', 'documents', 'notifications', 'messages', 'activity', 'vehicles', 'practices', 'outbox'] as const;
 const rowKey = (t: string, r: Row) => (t === 'academies' ? r.id! : t === 'settings' ? r.academyId! : r.id!);
 const tenantOf = (t: string, r: Row) => (t === 'academies' ? r.id! : r.academyId!);
 

@@ -43,7 +43,7 @@ export type LabelKey =
 export type ModuleId =
   | 'dashboard' | 'students' | 'teachers' | 'groups' | 'classes' | 'subjects' | 'schedule'
   | 'exams' | 'grades' | 'attendance' | 'applications' | 'waitlist' | 'enrollments'
-  | 'payments' | 'billing' | 'documents' | 'practicas' | 'vehiculos' | 'parte' | 'incidents' | 'messages' | 'announcements'
+  | 'payments' | 'billing' | 'documents' | 'practicas' | 'vehiculos' | 'parte' | 'avisos' | 'incidents' | 'messages' | 'announcements'
   | 'notifications' | 'statistics' | 'reports' | 'ai' | 'settings' | 'users' | 'permissions'
   | 'customization' | 'platform';
 
@@ -86,9 +86,19 @@ export interface Student extends Tenant {
   assignedTeacherId?: ID;
   /** Autoescuela: exámenes de la DGT (teórico/práctico) con su resultado. */
   driving?: DrivingExam[];
+  /** Cómo avisar al alumno de cambios que le afectan (por defecto, correo y WhatsApp). */
+  notifyVia?: 'ambos' | 'correo' | 'whatsapp' | 'nada';
 }
 
 export interface DrivingExam { id: ID; kind: 'teorico' | 'practico'; date: ISODate; result: 'pendiente' | 'aprobado' | 'suspendido' }
+
+/** Aviso al alumno (y a su tutor si es menor) por un cambio que le afecta; el servidor lo entrega por correo y/o WhatsApp. */
+export type DeliveryStatus = 'pendiente' | 'enviado' | 'fallido' | 'manual' | 'no';
+export interface OutboxItem extends Tenant {
+  id: ID; studentId: ID; kind: 'practica' | 'examen'; /** Referencia (id de práctica/examen) para unir cambios seguidos en un solo aviso. */ ref?: ID;
+  to: { name: string; email?: string; phone?: string }[]; subject: string; body: string; createdAt: ISODateTime;
+  emailStatus: DeliveryStatus; waStatus: DeliveryStatus; attempts: number; note?: string;
+}
 
 export interface Teacher extends Tenant {
   id: ID; firstName: string; lastName: string; email: string; phone: string;

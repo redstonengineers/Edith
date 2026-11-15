@@ -20,7 +20,7 @@ export async function sendMail(to: string[], subject: string, text: string): Pro
     // Un correo por destinatario (no se exponen direcciones entre sí); lotes de 100 con el endpoint batch.
     for (let i = 0; i < to.length; i += 100) {
       const batch = to.slice(i, i + 100).map((addr) => ({ from: FROM, to: [addr], subject, text, html }));
-      const res = await fetch('https://api.resend.com/emails/batch', { method: 'POST', headers: { authorization: `Bearer ${KEY}`, 'content-type': 'application/json' }, body: JSON.stringify(batch), signal: AbortSignal.timeout(15_000) });
+      const res = await fetch(`${process.env.MAIL_API_BASE ?? 'https://api.resend.com'}/emails/batch`, { method: 'POST', headers: { authorization: `Bearer ${KEY}`, 'content-type': 'application/json' }, body: JSON.stringify(batch), signal: AbortSignal.timeout(15_000) });
       if (!res.ok) return { ok: false, error: `Proveedor de correo: HTTP ${res.status}` };
     }
     return { ok: true };

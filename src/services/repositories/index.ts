@@ -63,6 +63,7 @@ function scopeSnapshot(db: Database, user: User) {
     messages: byTenant(db.messages).filter((m) => m.kind === 'announcement' || m.fromUserId === user.id || m.toUserIds.includes(user.id)),
     activity: byTenant(db.activity),
     vehicles: portal ? [] : byTenant(db.vehicles),
+    outbox: portal ? [] : byTenant(db.outbox).filter((o) => user.role !== 'PROFESOR' || studentIds.has(o.studentId)),
     practices: practices.map(({ studentSig, teacherSig, ...p }) => ({ ...p, signed: !!(studentSig && teacherSig) })),
   };
 }

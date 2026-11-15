@@ -343,7 +343,7 @@ function buildAcademy(spec: AcademySpec, today: Date, db: Database) {
 export function generateDatabase(today: Date = new Date()): Database {
   const db: Database = {
     academies: [], settings: [], users: [], students: [], guardians: [], teachers: [], subjects: [], classrooms: [], groups: [], classes: [],
-    enrollments: [], waitlist: [], attendance: [], exams: [], grades: [], payments: [], incidents: [], documents: [], notifications: [], messages: [], activity: [], vehicles: [], practices: [],
+    enrollments: [], waitlist: [], attendance: [], exams: [], grades: [], payments: [], incidents: [], documents: [], notifications: [], messages: [], activity: [], vehicles: [], outbox: [], practices: [],
   };
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   for (const spec of SPECS) buildAcademy(spec, t, db);

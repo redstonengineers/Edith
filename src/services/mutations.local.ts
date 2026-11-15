@@ -4,7 +4,8 @@ import { can, type Permission } from '@/lib/permissions';
 import { groupConflicts } from '@/lib/conflicts';
 import type { GroupInput, PracticeInput, StudentInput, SubjectInput, TeacherInput, VehicleInput } from '@/lib/schemas';
 import { practiceConflicts, type PracticeConflict } from '@/lib/practices';
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, differenceInYears, format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { logActivity } from './activity';
 import { getDatabase, persist } from './database';
 
@@ -292,11 +293,37 @@ export function setGrade(user: User, examId: ID, studentId: ID, score: number | 
 // ═════════ Fase 4: admisión, pagos, incidencias, documentos, comunicación ═════════
 import type { Enrollment, EnrollmentStatus, Incident, IncidentStatus, Payment, WaitlistEntry, DocumentFile, DocumentOwner, Message } from '@/types';
 import type { ApplicationInput, IncidentInput, PaymentInput, WaitlistInput } from '@/lib/schemas';
-import { CHANNELS } from './channels';
+import { AUTO, CHANNELS } from './channels';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const notify = (user: User, title: string, body: string, level: 'info' | 'warning' | 'success', href?: string) =>
   getDatabase().notifications.unshift({ academyId: user.academyId, id: newId(user, 'ntf'), title, body, level, createdAt: new Date().toISOString(), read: false, href });
+
+/**
+ * Avisa al alumno (y a su tutor si es menor) de un cambio que le afecta. Deja el aviso en la bandeja de salida;
+ * el servidor lo entrega por correo y/o WhatsApp según la preferencia del alumno. Si el cambio llega antes de enviarse el anterior
+ * sobre lo mismo (`ref`), se sustituye en vez de duplicar.
+ */
+function queueNotice(user: User, studentId: ID, kind: 'practica' | 'examen', ref: ID, subject: string, body: string) {
+  const db = getDatabase(); const s = db.students.find((x) => x.id === studentId && x.academyId === user.academyId); if (!s || s.status === 'baja') return;
+  const via = s.notifyVia ?? 'ambos'; if (via === 'nada') return;
+  const to: { name: string; email?: string; phone?: string }[] = [{ name: s.firstName, email: s.email || undefined, phone: s.phone || undefined }];
+  const g = s.guardianId ? db.guardians.find((x) => x.id === s.guardianId && x.academyId === user.academyId) : undefined;
+  if (g && differenceInYears(new Date(), parseISO(s.birthDate)) < 18) to.push({ name: g.name, email: g.email || undefined, phone: g.phone || undefined });
+  const wantMail = (via === 'ambos' || via === 'correo') && to.some((t) => t.email); const wantWa = (via === 'ambos' || via === 'whatsapp') && to.some((t) => t.phone);
+  if (!wantMail && !wantWa) return;
+  const emailStatus = wantMail && AUTO.email ? 'pendiente' as const : 'no' as const; const waStatus = wantWa ? (AUTO.whatsapp ? 'pendiente' as const : 'manual' as const) : 'no' as const;
+  const box = (db.outbox ??= []); const open = box.find((o) => o.academyId === user.academyId && o.ref === ref && o.emailStatus !== 'enviado' && o.waStatus !== 'enviado' && o.attempts === 0);
+  const school = db.settings.find((x) => x.academyId === user.academyId)?.branding.name ?? db.academies.find((a) => a.id === user.academyId)?.name ?? '';
+  const text = `${body}\n— ${school}`;
+  if (open) { Object.assign(open, { subject, body: text, to, emailStatus, waStatus, createdAt: new Date().toISOString() }); return; }
+  box.unshift({ academyId: user.academyId, id: newId(user, 'avi'), studentId, kind, ref, to, subject, body: text, createdAt: new Date().toISOString(), emailStatus, waStatus, attempts: 0 });
+  if (box.length > 500) box.length = 500;
+}
+const longDay = (iso: string) => format(parseISO(iso), "EEEE d 'de' MMMM", { locale: es });
+const hi = (user: User, studentId: ID) => getDatabase().students.find((x) => x.id === studentId && x.academyId === user.academyId)?.firstName ?? '';
+const teacherName = (user: User, id: ID) => { const t = getDatabase().teachers.find((x) => x.id === id && x.academyId === user.academyId); return t ? `${t.firstName} ${t.lastName}` : 'tu profesor'; };
+const upcoming = (iso: string) => iso >= new Date().toISOString().slice(0, 10);
 const splitName = (full: string) => { const [first, ...rest] = full.trim().split(/\s+/); return { firstName: first, lastName: rest.join(' ') || '—' }; };
 
 /** Crea el alumno a partir de datos de un solicitante / lista de espera. Único punto de conversión. */
@@ -666,6 +693,7 @@ export function createPractice(user: User, input: PracticeInput, force = false):
   enforce(checkPractice(user, { ...input, teacherId, id }), force);
   const p: Practice = { academyId: user.academyId, id, status: 'programada', ...input, teacherId };
   getDatabase().practices.push(p); logActivity(user, 'creó', 'practice', `${user.name} apuntó una práctica de ${practiceNames(user).student(p.studentId)} el ${p.date} a las ${p.start}`, p.id);
+  if (upcoming(p.date)) queueNotice(user, p.studentId, 'practica', p.id, 'Nueva práctica de conducir', `Hola ${hi(user, p.studentId)}, tienes una práctica de conducir el ${longDay(p.date)} a las ${p.start} con ${teacherName(user, p.teacherId)}.`);
   return done(p);
 }
 /** «Repetir cada semana»: crea N prácticas (2–26). Si alguna choca no se crea nada, salvo que se pida saltar las ocupadas. */
@@ -680,13 +708,16 @@ export function createPracticeSeries(user: User, input: PracticeInput, weeks: nu
     free.push({ academyId: user.academyId, id, status: 'programada', ...input, teacherId, date, seriesId });
   }
   getDatabase().practices.push(...free); logActivity(user, 'creó', 'practice', `${user.name} apuntó ${free.length} prácticas semanales de ${practiceNames(user).student(input.studentId)}`, seriesId);
+  if (free.length) queueNotice(user, input.studentId, 'practica', seriesId, 'Prácticas de conducir cada semana', `Hola ${hi(user, input.studentId)}, te hemos apuntado ${free.length} prácticas de conducir, una por semana: desde el ${longDay(free[0].date)} a las ${input.start} con ${teacherName(user, teacherId)}.`);
   return done({ created: free.length, skipped });
 }
 export function updatePractice(user: User, id: ID, input: PracticeInput, force = false) {
   need(user, 'practicas:write'); const p = own(user, getDatabase().practices.find((x) => x.id === id), 'Práctica');
   if (user.role === 'PROFESOR' && p.teacherId !== user.teacherId) throw new DomainError('Solo puedes modificar tus prácticas.');
   const teacherId = scopeTeacher(user, input.teacherId); enforce(checkPractice(user, { ...input, teacherId, id }), force);
+  const moved = p.date !== input.date || p.start !== input.start || p.end !== input.end || p.teacherId !== teacherId;
   Object.assign(p, input, { teacherId }); logActivity(user, 'modificó', 'practice', `${user.name} modificó la práctica de ${practiceNames(user).student(p.studentId)} (${p.date} ${p.start})`, p.id);
+  if (moved && p.status === 'programada' && upcoming(p.date)) queueNotice(user, p.studentId, 'practica', p.id, 'Cambio en tu práctica de conducir', `Hola ${hi(user, p.studentId)}, hemos cambiado tu práctica de conducir: ahora es el ${longDay(p.date)} a las ${p.start} con ${teacherName(user, p.teacherId)}.`);
   return done(p);
 }
 export function cancelPractice(user: User, id: ID, cancelled = true) {
@@ -695,6 +726,7 @@ export function cancelPractice(user: User, id: ID, cancelled = true) {
   if (p.status === 'hecha') throw new DomainError('Una práctica ya hecha no se puede cancelar.');
   if (!cancelled) enforce(checkPractice(user, p), false);
   p.status = cancelled ? 'cancelada' : 'programada'; logActivity(user, 'modificó', 'practice', `${user.name} ${cancelled ? 'canceló' : 'restauró'} la práctica de ${practiceNames(user).student(p.studentId)} (${p.date})`, p.id);
+  if (upcoming(p.date)) queueNotice(user, p.studentId, 'practica', p.id, cancelled ? 'Práctica de conducir cancelada' : 'Práctica de conducir confirmada', cancelled ? `Hola ${hi(user, p.studentId)}, tenemos que cancelar tu práctica de conducir del ${longDay(p.date)} a las ${p.start}. Te propondremos otra hora enseguida. Disculpa las molestias.` : `Hola ${hi(user, p.studentId)}, tu práctica de conducir del ${longDay(p.date)} a las ${p.start} sigue en pie.`);
   return done(p);
 }
 /** Marca la práctica como hecha, anota los kilómetros y los suma al cuentakilómetros del coche. */
@@ -707,7 +739,7 @@ export function completePractice(user: User, id: ID, data: { km?: number; notes?
   logActivity(user, 'registró', 'practice', `${user.name} cerró la práctica de ${practiceNames(user).student(p.studentId)} (${p.date})`, p.id);
   return done(p);
 }
-export function setStudentTraining(user: User, id: ID, data: { targetHours?: number; permit?: string; assignedTeacherId?: ID }) {
+export function setStudentTraining(user: User, id: ID, data: { targetHours?: number; permit?: string; assignedTeacherId?: ID; notifyVia?: 'ambos' | 'correo' | 'whatsapp' | 'nada' }) {
   need(user, 'students:write'); const db = getDatabase(); const s = own(user, db.students.find((x) => x.id === id), 'Alumno');
   if (data.assignedTeacherId) own(user, db.teachers.find((x) => x.id === data.assignedTeacherId), 'Profesor');
   Object.assign(s, data); logActivity(user, 'modificó', 'student', `${user.name} actualizó la formación de ${s.firstName} ${s.lastName}`, s.id);
@@ -723,14 +755,17 @@ export function getPracticeSignatures(user: User, id: ID): { studentSig?: string
 /** Exámenes de conducir (teórico/práctico) en la ficha del alumno. */
 export function addDrivingExam(user: User, studentId: ID, input: { kind: 'teorico' | 'practico'; date: string; result: 'pendiente' | 'aprobado' | 'suspendido' }) {
   need(user, 'students:write'); const s = own(user, getDatabase().students.find((x) => x.id === studentId), 'Alumno');
-  (s.driving ??= []).push({ id: newId(user, 'exd'), ...input });
+  const ex = { id: newId(user, 'exd'), ...input }; (s.driving ??= []).push(ex);
+  if (upcoming(input.date)) queueNotice(user, studentId, 'examen', ex.id, `Examen ${input.kind === 'teorico' ? 'teórico' : 'práctico'}`, `Hola ${s.firstName}, tienes el examen ${input.kind === 'teorico' ? 'teórico' : 'práctico'} de conducir el ${longDay(input.date)}. ¡Mucho ánimo!`);
   logActivity(user, 'creó', 'student', `${user.name} anotó un examen ${input.kind} de ${s.firstName} ${s.lastName} (${input.result})`, s.id);
   return done(s);
 }
 export function setDrivingExamResult(user: User, studentId: ID, examId: ID, result: 'pendiente' | 'aprobado' | 'suspendido') {
   need(user, 'students:write'); const s = own(user, getDatabase().students.find((x) => x.id === studentId), 'Alumno');
   const e = (s.driving ?? []).find((x) => x.id === examId); if (!e) throw new Error('Examen no encontrado');
-  e.result = result; logActivity(user, 'modificó', 'student', `${user.name} marcó el examen ${e.kind} de ${s.firstName} ${s.lastName} como ${result}`, s.id);
+  e.result = result;
+  if (result !== 'pendiente') queueNotice(user, studentId, 'examen', e.id, `Resultado de tu examen ${e.kind === 'teorico' ? 'teórico' : 'práctico'}`, result === 'aprobado' ? `Hola ${s.firstName}, ¡enhorabuena! Has aprobado el examen ${e.kind === 'teorico' ? 'teórico' : 'práctico'} de conducir.` : `Hola ${s.firstName}, el examen ${e.kind === 'teorico' ? 'teórico' : 'práctico'} de conducir no ha salido esta vez. No pasa nada: hablamos para preparar el siguiente.`);
+  logActivity(user, 'modificó', 'student', `${user.name} marcó el examen ${e.kind} de ${s.firstName} ${s.lastName} como ${result}`, s.id);
   return done(s);
 }
 export function deleteDrivingExam(user: User, studentId: ID, examId: ID) {
@@ -742,4 +777,13 @@ export function importStudents(user: User, rows: StudentInput[]): { created: num
   need(user, 'students:write');
   for (const r of rows) createStudent(user, r);
   return { created: rows.length };
+}
+
+/** El aviso de WhatsApp se envió a mano (abriendo wa.me): se da por enviado. */
+export function markNoticeSent(user: User, id: ID) {
+  need(user, 'practicas:write'); const n = own(user, (getDatabase().outbox ?? []).find((x) => x.id === id), 'Aviso');
+  n.waStatus = 'enviado'; return done(n);
+}
+export function dismissNotice(user: User, id: ID) {
+  need(user, 'practicas:write'); const db = getDatabase(); own(user, (db.outbox ?? []).find((x) => x.id === id), 'Aviso'); db.outbox = db.outbox.filter((x) => x.id !== id); return done(true);
 }

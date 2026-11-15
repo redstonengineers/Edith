@@ -47,6 +47,7 @@ export function Training({ student: s }: { student: Student }) {
             <Button disabled={!exDate} onClick={() => void run(() => addDrivingExam(user, s.id, { kind, date: exDate, result: 'pendiente' }), 'Examen anotado').then(() => setExDate(''))}><Plus size={14} />Anotar</Button>
           </div>)}
       </div>
+      {edit && <label className="mt-3 block text-xs text-muted">Avisar al alumno por<Select aria-label="Avisar al alumno por" value={s.notifyVia ?? 'ambos'} onChange={(e) => void run(() => setStudentTraining(user, s.id, { notifyVia: e.target.value as 'ambos' | 'correo' | 'whatsapp' | 'nada' }), 'Preferencia de avisos guardada')} className="mt-1"><option value="ambos">Correo y WhatsApp</option><option value="correo">Solo correo</option><option value="whatsapp">Solo WhatsApp</option><option value="nada">No avisar</option></Select></label>}
       {open && <PracticeForm open defaults={{ studentId: s.id }} onClose={() => setOpen(false)} />}
     </Panel>
   );

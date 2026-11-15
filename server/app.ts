@@ -12,6 +12,8 @@ import { logActivity } from '../src/services/activity';
 import { verifyPassword } from '../src/services/crypto';
 import * as M from '../src/services/mutations.local';
 import { config } from './config';
+import { deliverOutbox, whatsappEnabled } from './notifier';
+import { mailEnabled } from './mailer';
 import { aiBody, loginBody, onboardingBody, RPC } from './validators';
 import type { Store } from './store';
 
@@ -120,6 +122,9 @@ export function buildApp(store: Store) {
 
   app.get('/api/snapshot', async (req, reply) => { const u = need(req, reply); if (!u) return reply; return createRepos(getDatabase(), u).snapshot(); });
 
+  app.get('/api/channels/status', async (req, reply) => { const u = need(req, reply); if (!u) return reply; return { email: mailEnabled(), whatsapp: whatsappEnabled() }; });
+  setInterval(() => void deliverOutbox(flush), 60_000).unref();
+
   app.post<{ Params: { name: string } }>('/api/rpc/:name', async (req, reply) => {
     const u = need(req, reply); if (!u) return reply;
     const fn = exposed.find(([n]) => n === req.params.name)?.[1]; const schema = RPC[req.params.name];
@@ -130,7 +135,7 @@ export function buildApp(store: Store) {
     return serial(async () => {
       try {
         const result = await fn(u, ...parsed.data);
-        flush();
+        flush(); void deliverOutbox(flush);
         return { result: JSON.parse(JSON.stringify(result ?? null, (k, v) => (k === 'pwd' ? undefined : v))) };
       } catch (e) {
         // La mutación pudo dejar el dominio en memoria a medias: se restaura desde disco para no divergir de lo persistido.

@@ -56,7 +56,8 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   addDrivingExam: z.tuple([id, z.object({ kind: z.enum(['teorico', 'practico']), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), result: z.enum(['pendiente', 'aprobado', 'suspendido']) })]),
   setDrivingExamResult: z.tuple([id, id, z.enum(['pendiente', 'aprobado', 'suspendido'])]), deleteDrivingExam: z.tuple([id, id]),
   importStudents: z.tuple([z.array(studentSchema).min(1).max(500)]),
-  setStudentTraining: z.tuple([id, z.object({ targetHours: z.number().min(1).max(200).optional(), permit: z.string().max(10).optional(), assignedTeacherId: id.optional() })]),
+  setStudentTraining: z.tuple([id, z.object({ targetHours: z.number().min(1).max(200).optional(), permit: z.string().max(10).optional(), assignedTeacherId: id.optional(), notifyVia: z.enum(['ambos', 'correo', 'whatsapp', 'nada']).optional() })]),
+  markNoticeSent: z.tuple([id]), dismissNotice: z.tuple([id]),
   recordExport: z.tuple([z.string().min(1).max(200)]),
 };
 

@@ -10,6 +10,8 @@ import { createAcademy } from '../src/services/mutations.local';
 import { buildApp } from './app';
 import { registerChannel } from '../src/services/channels';
 import { emailChannel, mailEnabled } from './mailer';
+import { whatsappEnabled } from './notifier';
+import { AUTO } from '../src/services/channels';
 import { config } from './config';
 import { scryptHasher } from './password';
 import { Store } from './store';
@@ -26,7 +28,7 @@ else if (config.seedDemo) {
   for (const u of db.users) u.pwd = await hashPassword('demo', pwd.salt);
   console.warn('⚠ SEED_DEMO=1: cuentas de demostración con contraseña "demo". No usar en producción.');
 } else {
-  db = Object.fromEntries(['academies', 'settings', 'users', 'students', 'guardians', 'teachers', 'subjects', 'classrooms', 'groups', 'classes', 'enrollments', 'waitlist', 'attendance', 'exams', 'grades', 'payments', 'incidents', 'documents', 'notifications', 'messages', 'activity', 'vehicles', 'practices'].map((t) => [t, []])) as unknown as Database;
+  db = Object.fromEntries(['academies', 'settings', 'users', 'students', 'guardians', 'teachers', 'subjects', 'classrooms', 'groups', 'classes', 'enrollments', 'waitlist', 'attendance', 'exams', 'grades', 'payments', 'incidents', 'documents', 'notifications', 'messages', 'activity', 'vehicles', 'practices', 'outbox'].map((t) => [t, []])) as unknown as Database;
   if (config.bootstrapEmail && config.bootstrapPassword) {
     db.academies.push({ id: 'acad_platform', name: 'Plataforma', type: 'otro', plan: 'pro', status: 'active', createdAt: new Date().toISOString().slice(0, 10) });
     db.settings.push({ academyId: 'acad_platform', branding: { name: 'Plataforma', tagline: '', primary: '#8b7bff', secondary: '#f472b6', theme: 'dark' }, labels: DEFAULT_LABELS, modules: Object.fromEntries(MODULES.map((m) => [m.id, true])), locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
@@ -47,6 +49,7 @@ if (config.provision) {
 store.flush(getDatabase());
 
 if (mailEnabled()) registerChannel(emailChannel);
+AUTO.email = mailEnabled(); AUTO.whatsapp = whatsappEnabled();
 const app = buildApp(store);
 await app.listen({ port: config.port, host: config.host });
 if (config.backupHours > 0) {
