@@ -102,7 +102,7 @@ export function buildApp(store: Store) {
     const key = `${req.ip}|${p.data.email.toLowerCase()}`;
     if (loginLimit.blocked(key)) return fail(reply, 429, 'Demasiados intentos. Espera unos minutos.');
     return serial(async () => {
-      const db = getDatabase(); const u = db.users.find((x) => x.email.toLowerCase() === p.data.email.toLowerCase());
+      const db = getDatabase(); const id = p.data.email.trim().toLowerCase(); const u = db.users.find((x) => x.email.toLowerCase() === id || x.username?.toLowerCase() === id);
       // Se verifica siempre (hash ficticio si no existe) para no filtrar por tiempo si el correo existe.
       const ok = u?.pwd ? await verifyPassword(p.data.password, u.pwd) : (await verifyPassword(p.data.password, { salt: '00', hash: '00' }), false);
       if (!u || !ok) { loginLimit(key); return fail(reply, 401, 'Credenciales no válidas'); }

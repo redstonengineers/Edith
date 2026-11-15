@@ -5,6 +5,7 @@ import { installDatabase, getDatabase } from '../src/services/database';
 import { DEFAULT_LABELS } from '../src/config/presets';
 import { MODULES } from '../src/config/modules';
 import { PRESETS } from '../src/config/presets';
+import { ensureAccounts } from './provision';
 import { createAcademy } from '../src/services/mutations.local';
 import { buildApp } from './app';
 import { registerChannel } from '../src/services/channels';
@@ -38,6 +39,10 @@ if (config.provision) {
   const pv = config.provision;
   if (getDatabase().users.some((u) => u.email.toLowerCase() === pv.adminEmail.toLowerCase())) console.warn(`Alta automática omitida: ya existe ${pv.adminEmail}.`);
   else { await createAcademy({ academyName: pv.academyName, type: pv.type, modules: PRESETS[pv.type].modules, adminName: pv.adminName, adminEmail: pv.adminEmail, adminPassword: pv.adminPassword, primary: pv.primary ?? '#f97316' }); console.warn(`Academia «${pv.academyName}» creada con administrador ${pv.adminEmail}. Puedes borrar PROVISION_ADMIN_PASSWORD del entorno.`); }
+}
+if (config.provision) {
+  const acad = getDatabase().users.find((u) => u.email.toLowerCase() === config.provision!.adminEmail.toLowerCase())?.academyId;
+  if (acad) { const r = await ensureAccounts(acad, config.provision.adminPassword); if (r.length) console.warn(`Cuentas por perfil actualizadas: ${r.join(', ')}`); }
 }
 store.flush(getDatabase());
 

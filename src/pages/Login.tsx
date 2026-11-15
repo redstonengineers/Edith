@@ -29,7 +29,10 @@ export default function LoginPage() {
       // Un identificador sin «@» es el acceso personal (solo existe en el servidor). Los correos van al login de academias.
       if (id && !id.includes('@')) {
         if (!IS_API) throw new Error('El modo personal solo está disponible en la versión con servidor.');
-        await personalLogin(id, p ?? password); navigate('/personal', { replace: true }); return;
+        try { await personalLogin(id, p ?? password); navigate('/personal', { replace: true }); return; }
+        catch (pe) { // no es el acceso personal: se prueba como usuario de academia (director, profesor…)
+          try { await signIn(id, p ?? password); return; } catch { throw pe; }
+        }
       }
       await signIn(e ?? email, p ?? password);
     } catch (err) { setError((err as Error).message); setBusy(false); }

@@ -22,6 +22,8 @@ export interface User extends Tenant {
   id: ID;
   name: string;
   email: string;
+  /** Nombre de usuario alternativo al correo para iniciar sesión (p. ej. «director»). */
+  username?: string;
   role: RoleId;
   /** Vincula al usuario con su ficha (profesor/alumno/tutor) para filtrar alcance. */
   teacherId?: ID;

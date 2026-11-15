@@ -54,3 +54,4 @@ Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/pr
 
 ## Alta automática de una academia (PROVISION_*)
 Variables de entorno del servidor: `PROVISION_ACADEMY_NAME`, `PROVISION_ADMIN_EMAIL`, `PROVISION_ADMIN_PASSWORD` (+ opcionales `PROVISION_ACADEMY_TYPE` = autoescuela, `PROVISION_ADMIN_NAME`, `PROVISION_PRIMARY`). Al arrancar crea la academia si el correo no existe (idempotente). Tras el primer arranque se puede borrar la variable de la contraseña. Usado para Autoescuela Atlanta.
+- Cuentas por perfil (Atlanta): con `PROVISION_*` el servidor crea además `director`, `secretaria`, `profesor`, `alumno` y `padre` (usuario = nombre del perfil, misma contraseña `PROVISION_ADMIN_PASSWORD`). El profesor, el alumno y el padre quedan vinculados a una ficha de ejemplo («Profesor/Alumno/Padre Atlanta») que conviene sustituir por las reales. Cambiar la variable y reiniciar cambia la contraseña de todas.
