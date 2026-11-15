@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Menu, Moon, Palette, Search, Sparkles, Sun } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Bell, LogOut, Menu, Moon, Palette, Search, Sparkles, Sun } from 'lucide-react';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { Avatar, Kbd, StatusIndicator } from '@/components/ui/primitives';
 import { useSettings, useSnapshot, useUser, useVisibleModules } from '@/hooks';
@@ -13,11 +13,19 @@ import { BrandMark } from './Brand';
 
 const iconBtn = 'relative grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-fg';
 
+/** Atrás/adelante por el historial de la app (en la app instalada no hay botones del navegador). `idx` lo guarda el router en cada entrada. */
+function useHistoryNav() {
+  useLocation(); const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0; const max = useRef(idx); const prev = useRef(idx);
+  if (idx > prev.current) max.current = idx; // avanzar o abrir una página nueva fija el tope: lo que hubiera «adelante» se descarta
+  prev.current = idx;
+  return { canBack: idx > 0, canForward: idx < max.current };
+}
+
 export function Header({ theme }: { theme: 'dark' | 'light' }) {
   const user = useUser();
   const snap = useSnapshot();
   const { branding } = useSettings();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); const { canBack, canForward } = useHistoryNav();
   const { setPalette, setMobileNav, setAi, setTheme } = useUi();
   const signOut = useSession((s) => s.signOut);
   const modules = useVisibleModules();
@@ -29,6 +37,10 @@ export function Header({ theme }: { theme: 'dark' | 'light' }) {
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-bg/75 px-3 backdrop-blur-xl sm:px-5">
       <button className={cn(iconBtn, 'lg:hidden')} onClick={() => setMobileNav(true)} aria-label="Abrir menú"><Menu size={20} /></button>
       <div className="flex items-center gap-2 lg:hidden"><BrandMark size={28} /></div>
+      <div className="flex items-center" role="group" aria-label="Historial">
+        <button className={cn(iconBtn, 'disabled:pointer-events-none disabled:opacity-35')} disabled={!canBack} onClick={() => navigate(-1)} aria-label="Atrás" title="Atrás"><ArrowLeft size={19} /></button>
+        <button className={cn(iconBtn, 'disabled:pointer-events-none disabled:opacity-35')} disabled={!canForward} onClick={() => navigate(1)} aria-label="Adelante" title="Adelante"><ArrowRight size={19} /></button>
+      </div>
 
       <button onClick={() => setPalette(true)} aria-label="Buscar o ejecutar un comando (Ctrl K)"
         className="mx-auto hidden h-10 w-full max-w-xl items-center gap-3 rounded-xl border border-line bg-surface/70 px-3.5 text-left text-sm text-muted transition-colors hover:border-line-strong md:flex">
