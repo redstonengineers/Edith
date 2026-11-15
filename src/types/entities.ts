@@ -14,6 +14,8 @@ export interface Academy {
   type: AcademyType;
   plan: 'trial' | 'basic' | 'pro';
   status: 'active' | 'suspended';
+  /** Identificador público del negocio en la pantalla de acceso (p. ej. «atlanta»). */
+  slug?: string;
   createdAt: ISODate;
 }
 export type AcademyType = 'educativa' | 'idiomas' | 'musica' | 'oposiciones' | 'refuerzo' | 'autoescuela' | 'fisioterapia' | 'psicologia' | 'fitness' | 'danza' | 'deportiva' | 'infantil' | 'formacion' | 'nautica' | 'canina' | 'estetica' | 'artes' | 'otro';
@@ -56,6 +58,19 @@ export interface Settings extends Tenant {
   attendanceAlertThreshold: number; // %
   /** Ajustes de permisos por rol de esta academia: { ROL: { 'recurso:accion': true|false } } sobre la matriz por defecto. */
   permissionOverrides?: Partial<Record<RoleId, Record<string, boolean>>>;
+  /** Avisos automáticos a alumnos: qué eventos se avisan, con qué texto y por qué canales. */
+  notices?: NoticeSettings;
+}
+
+export interface NoticeSettings {
+  /** Por evento: activado y/o texto propio (con variables como {nombre}, {fecha}, {hora}). */
+  events?: Record<string, { enabled?: boolean; subject?: string; body?: string }>;
+  /** Canales de la academia (por defecto todos activos; además cuenta la preferencia de cada alumno). */
+  channels?: { email?: boolean; whatsapp?: boolean; webhook?: boolean };
+  /** Recordatorio automático antes de cada práctica (horas; 0 = sin recordatorio). Por defecto 24. */
+  reminderHours?: number;
+  /** Horas de descanso: los avisos automáticos esperan a que acabe (hora local de la academia). */
+  quiet?: { enabled?: boolean; from?: string; to?: string };
 }
 
 export interface Guardian extends Tenant {
@@ -97,7 +112,7 @@ export type DeliveryStatus = 'pendiente' | 'enviado' | 'fallido' | 'manual' | 'n
 export interface OutboxItem extends Tenant {
   id: ID; studentId: ID; kind: 'practica' | 'examen'; /** Referencia (id de práctica/examen) para unir cambios seguidos en un solo aviso. */ ref?: ID;
   to: { name: string; email?: string; phone?: string }[]; subject: string; body: string; createdAt: ISODateTime;
-  emailStatus: DeliveryStatus; waStatus: DeliveryStatus; attempts: number; note?: string;
+  emailStatus: DeliveryStatus; waStatus: DeliveryStatus; /** Integración propia (webhook firmado hacia otras herramientas). */ hookStatus?: DeliveryStatus; attempts: number; note?: string; event?: string;
 }
 
 export interface Teacher extends Tenant {

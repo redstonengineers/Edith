@@ -9,6 +9,7 @@ import type { Database } from './db';
 import { FIRST_NAMES, LAST_NAMES } from './names';
 import { createRng, type Rng } from './rng';
 import { buildAtlanta } from './seed.atlanta';
+import { applyTenantAccounts } from './tenants';
 
 const d = (date: Date) => format(date, 'yyyy-MM-dd');
 const dt = (date: Date) => date.toISOString();
@@ -97,6 +98,38 @@ const SPECS: AcademySpec[] = [
     modules: ['students', 'teachers', 'groups', 'classes', 'subjects', 'schedule', 'attendance', 'payments', 'waitlist', 'enrollments', 'applications', 'incidents', 'notifications', 'statistics', 'ai', 'users', 'permissions'],
   },
 ];
+/** Clínica de ejemplo (fisioterapia y rehabilitación) para la demo y el acceso por negocio. */
+const CLINICA: AcademySpec = {
+  id: 'acad_clinica', name: 'Clínica Vitalia', tagline: 'Fisioterapia, rehabilitación y bienestar', type: 'fisioterapia',
+  primary: '#14b8a6', secondary: '#38bdf8', theme: 'light', seed: 3003, students: 26, waitlist: 4,
+  fixedNames: ['Ana Belén Cortés Mena', 'Rafael Soto Lara', 'Inés Villalba Pozo'],
+  subjects: [
+    { name: 'Fisioterapia manual', code: 'FM', color: '#14b8a6' }, { name: 'Rehabilitación deportiva', code: 'RD', color: '#38bdf8' },
+    { name: 'Pilates terapéutico', code: 'PT', color: '#a78bfa' }, { name: 'Suelo pélvico', code: 'SP', color: '#f472b6' },
+  ],
+  teachers: [
+    { first: 'Lucas', last: 'Herrera', specialty: 'Fisioterapia manual', subjects: [0] },
+    { first: 'Noelia', last: 'Bravo', specialty: 'Rehabilitación deportiva', subjects: [1] },
+    { first: 'Teresa', last: 'Maldonado', specialty: 'Pilates y suelo pélvico', subjects: [2, 3] },
+  ],
+  rooms: [{ name: 'Cabina 1', capacity: 1 }, { name: 'Cabina 2', capacity: 1 }, { name: 'Sala de grupos', capacity: 10 }],
+  groups: [
+    { name: 'Pilates terapéutico · Mañanas', subject: 2, teacher: 2, room: 2, capacity: 8, slots: LM_X('10:00', '11:00') },
+    { name: 'Pilates terapéutico · Tardes', subject: 2, teacher: 2, room: 2, capacity: 8, slots: MJ('18:00', '19:00') },
+    { name: 'Suelo pélvico · Grupo A', subject: 3, teacher: 2, room: 2, capacity: 6, slots: V('11:00', '12:00') },
+    { name: 'Readaptación deportiva', subject: 1, teacher: 1, room: 2, capacity: 8, slots: LXV('19:00', '20:00') },
+  ],
+  users: [{ name: 'Dirección Vitalia', role: 'ADMIN', email: 'admin@vitalia.demo' }, { name: 'Recepción Vitalia', role: 'SECRETARIA', email: 'recepcion@vitalia.demo' }],
+};
+SPECS.push(CLINICA);
+
+/** Academia y clínica de ejemplo para entornos reales (sin la demo completa): crea el negocio con datos de muestra si no existe. */
+export function buildShowcase(db: Database, slug: 'academia' | 'clinica', today: Date = new Date()) {
+  const spec = slug === 'academia' ? SPECS.find((s) => s.id === 'acad_001')! : CLINICA; const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (db.academies.some((a) => a.id === spec.id)) return;
+  const noSuper = { ...spec, users: spec.users.filter((u) => u.role !== 'SUPER_ADMIN') };
+  buildAcademy(noSuper, t, db);
+}
 
 function buildAcademy(spec: AcademySpec, today: Date, db: Database) {
   const rng: Rng = createRng(spec.seed);
@@ -122,7 +155,7 @@ function buildAcademy(spec: AcademySpec, today: Date, db: Database) {
 
   const teachers: Teacher[] = spec.teachers.map((t, i) => ({
     academyId: A, id: uid('tea', i), firstName: t.first, lastName: t.last,
-    email: `${t.first.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')}@${spec.id === 'acad_001' ? 'horizonte' : 'atlas'}.demo`,
+    email: `${t.first.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')}@${spec.id === 'acad_001' ? 'horizonte' : spec.id === 'acad_002' ? 'atlas' : 'vitalia'}.demo`,
     phone: `6${rng.int(10, 99)} ${rng.int(100, 999)} ${rng.int(100, 999)}`,
     specialty: t.specialty, subjectIds: t.subjects.map((s) => subjects[s].id), weeklyHoursTarget: rng.int(14, 24),
     active: true, avatarHue: rng.int(0, 360), availability: [1, 2, 3, 4, 5],
@@ -348,5 +381,7 @@ export function generateDatabase(today: Date = new Date()): Database {
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   for (const spec of SPECS) buildAcademy(spec, t, db);
   buildAtlanta(db, t);
+  for (const [id, slug] of [['acad_001', 'academia'], ['acad_atlanta', 'atlanta'], ['acad_clinica', 'clinica']] as const) { const a = db.academies.find((x) => x.id === id); if (a) a.slug = slug; }
+  applyTenantAccounts(db);
   return db;
 }

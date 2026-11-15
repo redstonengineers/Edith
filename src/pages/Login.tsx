@@ -6,7 +6,8 @@ import { usePersonal } from '@/store/personal';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { StatusIndicator } from '@/components/ui/primitives';
 import { ROLE_LABELS } from '@/lib/permissions';
-import { DEMO_PASSWORD, listDemoAccounts, type DemoAccount } from '@/services/auth';
+import { DEMO_PASSWORD, listDemoAccounts, listTenants, type DemoAccount } from '@/services/auth';
+import type { PublicTenant } from '@/data/tenants';
 import { useSession } from '@/store/session';
 import { useEffect } from 'react';
 
@@ -16,8 +17,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [accounts, setAccounts] = useState<DemoAccount[]>([]);
-  useEffect(() => { void listDemoAccounts().then(setAccounts); }, []);
+  const [accounts, setAccounts] = useState<DemoAccount[]>([]); const [tenants, setTenants] = useState<PublicTenant[]>([]);
+  useEffect(() => { void listDemoAccounts().then(setAccounts); void listTenants().then(setTenants); }, []);
   const academies = [...new Set(accounts.map((a) => a.academy))];
   useEffect(() => { document.documentElement.dataset.theme = 'dark'; document.documentElement.style.removeProperty('--brand'); document.documentElement.style.removeProperty('--brand-2'); document.documentElement.style.removeProperty('--on-brand'); }, []);
   if (status === 'auth') return <Navigate to="/" replace />;
@@ -31,7 +32,7 @@ export default function LoginPage() {
         if (!IS_API) throw new Error('El modo personal solo está disponible en la versión con servidor.');
         try { await personalLogin(id, p ?? password); navigate('/personal', { replace: true }); return; }
         catch (pe) { // no es el acceso personal: se prueba como usuario de academia (director, profesor…)
-          try { await signIn(id, p ?? password); return; } catch { throw pe; }
+          try { await signIn(id, p ?? password); return; } catch (se) { throw /varios negocios/.test((se as Error).message) ? se : pe; }
         }
       }
       await signIn(e ?? email, p ?? password);
@@ -61,6 +62,19 @@ export default function LoginPage() {
             <button type="submit" disabled={busy || !email || !password} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-on-brand hover:brightness-110 disabled:opacity-50">{busy ? <Loader2 size={16} className="animate-spin" /> : <>Entrar <ArrowRight size={16} /></>}</button>
           </form>
           <p className="mt-5 text-sm text-muted">¿Eres propietario de un centro? <Link to="/onboarding" className="font-medium text-brand-text hover:underline">Crea tu academia</Link></p>
+          {tenants.length > 0 && (
+            <section className="mt-8" aria-label="Elige tu negocio">
+              <p className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Elige tu negocio</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {tenants.map((t) => (
+                  <Link key={t.slug} to={`/acceso/${t.slug}`} aria-label={`Entrar en ${t.card}`} className="group flex flex-col items-center gap-2 rounded-xl border border-line bg-surface p-4 text-center transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2" style={{ ['--tc' as string]: t.primary }}>
+                    <img src={t.logo} alt="" width={52} height={52} className="rounded-xl shadow-sm" />
+                    <span className="text-sm font-semibold">{t.card}</span>
+                    <span className="text-[11px] leading-snug text-muted">{t.tagline}</span>
+                    <span className="mt-auto h-0.5 w-8 rounded-full opacity-70 transition-all group-hover:w-14" style={{ background: t.primary }} />
+                  </Link>))}
+              </div>
+            </section>)}
           <div className="mt-8">
             {accounts.length > 0 && <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Acceso demo · contraseña “{DEMO_PASSWORD}”</p>}
             <div className="space-y-4">

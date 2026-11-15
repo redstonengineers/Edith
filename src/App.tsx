@@ -69,6 +69,8 @@ function Protected() {
   return <AppShell />;
 }
 
+const AccesoNegocio = lazy(() => import('@/pages/AccesoNegocio'));
+
 export default function App() {
   const init = useSession((s) => s.init);
   useEffect(() => { void init(); }, [init]);
@@ -76,6 +78,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/acceso/:slug" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><AccesoNegocio /></Suspense>} />
         <Route path="/personal" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><PersonalPage /></Suspense>} />
         <Route path="/onboarding" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><OnboardingPage /></Suspense>} />
         <Route element={<Protected />}>

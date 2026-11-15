@@ -14,6 +14,7 @@ import * as M from '../src/services/mutations.local';
 import { config } from './config';
 import { deliverOutbox, whatsappEnabled } from './notifier';
 import { mailEnabled } from './mailer';
+import { publicTenants } from '../src/data/tenants';
 import { aiBody, loginBody, onboardingBody, RPC } from './validators';
 import type { Store } from './store';
 
@@ -93,6 +94,7 @@ export function buildApp(store: Store) {
 
   app.get('/api/health', async () => ({ ok: true, ai: claudeEnabled() ? 'claude' : 'local', personal: personalEnabled() }));
 
+  app.get('/api/public/tenants', async () => ({ tenants: publicTenants(getDatabase()) }));
   app.get('/api/demo-accounts', async (_req, reply) => {
     if (!config.seedDemo) return fail(reply, 404, 'No disponible');
     const db = getDatabase();
@@ -101,12 +103,18 @@ export function buildApp(store: Store) {
 
   app.post('/api/auth/login', async (req, reply) => {
     const p = loginBody.safeParse(req.body); if (!p.success) return fail(reply, 400, 'Datos no válidos');
-    const key = `${req.ip}|${p.data.email.toLowerCase()}`;
+    const key = `${req.ip}|${p.data.academy ?? '*'}|${p.data.email.toLowerCase()}`;
     if (loginLimit.blocked(key)) return fail(reply, 429, 'Demasiados intentos. Espera unos minutos.');
     return serial(async () => {
-      const db = getDatabase(); const id = p.data.email.trim().toLowerCase(); const u = db.users.find((x) => x.email.toLowerCase() === id || x.username?.toLowerCase() === id);
-      // Se verifica siempre (hash ficticio si no existe) para no filtrar por tiempo si el correo existe.
-      const ok = u?.pwd ? await verifyPassword(p.data.password, u.pwd) : (await verifyPassword(p.data.password, { salt: '00', hash: '00' }), false);
+      const db = getDatabase(); const id = p.data.email.trim().toLowerCase(); const scope = p.data.academy ? db.academies.find((a) => a.slug === p.data.academy)?.id : undefined;
+      // El usuario («director»…) solo es único dentro de su negocio: con `academy` se busca ahí; sin él, entre todos.
+      const cands = db.users.filter((x) => (x.email.toLowerCase() === id || x.username?.toLowerCase() === id) && (!p.data.academy || x.academyId === scope));
+      // Se verifica siempre (hash ficticio si no existe) para no filtrar por tiempo si el usuario existe.
+      const okList: typeof cands = [];
+      for (const c of cands) if (c.pwd && await verifyPassword(p.data.password, c.pwd)) okList.push(c);
+      if (!cands.length) await verifyPassword(p.data.password, { salt: '00', hash: '00' });
+      if (okList.length > 1) return fail(reply, 409, 'Ese usuario existe en varios negocios. Entra desde la tarjeta de tu negocio.');
+      const u = okList[0]; const ok = !!u;
       if (!u || !ok) { loginLimit(key); return fail(reply, 401, 'Credenciales no válidas'); }
       loginLimit.clear(key); // solo cuentan los intentos fallidos
       if (u.disabled) return fail(reply, 403, 'Tu cuenta está desactivada. Contacta con el administrador.');

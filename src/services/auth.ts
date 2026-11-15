@@ -3,9 +3,10 @@ import { getDatabase } from './database';
 import { verifyPassword } from './crypto';
 import { IS_API } from './mode';
 import { get, post } from './http';
+import { publicTenants, type PublicTenant } from '@/data/tenants';
 
 export interface AuthProvider {
-  signIn(email: string, password: string): Promise<User>;
+  signIn(email: string, password: string, academy?: string): Promise<User>;
   signOut(): Promise<void>;
   restore(): Promise<User | null>;
 }
@@ -21,8 +22,9 @@ function usable(u: User | undefined | null): u is User {
 }
 
 export const mockAuth: AuthProvider = {
-  async signIn(email, password) {
-    const user = getDatabase().users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  async signIn(email, password, academy) {
+    const db = getDatabase(); const id = email.trim().toLowerCase(); const scope = academy ? db.academies.find((a) => a.slug === academy)?.id : undefined;
+    const user = db.users.find((u) => (u.email.toLowerCase() === id || u.username?.toLowerCase() === id) && (!academy || u.academyId === scope));
     // Mensaje único para no revelar si el correo existe.
     const bad = new Error('Credenciales no válidas');
     if (!user) throw bad;
@@ -43,7 +45,7 @@ export const mockAuth: AuthProvider = {
 
 /** Sesión real: el servidor emite una cookie httpOnly; el navegador nunca ve el token. */
 export const httpAuth: AuthProvider = {
-  async signIn(email, password) { return (await post<{ user: User }>('/auth/login', { email, password })).user; },
+  async signIn(email, password, academy) { return (await post<{ user: User }>('/auth/login', { email, password, ...(academy ? { academy } : {}) })).user; },
   async signOut() { await post('/auth/logout'); },
   async restore() { try { return (await get<{ user: User | null }>('/auth/me')).user; } catch { return null; } },
 };
@@ -56,4 +58,10 @@ export async function listDemoAccounts(): Promise<DemoAccount[]> {
   if (IS_API) { try { return (await get<{ accounts: DemoAccount[] }>('/demo-accounts')).accounts; } catch { return []; } }
   const db = getDatabase();
   return db.users.filter((u) => !u.pwd).map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, academy: db.academies.find((a) => a.id === u.academyId)?.name ?? '' }));
+}
+
+/** Negocios con acceso propio (tarjetas de la pantalla de inicio de sesión). */
+export async function listTenants(): Promise<PublicTenant[]> {
+  if (IS_API) { try { return (await get<{ tenants: PublicTenant[] }>('/public/tenants')).tenants; } catch { return []; } }
+  return publicTenants(getDatabase());
 }
