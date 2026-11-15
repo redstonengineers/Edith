@@ -12,7 +12,7 @@ export interface Habit { id: string; name: string; log: string[] }
 export interface Note { id: string; title: string; body: string; updated: string }
 /** Carpeta de dinero (efectivo, un banco, la pensión…). Su saldo = saldo inicial + ingresos − gastos de sus movimientos. */
 export type WalletKind = 'efectivo' | 'banco' | 'pension' | 'ahorro' | 'tarjeta' | 'otro';
-export interface Wallet { id: string; name: string; kind: WalletKind; color: string; opening: number }
+export interface Wallet { id: string; name: string; kind: WalletKind; color: string; opening: number; /** Presupuesto mensual de ingresos de esta carpeta (objetivo de lo que debe entrar). */ budgetIn?: number; /** Presupuesto mensual de gastos de esta carpeta (límite de lo que puede salir). */ budgetOut?: number }
 export interface Expense { id: string; concept: string; amount: number; date: string; category: string; income?: boolean; walletId?: string; /** Patas de un traspaso entre carpetas: no cuentan como ingreso ni gasto. */ transferId?: string }
 export interface Slot { id: string; title: string; day: number; start: string; end: string; place?: string; color: string }
 /** Excepción de una semana concreta (week = lunes ISO): mover o cancelar una clase recurrente, o añadir una clase suelta. */
