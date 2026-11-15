@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BellRing, Mail, MessageCircle, RotateCcw, Webhook } from 'lucide-react';
+import { BellRing, MessageCircle, RotateCcw } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState, Panel } from '@/components/ui/primitives';
@@ -39,10 +39,8 @@ function Inbox() {
   const toSend = rows.filter((r) => r.waStatus === 'manual').length;
   return (
     <>
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <div className="panel flex items-center gap-3 p-4"><Mail size={18} aria-hidden /><div><p className="text-sm font-medium">Correo · {chan.email ? 'automático' : 'no conectado'}</p><p className="text-xs text-muted">{chan.email ? 'Se envía solo al alumno (y a su tutor si es menor).' : 'Falta conectar el servicio de correo (RESEND_API_KEY).'}</p></div></div>
+      <div className="mb-4 grid gap-3">
         <div className="panel flex items-center gap-3 p-4"><MessageCircle size={18} aria-hidden /><div><p className="text-sm font-medium">WhatsApp · {chan.whatsapp ? 'automático' : 'con un toque'}</p><p className="text-xs text-muted">{chan.whatsapp ? 'Se envía solo desde el número del negocio.' : 'El mensaje sale ya escrito: pulsa «Enviar» y se abre WhatsApp.'}</p></div></div>
-        <div className="panel flex items-center gap-3 p-4"><Webhook size={18} aria-hidden /><div><p className="text-sm font-medium">Integración · {chan.webhook ? 'conectada' : 'sin conectar'}</p><p className="text-xs text-muted">{chan.webhook ? 'Cada aviso se envía también a tu herramienta (webhook firmado).' : 'Conecta Telegram, SMS u otra app con un webhook (NOTIFY_WEBHOOK_URL).'}</p></div></div>
       </div>
       {toSend > 0 && <p className="mb-3 rounded-lg border border-line bg-surface-2 px-4 py-2.5 text-sm" role="status"><BellRing size={14} className="mr-2 inline" aria-hidden />Tienes <b>{toSend}</b> {toSend === 1 ? 'aviso' : 'avisos'} de WhatsApp por enviar.</p>}
       {rows.length === 0 ? <EmptyState icon={BellRing} title="Aún no hay avisos" description="Cuando apuntes, cambies o canceles una práctica, o anotes un examen, el aviso aparecerá aquí." /> : (
@@ -50,9 +48,9 @@ function Inbox() {
           {rows.map((r) => (
             <li key={r.id} className="flex flex-wrap items-start gap-3 px-5 py-3.5">
               <div className="min-w-0 flex-1"><p className="text-sm font-medium">{r.subject} <span className="font-normal text-muted">· {stu(r.studentId)}</span></p><p className="mt-0.5 text-sm whitespace-pre-line text-muted">{r.body}</p><p className="mt-1 text-xs text-muted">{fmtAgo(r.createdAt)}{r.note ? ` · ${r.note}` : ''}</p></div>
-              <div className="flex flex-wrap items-center gap-2"><Badge tone={TONE[r.emailStatus]}><Mail size={11} aria-hidden />{LABEL[r.emailStatus]}</Badge><Badge tone={TONE[r.waStatus]}><MessageCircle size={11} aria-hidden />{LABEL[r.waStatus]}</Badge>{(r.hookStatus ?? 'no') !== 'no' && <Badge tone={TONE[r.hookStatus!]}><Webhook size={11} aria-hidden />{LABEL[r.hookStatus!]}</Badge>}
+              <div className="flex flex-wrap items-center gap-2"><Badge tone={TONE[r.waStatus]}><MessageCircle size={11} aria-hidden />{LABEL[r.waStatus]}</Badge>
                 {write && r.waStatus === 'manual' && r.to.filter((t) => t.phone).map((t) => <a key={t.phone} href={waLink(t.phone!, r.body)} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line px-3 text-xs font-medium hover:bg-surface-2" onClick={() => void run(() => markNoticeSent(user, r.id), 'Marcado como enviado')}>Enviar a {t.name}</a>)}
-                {write && [r.emailStatus, r.waStatus, r.hookStatus].includes('fallido') && <Button aria-label="Reintentar aviso" onClick={() => void run(() => retryNotice(user, r.id), 'Reintentando')}><RotateCcw size={13} aria-hidden />Reintentar</Button>}
+                {write && r.waStatus === 'fallido' && <Button aria-label="Reintentar aviso" onClick={() => void run(() => retryNotice(user, r.id), 'Reintentando')}><RotateCcw size={13} aria-hidden />Reintentar</Button>}
                 {write && <Button aria-label="Quitar aviso" onClick={() => void run(() => dismissNotice(user, r.id), 'Aviso quitado')}>Quitar</Button>}</div>
             </li>))}
         </ul>)}
@@ -79,7 +77,7 @@ function Config() {
     <div className="space-y-5">
       <Panel title="Canales">
         <ul className="divide-y divide-line text-sm">
-          {([['email', 'Correo electrónico', Mail, chan.email, 'Falta conectar el correo (RESEND_API_KEY).'], ['whatsapp', 'WhatsApp', MessageCircle, chan.whatsapp, 'Sin conexión automática: queda «por enviar» con un toque.'], ['webhook', 'Integración (webhook)', Webhook, chan.webhook, 'Sin conectar (NOTIFY_WEBHOOK_URL).']] as const).map(([k, label, Icon, live, hint]) => (
+          {([['whatsapp', 'WhatsApp', MessageCircle, chan.whatsapp, 'Sin conexión automática: queda «por enviar» con un toque.']] as const).map(([k, label, Icon, live, hint]) => (
             <li key={k} className="flex items-center gap-3 py-3"><Icon size={16} aria-hidden /><div className="flex-1"><p className="font-medium">{label} <Badge tone={live ? 'ok' : 'neutral'}>{live ? 'conectado' : 'no conectado'}</Badge></p><p className="text-xs text-muted">{live ? 'Se envía desde el servidor.' : hint}</p></div><Toggle on={ch[k]} set={(b) => setN((x) => ({ ...x, channels: { ...x.channels, [k]: b } }))} label={`${label} activado`} /></li>))}
         </ul>
         <p className="mt-2 text-xs text-muted">Además cuenta la preferencia de cada {L.student.singular.toLowerCase()} (en su ficha). Quien elige «No avisar» no recibe nada.</p>
@@ -108,13 +106,12 @@ function Config() {
       <div className="flex justify-end"><Button variant="primary" onClick={save}>Guardar ajustes de avisos</Button></div>
       {IS_API && (
         <Panel title="Probar los canales">
-          <p className="mb-3 text-sm text-muted">Envía un mensaje de prueba por cada canal conectado para comprobar que funciona.</p>
+          <p className="mb-3 text-sm text-muted">Envía un WhatsApp de prueba para comprobar que la conexión funciona.</p>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="text-xs text-muted">Correo<Input type="email" aria-label="Correo de prueba" value={test.email} onChange={(e) => setTest({ ...test, email: e.target.value })} placeholder="tu@correo.es" className="mt-1 w-56" /></label>
             <label className="text-xs text-muted">Teléfono<Input type="tel" aria-label="Teléfono de prueba" value={test.phone} onChange={(e) => setTest({ ...test, phone: e.target.value })} placeholder="600 123 456" className="mt-1 w-44" /></label>
             <Button onClick={() => void sendTest()} disabled={busy}>Enviar prueba</Button>
           </div>
-          {res && <ul className="mt-3 text-sm" aria-live="polite">{Object.entries(res).map(([k, v]) => <li key={k}><b className="capitalize">{k}</b>: <span className={v === 'enviado' ? 'text-ok' : 'text-muted'}>{v}</span></li>)}</ul>}
+          {res && <ul className="mt-3 text-sm" aria-live="polite">{Object.entries(res).filter(([k]) => k === 'whatsapp' || k === 'error').map(([k, v]) => <li key={k}><b className="capitalize">{k}</b>: <span className={v === 'enviado' ? 'text-ok' : 'text-muted'}>{v}</span></li>)}</ul>}
         </Panel>)}
     </div>
   );

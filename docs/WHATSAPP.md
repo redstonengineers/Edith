@@ -21,7 +21,8 @@ EDITH envía los avisos a alumnos por WhatsApp sin intervención cuando están e
 Redesplegar. En **Avisos a alumnos** el canal pasa a «conectado»; usar «Prueba de canales» con un teléfono propio.
 
 ## Reglas
-- **Consentimiento**: el formulario público incluye una casilla aparte y opcional de WhatsApp. Si el solicitante no la marca, al matricularlo sus avisos van solo por correo. En la ficha del alumno se cambia con «Avisar por».
+- **Canal único**: los avisos a alumnos salen solo por WhatsApp (correo e integración quitados de la interfaz y del envío).
+- **Consentimiento**: el formulario público incluye una casilla aparte y opcional de WhatsApp. Si el solicitante no la marca, al matricularlo queda en «No avisar». En la ficha del alumno se cambia con «Avisar por».
 - **Horario de descanso**: 22:00–08:00 (Europe/Madrid), configurable.
 - **Reintentos**: 3 por aviso.
 - **Coste**: Meta cobra por plantilla enviada según país y categoría; comprobar la tarifa vigente antes de ofrecer precios.

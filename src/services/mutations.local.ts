@@ -317,8 +317,8 @@ const splitName = (full: string) => { const [first, ...rest] = full.trim().split
 function studentFromApplicant(user: User, a: { name: string; email: string; phone: string; birthDate?: string; whatsappConsent?: boolean }): Student {
   const { firstName, lastName } = splitName(a.name);
   const s: Student = { academyId: user.academyId, id: newId(user, 'stu'), firstName, lastName, birthDate: a.birthDate || '2000-01-01', email: a.email, phone: a.phone, groupIds: [], status: 'nuevo', enrolledAt: today(), lastActivityAt: new Date().toISOString(), notes: '', avatarHue: Math.floor(Math.random() * 360) };
-  // Solicitud web: si no marcó WhatsApp, los avisos van solo por correo (nunca se le escribe sin permiso).
-  if (a.whatsappConsent !== undefined) s.notifyVia = a.whatsappConsent ? 'ambos' : 'correo';
+  // Solicitud web: si no marcó WhatsApp, no se le avisa (nunca se le escribe sin permiso).
+  if (a.whatsappConsent !== undefined) s.notifyVia = a.whatsappConsent ? 'whatsapp' : 'nada';
   getDatabase().students.push(s); return s;
 }
 

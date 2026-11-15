@@ -65,7 +65,7 @@ export function fillAtlantaDemo(db: Database, academyId: string, today: Date = n
     S.push({
       academyId: A, id: uid('stu', i), firstName: f, lastName: `${l1} ${l2}`, birthDate: d(subYears(t0, age)), email: `${norm(f)}.${norm(l1)}${i}@correo.test`, phone: `6${rng.int(10, 99)} ${rng.int(100, 999)} ${rng.int(100, 999)}`, guardianId, groupIds: [moto ? GR[2].id : i % 2 ? GR[1].id : GR[0].id],
       status: enrolled > -20 ? 'nuevo' : 'activo', enrolledAt: d(addDays(t0, enrolled)), lastActivityAt: addDays(t0, -rng.int(0, 6)).toISOString(), notes: '', avatarHue: rng.int(0, 360), targetHours: moto ? 12 : rng.pick([20, 20, 25]), permit: moto ? (minor ? 'AM' : 'A2') : 'B', assignedTeacherId: teacher.id,
-      notifyVia: rng.pick(['ambos', 'ambos', 'whatsapp', 'correo']),
+      notifyVia: rng.pick(['whatsapp', 'whatsapp', 'whatsapp', 'nada']),
     });
   }
   db.guardians.push(...G);

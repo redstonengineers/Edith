@@ -18,7 +18,8 @@ export function queueNotice(academyId: string, studentId: ID, kind: 'practica' |
   const to: { name: string; email?: string; phone?: string }[] = [{ name: s.firstName, email: s.email || undefined, phone: s.phone || undefined }];
   const g = s.guardianId ? db.guardians.find((x) => x.id === s.guardianId && x.academyId === academyId) : undefined;
   if (g && differenceInYears(new Date(), parseISO(s.birthDate)) < 18) to.push({ name: g.name, email: g.email || undefined, phone: g.phone || undefined });
-  const wantMail = ch.email && (via === 'ambos' || via === 'correo') && to.some((t) => t.email); const wantWa = ch.whatsapp && (via === 'ambos' || via === 'whatsapp') && to.some((t) => t.phone); const wantHook = ch.webhook && AUTO.webhook;
+  // Canal único: WhatsApp (correo e integración ya no se usan para avisar a alumnos).
+  const wantMail = false; const wantWa = ch.whatsapp && (via === 'ambos' || via === 'whatsapp') && to.some((t) => t.phone); const wantHook = false;
   if (!wantMail && !wantWa && !wantHook) return false;
   const school = settings?.branding.name ?? db.academies.find((a) => a.id === academyId)?.name ?? '';
   const all = { nombre: s.firstName, escuela: school, ...vars };

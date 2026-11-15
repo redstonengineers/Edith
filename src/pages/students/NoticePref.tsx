@@ -9,7 +9,7 @@ export function NoticePref({ student: s }: { student: Student }) {
   const user = useUser(); const run = useAction(); const edit = useCan()('students:write');
   return (
     <Panel title="Avisos">
-      <label className="block text-xs text-muted">Avisar por<Select aria-label="Avisar por" disabled={!edit} value={s.notifyVia ?? 'ambos'} onChange={(e) => void run(() => setStudentTraining(user, s.id, { notifyVia: e.target.value as 'ambos' | 'correo' | 'whatsapp' | 'nada' }), 'Preferencia de avisos guardada')} className="mt-1"><option value="ambos">Correo y WhatsApp</option><option value="correo">Solo correo</option><option value="whatsapp">Solo WhatsApp</option><option value="nada">No avisar</option></Select></label>
+      <label className="block text-xs text-muted">Avisar por<Select aria-label="Avisar por" disabled={!edit} value={s.notifyVia === 'nada' || s.notifyVia === 'correo' ? 'nada' : 'whatsapp'} onChange={(e) => void run(() => setStudentTraining(user, s.id, { notifyVia: e.target.value as 'whatsapp' | 'nada' }), 'Preferencia de avisos guardada')} className="mt-1"><option value="whatsapp">WhatsApp</option><option value="nada">No avisar</option></Select></label>
     </Panel>
   );
 }
