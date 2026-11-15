@@ -9,7 +9,7 @@ export interface TenantDef {
 }
 export const TENANTS: TenantDef[] = [
   { slug: 'atlanta', card: 'Autoescuela Atlanta', name: 'Autoescuela Atlanta', tagline: 'Prácticas, exámenes y gestión de tu autoescuela', blurb: 'Agenda de prácticas, coches, parte mensual y avisos a tus alumnos.', type: 'autoescuela', primary: '#f97316', secondary: '#38bdf8', theme: 'dark', logo: '/brand/atlanta.svg',
-    profiles: [{ username: 'director', role: 'ADMIN', label: 'Director' }, { username: 'secretaria', role: 'SECRETARIA', label: 'Secretaría' }, { username: 'profesor', role: 'PROFESOR', label: 'Profesor' }, { username: 'alumno', role: 'ALUMNO', label: 'Alumno' }, { username: 'padre', role: 'TUTOR', label: 'Padre' }] },
+    profiles: [{ username: 'director', role: 'ADMIN', label: 'Director' }, { username: 'secretaria', role: 'SECRETARIA', label: 'Secretaría' }, { username: 'profesor', role: 'PROFESOR', label: 'Profesor' }, { username: 'alumno', role: 'ALUMNO', label: 'Alumno' }] },
   { slug: 'academia', card: 'Academia', name: 'Academia Horizonte', tagline: 'Refuerzo, idiomas y preparación académica', blurb: 'Grupos, horarios, asistencia, notas y pagos de tu academia.', type: 'educativa', primary: '#8b7bff', secondary: '#f472b6', theme: 'dark', logo: '/brand/academia.svg',
     profiles: [{ username: 'director', role: 'ADMIN', label: 'Director' }, { username: 'secretaria', role: 'SECRETARIA', label: 'Secretaría' }, { username: 'profesor', role: 'PROFESOR', label: 'Profesor' }, { username: 'alumno', role: 'ALUMNO', label: 'Alumno' }, { username: 'padre', role: 'TUTOR', label: 'Padre' }] },
   { slug: 'clinica', card: 'Clínica', name: 'Clínica Vitalia', tagline: 'Fisioterapia, rehabilitación y bienestar', blurb: 'Pacientes, sesiones, bonos, cabinas e informes de tu clínica.', type: 'fisioterapia', primary: '#14b8a6', secondary: '#38bdf8', theme: 'light', logo: '/brand/clinica.svg',
@@ -46,6 +46,8 @@ export function applyTenantAccounts(db: Database, pwd?: { salt: string; hash: st
       if (pwd && !u.pwd) { u.pwd = { ...pwd }; touched = true; }
       if (touched) changed.push(u);
     }
+    // Cuentas de perfiles que el negocio ya no tiene (p. ej. «padre» en Atlanta): se retiran.
+    for (let i = db.users.length - 1; i >= 0; i--) { const u = db.users[i]; if (u.academyId === A && u.role === 'TUTOR' && u.username && !def.profiles.some((p) => p.username === u.username)) { db.users.splice(i, 1); changed.push(u); } }
     // Marca y módulos del perfil del negocio: solo rellena lo que falte (no pisa lo que el negocio haya personalizado).
     const st = db.settings.find((x) => x.academyId === A);
     if (st) { if (!st.branding.logoUrl) st.branding.logoUrl = def.logo; }

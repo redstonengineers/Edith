@@ -15,7 +15,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   ok(await p.getByText(/varios negocios/).count() === 1, 'el usuario «director» sin negocio pide elegir negocio');
   // Personal sigue igual
   if (PERSONAL) { await p.locator('input#email').fill('redstonengineers'); await p.locator('input#pw').fill(PERSONAL); await p.getByRole('button', { name: /Entrar/ }).click(); await p.waitForURL(/personal/, { timeout: 8000 }).then(() => ok(true, 'el acceso personal sigue con su propia contraseña'), () => ok(false, 'el acceso personal sigue con su propia contraseña')); }
-  const T = [['atlanta', 'Autoescuela Atlanta', ['Director', 'Secretaría', 'Profesor', 'Alumno', 'Padre'], '#f97316'], ['academia', 'Academia', ['Director', 'Secretaría', 'Profesor', 'Alumno', 'Padre'], '#8b7bff'], ['clinica', 'Clínica', ['Director', 'Recepción', 'Doctor', 'Paciente', 'Familiar'], '#14b8a6']];
+  const T = [['atlanta', 'Autoescuela Atlanta', ['Director', 'Secretaría', 'Profesor', 'Alumno'], '#f97316'], ['academia', 'Academia', ['Director', 'Secretaría', 'Profesor', 'Alumno', 'Padre'], '#8b7bff'], ['clinica', 'Clínica', ['Director', 'Recepción', 'Doctor', 'Paciente', 'Familiar'], '#14b8a6']];
   for (const [slug, card, profiles, color] of T) {
     p = await page(); await p.goto(U + '/login'); await p.getByRole('link', { name: `Entrar en ${card}` }).click(); await p.waitForURL(new RegExp('/acceso/' + slug)); await p.waitForSelector('#u');
     ok(await p.locator('img[alt^="Logo de"]').first().count() === 1, `${slug}: muestra el logo del negocio`);
