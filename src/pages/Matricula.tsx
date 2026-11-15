@@ -12,7 +12,7 @@ const field = 'h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm
 /** Formulario público de solicitud de matrícula de un negocio. Lo rellena cualquiera, sin cuenta: llega a Matrículas como «Solicitud». */
 export default function Matricula() {
   const { key = '' } = useParams(); const [info, setInfo] = useState<PublicApplyInfo | null | undefined>(undefined);
-  const [f, setF] = useState({ name: '', email: '', phone: '', birthDate: '', interest: '', message: '', guardianName: '', guardianPhone: '', consent: false, website: '' });
+  const [f, setF] = useState({ name: '', email: '', phone: '', birthDate: '', interest: '', message: '', guardianName: '', guardianPhone: '', consent: false, whatsappConsent: false, website: '' });
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [sent, setSent] = useState(false); const started = useRef(Date.now());
   useEffect(() => { void loadApplyForm(key).then(setInfo); }, [key]);
   useEffect(() => {
@@ -59,6 +59,7 @@ export default function Matricula() {
             {/* Señuelo anti-spam: invisible para personas. */}
             <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden"><label>No rellenar<input tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => set('website', e.target.value)} /></label></div>
             <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1 size-4 accent-[var(--brand)]" checked={f.consent} onChange={(e) => set('consent', e.target.checked)} /><span>Acepto que <b>{info.name}</b> use mis datos para contactar conmigo y gestionar mi solicitud.</span></label>
+            <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-1 size-4 accent-[var(--brand)]" checked={f.whatsappConsent} onChange={(e) => set('whatsappConsent', e.target.checked)} /><span>Quiero recibir avisos por <b>WhatsApp</b> (citas, cambios, recordatorios). <span className="text-muted">Opcional; puedes retirarlo cuando quieras.</span></span></label>
             {error && <p role="alert" className="text-sm text-bad">{error}</p>}
             <button type="submit" disabled={busy} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-on-brand hover:brightness-110 disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : null}{busy ? 'Enviando…' : 'Enviar solicitud'}</button>
             <p className="flex items-center gap-1.5 text-xs text-muted"><ShieldCheck size={13} aria-hidden />Tus datos solo los verá {info.name}. No se comparten con nadie más.</p>

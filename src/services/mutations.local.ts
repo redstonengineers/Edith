@@ -314,9 +314,11 @@ const upcoming = (iso: string) => iso >= new Date().toISOString().slice(0, 10);
 const splitName = (full: string) => { const [first, ...rest] = full.trim().split(/\s+/); return { firstName: first, lastName: rest.join(' ') || '—' }; };
 
 /** Crea el alumno a partir de datos de un solicitante / lista de espera. Único punto de conversión. */
-function studentFromApplicant(user: User, a: { name: string; email: string; phone: string; birthDate?: string }): Student {
+function studentFromApplicant(user: User, a: { name: string; email: string; phone: string; birthDate?: string; whatsappConsent?: boolean }): Student {
   const { firstName, lastName } = splitName(a.name);
   const s: Student = { academyId: user.academyId, id: newId(user, 'stu'), firstName, lastName, birthDate: a.birthDate || '2000-01-01', email: a.email, phone: a.phone, groupIds: [], status: 'nuevo', enrolledAt: today(), lastActivityAt: new Date().toISOString(), notes: '', avatarHue: Math.floor(Math.random() * 360) };
+  // Solicitud web: si no marcó WhatsApp, los avisos van solo por correo (nunca se le escribe sin permiso).
+  if (a.whatsappConsent !== undefined) s.notifyVia = a.whatsappConsent ? 'ambos' : 'correo';
   getDatabase().students.push(s); return s;
 }
 

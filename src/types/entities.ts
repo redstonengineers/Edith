@@ -147,7 +147,8 @@ export type EnrollmentStatus = 'solicitud' | 'revision' | 'aceptada' | 'matricul
 /** Datos del solicitante mientras aún no existe como alumno. */
 export interface Applicant { name: string; email: string; phone: string; birthDate?: ISODate; course: string; source?: 'web' | 'lista_espera' | 'presencial';
   /** Solicitudes del formulario público: mensaje libre, tutor (si es menor) y cuándo aceptó el tratamiento de datos. */
-  message?: string; guardianName?: string; guardianPhone?: string; consentAt?: ISODate }
+  message?: string; guardianName?: string; guardianPhone?: string; consentAt?: ISODate;
+  /** El solicitante aceptó (casilla aparte, opcional) recibir avisos por WhatsApp. */ whatsappConsent?: boolean }
 export interface Enrollment extends Tenant {
   id: ID; studentId?: ID; applicant?: Applicant; groupId?: ID; status: EnrollmentStatus; createdAt: ISODate; updatedAt: ISODate;
 }

@@ -52,7 +52,7 @@ export function submitPublicApplication(db: Database, key: string, raw: unknown,
   if (dup) return res(false);
   const day = now.toISOString().slice(0, 10);
   const e: Enrollment = { academyId: a.id, id: `${a.id}_enr_w${now.getTime().toString(36)}${Math.random().toString(36).slice(2, 5)}`, status: 'solicitud', createdAt: day, updatedAt: day,
-    applicant: { name: v.name, email: v.email, phone: v.phone, birthDate: v.birthDate || undefined, course: v.interest, source: 'web', message: v.message || undefined, guardianName: minor ? v.guardianName : undefined, guardianPhone: minor ? v.guardianPhone : undefined, consentAt: day } };
+    applicant: { name: v.name, email: v.email, phone: v.phone, birthDate: v.birthDate || undefined, course: v.interest, source: 'web', message: v.message || undefined, guardianName: minor ? v.guardianName : undefined, guardianPhone: minor ? v.guardianPhone : undefined, consentAt: day, whatsappConsent: !!v.whatsappConsent } };
   db.enrollments.push(e);
   db.notifications.unshift({ academyId: a.id, id: `${a.id}_ntf_w${now.getTime().toString(36)}`, title: 'Nueva solicitud de matrícula', body: `${v.name} quiere información sobre «${v.interest}» (formulario web).`, level: 'info', createdAt: now.toISOString(), read: false, href: '/matriculas' });
   db.activity.unshift({ academyId: a.id, id: `${a.id}_act_w${now.getTime().toString(36)}`, at: now.toISOString(), actorId: 'public', actorName: 'Formulario web', action: 'creó', entityType: 'enrollment', entityId: e.id, summary: `Solicitud web de ${v.name}` });

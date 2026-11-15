@@ -102,6 +102,7 @@ export const publicApplySchema = z.object({
   interest: z.string().trim().min(2, 'Indica qué te interesa').max(80), message: z.string().trim().max(500, 'Máximo 500 caracteres').optional().or(z.literal('')),
   guardianName: z.string().trim().max(80).optional().or(z.literal('')), guardianPhone: z.string().trim().max(16).optional().or(z.literal('')),
   consent: z.literal(true, { error: 'Debes aceptar el tratamiento de tus datos' }),
+  /** Consentimiento específico y opcional para avisos por WhatsApp. */ whatsappConsent: z.boolean().optional(),
   /** Señuelo anti-spam: un humano no lo ve ni lo rellena (si llega relleno se descarta en silencio). */ website: z.string().max(300).optional(),
   /** Milisegundos que tardó en rellenarlo (un robot lo envía al instante). */ elapsed: z.number().min(0).max(86_400_000).optional(),
 });

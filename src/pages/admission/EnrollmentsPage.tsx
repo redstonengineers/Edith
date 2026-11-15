@@ -54,7 +54,7 @@ export default function EnrollmentsPage() {
                 {shown.map((e) => (
                   <li key={e.id} className="rounded-lg border border-line bg-surface-2/50 p-3">
                     <p className="text-sm font-medium">{e.studentId ? <Link to={`/alumnos/${e.studentId}`} className="hover:text-brand-text">{enrollmentName(snap, e)}</Link> : enrollmentName(snap, e)}</p>
-                    <p className="text-xs text-muted">{e.applicant?.course ?? snap.groups.find((g) => g.id === e.groupId)?.name ?? ''} · {fmtDate(e.createdAt)}{e.applicant?.source === 'web' && <Badge className="ml-1.5">Web</Badge>}</p>
+                    <p className="text-xs text-muted">{e.applicant?.course ?? snap.groups.find((g) => g.id === e.groupId)?.name ?? ''} · {fmtDate(e.createdAt)}{e.applicant?.source === 'web' && <Badge className="ml-1.5">Web</Badge>}{e.applicant?.whatsappConsent && <Badge className="ml-1.5">WhatsApp ✓</Badge>}</p>
                     {e.applicant?.message && <p className="mt-1 line-clamp-2 text-xs text-muted" title={e.applicant.message}>«{e.applicant.message}»</p>}
                     {e.applicant?.guardianName && <p className="mt-1 text-[11px] text-muted">Tutor: {e.applicant.guardianName} · {e.applicant.guardianPhone}</p>}
                     {write && st.next && (
