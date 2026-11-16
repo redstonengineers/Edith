@@ -41,7 +41,8 @@ function Stage({ compact, view }: { compact?: boolean; view?: 'choose' }) {
     window.addEventListener('pointermove', move, { passive: true });
     return () => { off(); window.removeEventListener('pointermove', move); sc.current?.dispose(); sc.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compact, view]);
+  }, [compact]);
+  useEffect(() => { sc.current?.setView(view); }, [view]);
   useEffect(() => { const t = themeOf(theme); sc.current?.setColors(t.hex, t.hex2); }, [theme]);
   useEffect(() => { sc.current?.setQuality(quality); }, [quality]);
   useEffect(() => { sc.current?.setMotion(motion); }, [motion]);
@@ -57,8 +58,7 @@ function Choose() {
   const { choose, logout } = usePersonal(); const [busy, setBusy] = useState<Profile | null>(null); const [err, setErr] = useState('');
   const go = async (p: Profile) => { setBusy(p); setErr(''); hudBus.emit('think-on'); try { await choose(p); } catch (e) { setErr((e as Error).message); setBusy(null); } finally { hudBus.emit('think-off'); } };
   return (
-    <main className="hud-root">
-      <Stage view="choose" />
+    <main className="hud-root hud-over">
       <div className="absolute inset-x-0 top-[7vh] z-10 text-center" style={{ textShadow: '0 0 10px #000' }}>
         <div className="mb-4 flex justify-center drop-shadow-[0_0_28px_var(--hud)]"><Logo size={84} /></div><h1 className="hud-title text-5xl md:text-6xl">E.D.I.T.H.</h1><p className="hud-sub mt-3">Tu sistema personal</p></div>
       <div className="absolute inset-x-0 bottom-[7vh] z-10 p-4 text-center">
@@ -219,8 +219,7 @@ function Hud() {
   const openMod = (m: Mod) => () => setOpen(m);
   const phoneMode = dev.phone; const W = Math.max(1180, dev.w); const z = dev.w / W; const Hd = z < 1 ? Math.min(dev.h / z, 1000) : dev.h; const top0 = z < 1 ? Math.max(0, (dev.h - Hd * z) / 2) : 0;
   return (
-    <div className={`hud-root ${phoneMode ? 'hud-root-phone' : ''}`} onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon, .ph-tab, .ph-fab')) blip('tick', sound); }}>
-      <Stage compact={phoneMode} />
+    <div className={`hud-root hud-over ${phoneMode ? 'hud-root-phone' : ''}`} onPointerDown={(e) => { if ((e.target as HTMLElement).closest('.hud-btn, .hud-check, .hud-dock button, .hud-icon, .ph-tab, .ph-fab')) blip('tick', sound); }}>
       <AlertStack ctl={alerts} />
       {phoneMode ? (
       <div className="hud-phone">
@@ -323,13 +322,17 @@ function Chat({ profile, inputRef, tall }: { profile: string; inputRef: React.Re
 }
 
 export default function PersonalPage() {
-  const { status, init } = usePersonal(); const dev = useDevice();
+  const { status, init, profile } = usePersonal(); const dev = useDevice();
   useEffect(() => { document.documentElement.classList.toggle('hud-mobile', dev.phone); return () => document.documentElement.classList.remove('hud-mobile'); }, [dev.phone]); const started = useRef(false); const theme = useHud((s) => s.theme);
   useEffect(() => { document.documentElement.classList.add('hud'); document.documentElement.dataset.theme = 'dark'; document.title = 'EDITH · Personal'; return () => { document.documentElement.classList.remove('hud'); clearTheme(); }; }, []);
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { if (!started.current) { started.current = true; void init(); } }, [init]);
-  if (status === 'loading') return <div className="hud-root grid place-items-center"><p className="hud-title text-xl">INICIANDO SISTEMAS…</p></div>;
   if (status === 'anon') return <Navigate to="/login" replace />;
-  if (status === 'choose') return <Choose />;
-  return <Hud />;
+  // Una sola escena 3D para todo el modo personal: pasar de «elegir perfil» a cargar y al HUD no la recrea (antes se desmontaba y parpadeaba en negro al empezar).
+  // Al arrancar, mientras aún no se sabe si hay que elegir perfil, no se monta (evita moverla de sitio).
+  const stage = status !== 'loading' || !!profile;
+  return (<>
+    {stage && <div className="hud-stage-host"><Stage compact={dev.phone} view={status === 'choose' ? 'choose' : undefined} /></div>}
+    {status === 'loading' ? <div className={`hud-root ${stage ? 'hud-over' : ''} grid place-items-center`}><p className="hud-title text-xl">INICIANDO SISTEMAS…</p></div> : status === 'choose' ? <Choose /> : <Hud />}
+  </>);
 }

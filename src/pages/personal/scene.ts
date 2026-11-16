@@ -5,7 +5,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 export interface SceneOpts { quality: 'alta' | 'media' | 'baja'; motion: boolean; hex: string; hex2: string; compact?: boolean; /** Vista de selección de perfil: núcleo más pequeño y bajado. */ view?: 'choose' }
-export interface HudScene { setColors: (a: string, b: string) => void; setQuality: (q: SceneOpts['quality']) => void; setMotion: (m: boolean) => void; pulse: () => void; setThinking: (b: boolean) => void; setSpeaking: (b: boolean) => void; setHover: (on: boolean) => void; dispose: () => void }
+/** Posición y tamaño del núcleo según el dispositivo y la vista (se anima al cambiar de vista, sin recrear la escena). */
+const layoutOf = (compact?: boolean, view?: 'choose') => ({ cs: compact ? .62 : view === 'choose' ? .74 : .8, cy: compact ? 2.75 : view === 'choose' ? -.05 : .3 });
+export interface HudScene { setColors: (a: string, b: string) => void; setQuality: (q: SceneOpts['quality']) => void; setMotion: (m: boolean) => void; pulse: () => void; setThinking: (b: boolean) => void; setSpeaking: (b: boolean) => void; setHover: (on: boolean) => void; setView: (v?: 'choose') => void; dispose: () => void }
 
 const Q = { alta: { stars: 2400, swirl: 1700, dpr: 2, net: 100, tex: 1024, bloom: true }, media: { stars: 1200, swirl: 900, dpr: 1.5, net: 64, tex: 1024, bloom: true }, baja: { stars: 450, swirl: 420, dpr: 1, net: 36, tex: 512, bloom: false } };
 
@@ -110,7 +112,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
   const uni = { uT: { value: 0 }, uE: { value: 0 }, uA: { value: colA }, uB: { value: colB } };
 
   /* ── Núcleo ── */
-  const cs = opts.compact ? .62 : opts.view === 'choose' ? .74 : .8; const cy = opts.compact ? 2.75 : opts.view === 'choose' ? -.05 : .3;
+  let { cs, cy } = layoutOf(opts.compact, opts.view); let tcs = cs; let tcy = cy;
   const coreRoot = new THREE.Group(); coreRoot.position.y = cy; scene.add(coreRoot);
   const core = new THREE.Group(); core.scale.setScalar(cs); coreRoot.add(core);
 
@@ -211,7 +213,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
     if (document.hidden) { clock.getDelta(); return; }
     const raw = clock.getDelta(); const dt = Math.min(raw, .05); const t = clock.elapsedTime; const ts = motion ? 1 : .08;
     /* Si el equipo va justo, se degrada solo: primero sin brillo (bloom), luego con menos resolución. */
-    seen++; if (seen > 8 && degrade < 2 && (raw > .5 || (seen >= 45 && sumDt / 30 > .06))) { degrade++; if (degrade === 1) { bloomBroken = true; buildComposer(); } size(true); seen = 0; sumDt = 0; } else if (seen > 15) { sumDt += raw; if (seen >= 45) { seen = 0; sumDt = 0; } }
+    /* Durante los primeros segundos (compilar shaders, subir texturas) los tirones son normales: no cuentan, para no apagar el brillo al arrancar. */
+    const warm = t > 2.5; seen++; if (warm && seen > 8 && degrade < 2 && (raw > .5 || (seen >= 45 && sumDt / 30 > .06))) { degrade++; if (degrade === 1) { bloomBroken = true; buildComposer(); } size(true); seen = 0; sumDt = 0; } else if (seen > 15) { sumDt += raw; if (seen >= 45) { seen = 0; sumDt = 0; } }
+    cs += (tcs - cs) * Math.min(1, dt * 3); cy += (tcy - cy) * Math.min(1, dt * 3); coreRoot.position.y = cy;
     speed += ((thinking ? 2 : hover ? .2 : 1) - speed) * Math.min(1, dt * 3); energy *= Math.pow(.12, dt);
     voice += ((speaking ? .5 + .18 * Math.sin(t * 3.2) : 0) - voice) * Math.min(1, dt * 3);
     const lvl = Math.max(0, energy * .7 + voice * .5 + (thinking ? .2 : 0)); const k = dt * ts * speed;
@@ -233,6 +237,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOpts): HudScen
 
   return {
     setColors(a, b) { colA.set(a); colB.set(b); mats.forEach((m) => m.m.color.copy(m.role === 'a' ? colA : colB)); paintBg(); },
+    setView(v) { const l = layoutOf(opts.compact, v); tcs = l.cs; tcy = l.cy; },
     setQuality(q) { quality = q; apply(); }, setMotion(m) { motion = m; }, setThinking(b) { thinking = b; }, setSpeaking(b) { speaking = b; }, setHover(on) { hover = on; },
     pulse() { energy = 1; const w = waves[waveI++ % waves.length]; w.t = 0; w.m.visible = true; },
     dispose() {

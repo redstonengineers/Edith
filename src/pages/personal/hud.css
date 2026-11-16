@@ -6,6 +6,9 @@ html.hud {
 }
 html.hud, html.hud body { background: #02060f; }
 .hud-root { position: relative; height: 100dvh; min-height: 560px; color: var(--text); overflow: hidden; background: radial-gradient(1200px 800px at 50% 40%, rgb(var(--h2) / .22), transparent 62%), radial-gradient(800px 600px at 100% 100%, rgb(var(--h) / .12), transparent 60%), #02060f; }
+/* La escena 3D vive detrás de todo el modo personal (una sola, para no recrearla al cambiar de pantalla). */
+.hud-stage-host { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: radial-gradient(1200px 800px at 50% 40%, rgb(var(--h2) / .22), transparent 62%), radial-gradient(800px 600px at 100% 100%, rgb(var(--h) / .12), transparent 60%), #02060f; }
+.hud-over { position: relative; z-index: 1; background: none; }
 .hud-scroll { overflow: auto; height: auto; min-height: 100dvh; }
 .hud-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hud-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgb(0 0 0 / .65) 100%), repeating-linear-gradient(0deg, rgb(var(--h) / .025) 0 1px, transparent 1px 3px); }
