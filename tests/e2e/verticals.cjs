@@ -9,7 +9,7 @@ const CASES = [
   ['Club o escuela deportiva', 'Jugadores', /Nuevo jugador/, '/clases', /Nuevo entrenamiento/],
   ['Escuela infantil y ludoteca', 'Niños', /Nuevo niño/, '/clases', /Nueva actividad/],
   ['Formación profesional', 'Participantes', /Nuevo participante/, '/grupos', /Nueva convocatoria/],
-  ['Náutica, vuelo y conducción especial', 'Alumnos', /Nuevo alumno/, '/clases', /Nueva práctica/],
+  ['Náutica, vuelo y conducción especial', 'Alumnos', /Nuevo alumno/, '/clases', /Nueva clase/],
   ['Adiestramiento canino', 'Perros', /Nuevo perro/, '/clases', /Nueva sesión/],
   ['Peluquería y estética', 'Clientes', /Nuevo cliente/, '/clases', /Nueva cita/],
   ['Talleres y artes', 'Participantes', /Nuevo participante/, '/grupos', /Nuevo taller/],

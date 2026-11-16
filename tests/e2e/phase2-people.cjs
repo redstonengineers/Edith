@@ -38,7 +38,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   // groups: conflict
   await p.goto((process.env.APP_URL || 'http://127.0.0.1:5173') + '/grupos'); await p.waitForSelector('table');
   await p.getByRole('button', { name: 'Nuevo grupo' }).click();
-  await p.locator('[role=dialog] input').first().fill('Prueba conflicto'); await p.getByLabel('Asignatura').selectOption({ index: 1 }); await p.getByLabel('Profesor').selectOption({ index: 1 }); await p.getByLabel('Aula').selectOption({ index: 1 });
+  await p.locator('[role=dialog] input').first().fill('Prueba conflicto'); await p.getByLabel('Asignatura').fill('Asignatura nueva de prueba'); await p.getByLabel('Profesor').selectOption({ index: 1 }); await p.getByLabel('Aula').selectOption({ index: 1 });
   await p.getByLabel('Inicio 1').fill('16:00'); await p.getByLabel('Fin 1').fill('17:30'); // Monday 16:00 = Carlos (Mat A) in Aula 1
   await p.waitForTimeout(200); ok(await p.getByText('CONFLICTO').count() === 1, 'live conflict warning');
   await p.screenshot({ path: out + 'shot-conflict.png' });

@@ -6,12 +6,13 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   await p.goto(U + '/acceso/academia'); await p.waitForSelector('#u'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.locator('main h1').first().waitFor();
   await p.goto(U + '/clases?nuevo=1'); const dlg = p.getByRole('dialog'); await dlg.waitFor();
   const d = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
-  await dlg.getByLabel(/Nombre de la clase/).fill('Curso de recuperación de puntos'); await dlg.getByLabel('Fecha').fill(d); await dlg.getByLabel('Inicio').fill('20:15'); await dlg.getByLabel('Fin').fill('21:15');
+  await dlg.getByLabel(/^Grupo/).fill('Recuperación de puntos · tarde'); await dlg.getByLabel(/Nombre de la clase/).fill('Curso de recuperación de puntos'); await dlg.getByLabel('Fecha').fill(d); await dlg.getByLabel('Inicio').fill('20:15'); await dlg.getByLabel('Fin').fill('21:15');
   await dlg.getByRole('button', { name: 'Guardar' }).click(); await p.getByText('Clase creada').first().waitFor();
   await p.getByPlaceholder(/Buscar/).fill('recuperación'); await p.waitForTimeout(500); ok(await p.getByText('Curso de recuperación de puntos').first().isVisible().catch(() => false), 'la lista de clases muestra el nombre escrito a mano');
   await p.goto(U + '/horarios'); await p.waitForTimeout(800); 
   const snap = await p.evaluate(async () => (await fetch('/api/snapshot', { credentials: 'include' })).json());
   ok(snap.classes.some((c) => c.topic === 'Curso de recuperación de puntos'), 'el servidor guarda el nombre');
+  ok(snap.groups.some((g) => g.name === 'Recuperación de puntos · tarde'), 'el grupo escrito a mano se crea al guardar la clase');
   await p.goto(U + '/incidencias?nuevo=1'); const d2 = p.getByRole('dialog'); await d2.waitFor().catch(() => {});
   if (await d2.count()) { await d2.getByLabel('Tipo').fill('Curso de recuperación'); ok(await d2.getByLabel('Tipo').inputValue() === 'Curso de recuperación', 'el tipo de incidencia admite texto libre'); }
   ok(errs.length === 0, 'sin errores JS ' + errs.join('|')); console.log(fails ? fails + ' FALLOS' : 'TODO OK'); await b.close(); process.exit(fails ? 1 : 0);

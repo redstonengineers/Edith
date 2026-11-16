@@ -12,6 +12,7 @@ export const createTeacher = ((_user: unknown, ...args: unknown[]) => rpc('creat
 export const updateTeacher = ((_user: unknown, ...args: unknown[]) => rpc('updateTeacher', args)) as unknown as typeof L.updateTeacher;
 export const createGroup = ((_user: unknown, ...args: unknown[]) => rpc('createGroup', args)) as unknown as typeof L.createGroup;
 export const updateGroup = ((_user: unknown, ...args: unknown[]) => rpc('updateGroup', args)) as unknown as typeof L.updateGroup;
+export const createQuickGroup = ((_user: unknown, ...args: unknown[]) => rpc('createQuickGroup', args)) as unknown as typeof L.createQuickGroup;
 export const createSubject = ((_user: unknown, ...args: unknown[]) => rpc('createSubject', args)) as unknown as typeof L.createSubject;
 export const updateSubject = ((_user: unknown, ...args: unknown[]) => rpc('updateSubject', args)) as unknown as typeof L.updateSubject;
 export const deleteSubject = ((_user: unknown, ...args: unknown[]) => rpc('deleteSubject', args)) as unknown as typeof L.deleteSubject;

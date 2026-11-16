@@ -8,12 +8,14 @@ import { useAction, useLabels, useSnapshot, useUser } from '@/hooks';
 import { DAYS, groupConflicts } from '@/lib/conflicts';
 import { fieldErrors, groupSchema } from '@/lib/schemas';
 import { fullName } from '@/lib/people';
-import { createGroup, updateGroup } from '@/services/mutations';
+import { createGroup, createSubject, updateGroup } from '@/services/mutations';
 import type { Group, ScheduleSlot } from '@/types';
 
 export function GroupForm({ open, onClose, group, onCreated }: { open: boolean; onClose: () => void; group?: Group; onCreated?: (id: string) => void }) {
   const snap = useSnapshot(); const user = useUser(); const L = useLabels(); const run = useAction();
   const [f, setF] = useState({ name: group?.name ?? '', subjectId: group?.subjectId ?? '', teacherId: group?.teacherId ?? '', classroomId: group?.classroomId ?? '', capacity: String(group?.capacity ?? 10) });
+  const [subjectName, setSubjectName] = useState(snap.subjects.find((s) => s.id === group?.subjectId)?.name ?? '');
+  const findSubject = (n: string) => snap.subjects.find((s) => s.name.trim().toLowerCase() === n.trim().toLowerCase());
   const [slots, setSlots] = useState<ScheduleSlot[]>(group?.slots ?? [{ weekday: 1, start: '17:00', end: '18:30' }]);
   const [err, setErr] = useState<Record<string, string>>({}); const [top, setTop] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
@@ -27,10 +29,14 @@ export function GroupForm({ open, onClose, group, onCreated }: { open: boolean; 
 
   const submit = async () => {
     setTop(null);
-    const p = groupSchema.safeParse({ ...f, slots });
+    const p = groupSchema.safeParse({ ...f, subjectId: findSubject(subjectName)?.id ?? (subjectName.trim() ? 'nuevo' : ''), slots });
     if (!p.success) return setErr(fieldErrors(p.error));
     setErr({});
     try {
+      if (!findSubject(subjectName)) {
+        const nm = subjectName.trim(); const code = (nm.normalize('NFD').replace(/[^A-Za-z0-9]/g, '').slice(0, 4) || 'GEN').toUpperCase().padEnd(2, 'X');
+        const sj = await run(() => createSubject(user, { name: nm, code, color: '#8b7bff' }), `${L.subject.singular} creado`); if (!sj) return; p.data.subjectId = (sj as { id: string }).id;
+      }
       const r = group ? await run(() => updateGroup(user, group.id, p.data), `${L.group.singular} actualizado`) : await run(() => createGroup(user, p.data), `${L.group.singular} creado`);
       if (r) { onClose(); if (!group) onCreated?.((r as Group).id); }
     } catch (e) { setTop((e as Error).message); }
@@ -39,7 +45,7 @@ export function GroupForm({ open, onClose, group, onCreated }: { open: boolean; 
     <FormModal open={open} onClose={onClose} title={group ? `Editar ${L.group.singular.toLowerCase()}` : `${nuevo(L.group)}`} onSubmit={submit} error={top} wide>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre" required error={err.name} className="sm:col-span-2">{(p) => <Input {...p} data-autofocus value={f.name} onChange={set('name')} placeholder="Inglés B2 · Grupo A" />}</Field>
-        <Field label={L.subject.singular} required error={err.subjectId}>{(p) => <Select {...p} value={f.subjectId} onChange={set('subjectId')}><option value="">Seleccionar…</option>{snap.subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>}</Field>
+        <Field label={L.subject.singular} required error={err.subjectId} hint={subjectName.trim() && !findSubject(subjectName) ? `«${subjectName.trim()}» es nuevo: se creará al guardar.` : 'Elige uno existente o escribe uno nuevo.'}>{(p) => <><Input {...p} list="group-subjects" value={subjectName} onChange={(e) => setSubjectName(e.target.value)} maxLength={80} autoComplete="off" /><datalist id="group-subjects">{snap.subjects.map((s) => <option key={s.id} value={s.name} />)}</datalist></>}</Field>
         <Field label={L.teacher.singular} required error={err.teacherId}>{(p) => <Select {...p} value={f.teacherId} onChange={set('teacherId')}><option value="">Seleccionar…</option>{snap.teachers.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}</Select>}</Field>
         <Field label={L.classroom.singular} required error={err.classroomId}>{(p) => <Select {...p} value={f.classroomId} onChange={set('classroomId')}><option value="">Seleccionar…</option>{snap.classrooms.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.capacity})</option>)}</Select>}</Field>
         <Field label="Capacidad" required error={err.capacity}>{(p) => <Input {...p} type="number" min={1} value={f.capacity} onChange={set('capacity')} />}</Field>

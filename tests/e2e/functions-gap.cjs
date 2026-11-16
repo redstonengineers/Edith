@@ -44,7 +44,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
 
   // Grupos: capacidad
   await go('/grupos'); await p.getByRole('button', { name: 'Nuevo grupo' }).click(); await save(); ok(await dlg().locator('[role=alert]').count() >= 1, 'grupo: validación');
-  await f(/^Nombre/).fill('Taller de Prueba'); await dlg().getByLabel(/Asignatura/).selectOption({ index: 1 }); await last(/Profesor/); await last(/Aula/); await f(/Capacidad/).fill('2'); await save(); if (await dlg().count()) console.log('   (diálogo grupo)', (await dlg().locator('[role=alert]').allInnerTexts()).join(' / ').replace(/\n+/g, ' ').slice(0, 220));
+  await f(/^Nombre/).fill('Taller de Prueba'); await dlg().getByLabel(/Asignatura/).fill('Asignatura nueva de prueba'); await last(/Profesor/); await last(/Aula/); await f(/Capacidad/).fill('2'); await save(); if (await dlg().count()) console.log('   (diálogo grupo)', (await dlg().locator('[role=alert]').allInnerTexts()).join(' / ').replace(/\n+/g, ' ').slice(0, 220));
   await p.waitForURL(/\/grupos\/.+/, { timeout: 6000 }).catch(() => {}); await p.getByText('Taller de Prueba').first().waitFor({ timeout: 4000 }).catch(() => {}); ok(/\/grupos\/.+/.test(p.url()) && await p.getByText('Taller de Prueba').count() >= 1, 'grupo creado y abre su ficha');
 
   // Exámenes + notas

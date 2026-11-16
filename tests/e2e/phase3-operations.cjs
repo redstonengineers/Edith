@@ -29,7 +29,7 @@ const U = process.env.APP_URL || 'http://127.0.0.1:5173';
   // create by clicking empty slot
   await p.locator('[role=group][aria-label^="viernes"]').click({ position: { x: 20, y: (20 - 7) * 56 + 5 } });
   await p.waitForSelector('[role=dialog]'); ok(await p.getByLabel('Inicio').inputValue() === '20:00', 'click slot prefilled 20:00');
-  await p.getByRole('button', { name: 'Guardar' }).click(); await p.waitForTimeout(500); ok(await p.locator('[role=dialog]').count() === 0, 'class created from slot');
+  await p.getByLabel(/^Grupo/).fill('Matemáticas ESO · Grupo A'); await p.getByRole('button', { name: 'Guardar' }).click(); await p.waitForTimeout(500); ok(await p.locator('[role=dialog]').count() === 0, 'class created from slot');
   // open class, duplicate then cancel
   await p.locator('[role=group][aria-label^="sábado"] button').first().click(); await p.waitForSelector('[role=dialog]');
   await p.getByRole('button', { name: 'Cancelar clase' }).click(); await p.getByRole('button', { name: 'Cancelar clase' }).last().click(); await p.waitForTimeout(500);

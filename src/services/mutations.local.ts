@@ -132,6 +132,17 @@ export function updateGroup(user: User, id: ID, input: GroupInput) {
 }
 
 // ───────── Asignaturas ─────────
+/** Grupo creado al vuelo al escribir su nombre al programar una clase: sin horario semanal fijo, así que no choca con nada. */
+export function createQuickGroup(user: User, name: string, teacherId: ID, classroomId: ID): Group {
+  need(user, 'groups:write'); const db = getDatabase(); const clean = name.trim().replace(/\s+/g, ' ');
+  const dup = db.groups.find((g) => g.academyId === user.academyId && g.name.toLowerCase() === clean.toLowerCase()); if (dup) return done(dup);
+  own(user, db.teachers.find((x) => x.id === teacherId), 'Profesor'); const room = own(user, db.classrooms.find((x) => x.id === classroomId), 'Aula');
+  let subject = db.subjects.find((s) => s.academyId === user.academyId);
+  if (!subject) { subject = { academyId: user.academyId, id: newId(user, 'sub'), name: 'General', code: 'GEN', color: '#8b7bff' }; db.subjects.push(subject); }
+  const g: Group = { academyId: user.academyId, id: newId(user, 'grp'), name: clean, subjectId: subject.id, teacherId, classroomId, capacity: room.capacity || 20, slots: [], active: true };
+  db.groups.push(g); logActivity(user, 'creó', 'group', `${user.name} creó el grupo ${g.name}`, g.id);
+  return done(g);
+}
 export function createSubject(user: User, input: SubjectInput): Subject {
   need(user, 'subjects:write');
   const s: Subject = { academyId: user.academyId, id: newId(user, 'sub'), ...input };

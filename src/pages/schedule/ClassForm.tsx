@@ -10,7 +10,7 @@ import { useAction, useCan, useLabels, useSnapshot, useUser } from '@/hooks';
 import { classSchema, fieldErrors } from '@/lib/schemas';
 import { sessionConflicts, type Names } from '@/lib/classes';
 import { fullName } from '@/lib/people';
-import { cancelClass, createClass, duplicateClass, updateClass } from '@/services/mutations';
+import { cancelClass, createClass, createQuickGroup, duplicateClass, updateClass } from '@/services/mutations';
 import type { ClassSession } from '@/types';
 import { format, addDays, parseISO } from 'date-fns';
 
@@ -28,21 +28,28 @@ export function useNames(): Names {
 export function ClassForm({ open, onClose, session, defaults }: { open: boolean; onClose: () => void; session?: ClassSession; defaults?: ClassDefaults }) {
   const snap = useSnapshot(); const user = useUser(); const L = useLabels(); const can = useCan(); const run = useAction(); const names = useNames();
   const write = can('classes:write');
-  const firstGroup = snap.groups.find((g) => g.id === defaults?.groupId) ?? snap.groups.find((g) => g.active);
+  const firstGroup = snap.groups.find((g) => g.id === (session?.groupId ?? defaults?.groupId));
+  const [groupName, setGroupName] = useState(firstGroup?.name ?? '');
   const [f, setF] = useState({
-    groupId: session?.groupId ?? firstGroup?.id ?? '', teacherId: session?.teacherId ?? firstGroup?.teacherId ?? '', classroomId: session?.classroomId ?? firstGroup?.classroomId ?? '',
+    groupId: session?.groupId ?? firstGroup?.id ?? '', teacherId: session?.teacherId ?? firstGroup?.teacherId ?? snap.teachers.find((t) => t.active)?.id ?? '', classroomId: session?.classroomId ?? firstGroup?.classroomId ?? snap.classrooms[0]?.id ?? '',
     date: session?.date ?? defaults?.date ?? format(new Date(), 'yyyy-MM-dd'), start: session?.start ?? defaults?.start ?? '17:00', end: session?.end ?? (defaults?.start ? addMin(defaults.start, 90) : '18:30'), topic: session?.topic ?? '',
   });
   const [err, setErr] = useState<Record<string, string>>({}); const [top, setTop] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false); const [dupDate, setDupDate] = useState(format(addDays(parseISO(f.date), 7), 'yyyy-MM-dd'));
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
-  const onGroup = (id: string) => { const g = snap.groups.find((x) => x.id === id); setF((x) => ({ ...x, groupId: id, teacherId: g?.teacherId ?? x.teacherId, classroomId: g?.classroomId ?? x.classroomId })); };
+  const findGroup = (name: string) => snap.groups.find((g) => g.active && g.name.trim().toLowerCase() === name.trim().toLowerCase());
+  const onGroup = (name: string) => { setGroupName(name); const g = findGroup(name); setF((x) => ({ ...x, groupId: g?.id ?? '', teacherId: g?.teacherId ?? x.teacherId, classroomId: g?.classroomId ?? x.classroomId })); };
+  const isNewGroup = groupName.trim().length > 0 && !findGroup(groupName);
 
   const conflicts = useMemo(() => (f.groupId && f.teacherId && f.classroomId && f.start < f.end ? sessionConflicts({ id: session?.id ?? 'new', ...f }, snap.classes, names) : []), [f, snap.classes, names, session?.id]);
 
   const submit = async () => {
-    setTop(null); const p = classSchema.safeParse(f); if (!p.success) return setErr(fieldErrors(p.error)); setErr({});
-    try { const r = session ? await run(() => updateClass(user, session.id, p.data), 'Clase actualizada') : await run(() => createClass(user, p.data), 'Clase creada'); if (r) onClose(); } catch (e) { setTop((e as Error).message); }
+    setTop(null); if (!groupName.trim()) return setErr({ groupId: `Escribe o elige un ${L.group.singular.toLowerCase()}` });
+    const p = classSchema.safeParse({ ...f, groupId: f.groupId || 'nuevo' }); if (!p.success) return setErr(fieldErrors(p.error)); setErr({});
+    try {
+      if (!f.groupId) { const g = await run(() => createQuickGroup(user, groupName, f.teacherId, f.classroomId), 'Grupo creado'); if (!g) return; p.data.groupId = (g as { id: string }).id; }
+      const r = session ? await run(() => updateClass(user, session.id, p.data), 'Clase actualizada') : await run(() => createClass(user, p.data), 'Clase creada'); if (r) onClose();
+    } catch (e) { setTop((e as Error).message); }
   };
   const title = session ? `${session.status === 'cancelada' ? 'Clase cancelada' : 'Editar'} ${L.class.singular.toLowerCase()}` : `${nuevo(L.class)}`;
   return (
@@ -51,7 +58,7 @@ export function ClassForm({ open, onClose, session, defaults }: { open: boolean;
         <fieldset disabled={!write || session?.status === 'cancelada'} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre de la clase (opcional)" hint="Escríbelo tú: aparece en el calendario, la lista y los avisos en lugar del nombre del grupo." className="sm:col-span-2" error={err.topic}>{(p) => <Input {...p} data-autofocus value={f.topic} onChange={set('topic')} maxLength={120} placeholder="Ej. Curso de recuperación de puntos" />}</Field>
-            <Field label={`${L.group.singular} (quién asiste)`} required error={err.groupId} className="sm:col-span-2">{(p) => <Select {...p} value={f.groupId} onChange={(e) => onGroup(e.target.value)}><option value="">Seleccionar…</option>{snap.groups.filter((g) => g.active).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select>}</Field>
+            <Field label={`${L.group.singular} (quién asiste)`} required error={err.groupId} className="sm:col-span-2" hint={isNewGroup ? `«${groupName.trim()}» es nuevo: se creará al guardar la clase.` : 'Elige uno existente o escribe el nombre de uno nuevo.'}>{(p) => <><Input {...p} list="class-groups" value={groupName} onChange={(e) => onGroup(e.target.value)} maxLength={80} placeholder="Ej. Curso de recuperación de puntos" autoComplete="off" /><datalist id="class-groups">{snap.groups.filter((g) => g.active).map((g) => <option key={g.id} value={g.name} />)}</datalist></>}</Field>
             <Field label="Fecha" required error={err.date}>{(p) => <Input {...p} type="date" value={f.date} onChange={set('date')} />}</Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Inicio" required error={err.start}>{(p) => <Input {...p} type="time" value={f.start} onChange={set('start')} />}</Field>

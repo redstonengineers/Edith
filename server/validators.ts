@@ -27,6 +27,7 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   createTeacher: z.tuple([teacherSchema]),
   updateTeacher: z.tuple([id, teacherSchema.partial().extend({ active: z.boolean().optional() })]),
   createGroup: z.tuple([groupSchema]), updateGroup: z.tuple([id, groupSchema]),
+  createQuickGroup: z.tuple([z.string().trim().min(2).max(80), id, id]),
   createSubject: z.tuple([subjectSchema]), updateSubject: z.tuple([id, subjectSchema]), deleteSubject: z.tuple([id]),
   createClass: z.tuple([classSchema]), updateClass: z.tuple([id, classSchema]), cancelClass: z.tuple([id, z.boolean().optional()]), duplicateClass: z.tuple([id, day]),
   setAttendance: z.tuple([id, id, z.enum(['presente', 'ausente', 'retraso', 'justificado']).nullable()]), markAllPresent: z.tuple([id, z.array(id).max(500)]),
