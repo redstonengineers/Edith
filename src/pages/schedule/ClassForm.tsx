@@ -37,7 +37,7 @@ export function ClassForm({ open, onClose, session, defaults }: { open: boolean;
   const [err, setErr] = useState<Record<string, string>>({}); const [top, setTop] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false); const [dupDate, setDupDate] = useState(format(addDays(parseISO(f.date), 7), 'yyyy-MM-dd'));
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
-  const findGroup = (name: string) => snap.groups.find((g) => g.active && g.name.trim().toLowerCase() === name.trim().toLowerCase());
+  const findGroup = (name: string) => { const n = name.trim().toLowerCase(); return snap.groups.find((g) => g.active && g.name.trim().toLowerCase() === n) ?? snap.groups.find((g) => g.name.trim().toLowerCase() === n); };
   const onGroup = (name: string) => { setGroupName(name); const g = findGroup(name); setF((x) => ({ ...x, groupId: g?.id ?? '', teacherId: g?.teacherId ?? x.teacherId, classroomId: g?.classroomId ?? x.classroomId })); };
   const isNewGroup = groupName.trim().length > 0 && !findGroup(groupName);
 

@@ -34,6 +34,7 @@ export function GroupForm({ open, onClose, group, onCreated }: { open: boolean; 
     setErr({});
     try {
       if (!findSubject(subjectName)) {
+        if (conflicts.length) return setTop(`Conflicto de horario: ${conflicts.map((c) => c.message).join(' ')}`);
         const nm = subjectName.trim(); const code = (nm.normalize('NFD').replace(/[^A-Za-z0-9]/g, '').slice(0, 4) || 'GEN').toUpperCase().padEnd(2, 'X');
         const sj = await run(() => createSubject(user, { name: nm, code, color: '#8b7bff' }), `${L.subject.singular} creado`); if (!sj) return; p.data.subjectId = (sj as { id: string }).id;
       }
