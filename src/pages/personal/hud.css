@@ -174,3 +174,8 @@ textarea.hud-input { height: auto; }
 .more-tile { display: grid; justify-items: center; gap: 8px; padding: 18px 6px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(160deg, rgb(var(--h) / .1), rgb(4 12 24 / .8)); color: var(--text); font-size: 12px; text-align: center; transition: transform .2s var(--spring, ease), border-color .2s; } .more-tile svg { color: var(--hud); } .more-tile:active { transform: scale(.94); border-color: var(--hud); }
 html.hud-mobile .hud-input { font-size: 16px; height: 44px; } html.hud-mobile .hud-btn { height: 44px; } html.hud-mobile .hud-icon { width: 40px; height: 40px; } html.hud-mobile .hud-check { width: 22px; height: 22px; }
 html.hud-mobile textarea.hud-input { height: auto; }
+
+/* Tarjeta «Clientes» de la pantalla principal: al desplegarla, la lista se desplaza dentro de la tarjeta. */
+.clients-card { background: rgb(3 10 20 / .93); backdrop-filter: blur(10px); }
+.clients-card .clients-card-body { max-height: 30vh; overflow-y: auto; padding-right: 4px; }
+.hud-mid > .clients-card { flex: 0 0 auto; }
