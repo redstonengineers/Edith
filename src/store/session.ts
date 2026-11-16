@@ -15,7 +15,7 @@ interface SessionState {
   data: Snapshot | null;
   dataError: string | null;
   init(): Promise<void>;
-  signIn(email: string, password: string, academy?: string): Promise<void>;
+  signIn(email: string, password: string, academy?: string, remember?: boolean): Promise<void>;
   signOut(): Promise<void>;
   reload(): Promise<void>;
 }
@@ -36,8 +36,8 @@ export const useSession = create<SessionState>((set, get) => ({
     try { set({ status: 'auth', user, data: await hydrate(user), dataError: null }); void syncOutbox(); }
     catch (e) { set({ status: 'auth', user, data: null, dataError: (e as Error).message }); }
   },
-  async signIn(email, password, academy) {
-    const user = await authProvider.signIn(email, password, academy);
+  async signIn(email, password, academy, remember) {
+    const user = await authProvider.signIn(email, password, academy, remember);
     if (!IS_API) logActivity(user, 'inició sesión', 'session', `${user.name} inició sesión`);
     set({ status: 'auth', user, data: await hydrate(user), dataError: null }); void syncOutbox();
   },

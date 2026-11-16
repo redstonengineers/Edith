@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RememberMe, useRemember } from '@/components/domain/RememberMe';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { StatusIndicator } from '@/components/ui/primitives';
@@ -10,7 +11,7 @@ import { useSession } from '@/store/session';
 /** Acceso personalizado de un negocio: su logo, sus colores y sus perfiles (director, profesor, paciente…). */
 export default function AccesoNegocio() {
   const { slug = '' } = useParams(); const { status, signIn } = useSession(); const navigate = useNavigate();
-  const [tenants, setTenants] = useState<PublicTenant[] | null>(null); const [user, setUser] = useState(''); const [password, setPassword] = useState('demo'); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const [tenants, setTenants] = useState<PublicTenant[] | null>(null); const [user, setUser] = useState(''); const [password, setPassword] = useState('demo'); const [error, setError] = useState(''); const [remember, setRemember] = useRemember(); const [busy, setBusy] = useState(false);
   useEffect(() => { void listTenants().then(setTenants); }, []);
   const t = tenants?.find((x) => x.slug === slug);
   useEffect(() => {
@@ -23,7 +24,7 @@ export default function AccesoNegocio() {
 
   const submit = async (u = user, p = password) => {
     setBusy(true); setError('');
-    try { await signIn(u.trim(), p, t.slug); navigate('/', { replace: true }); } catch (e) { setError((e as Error).message); setBusy(false); }
+    try { await signIn(u.trim(), p, t.slug, remember); navigate('/', { replace: true }); } catch (e) { setError((e as Error).message); setBusy(false); }
   };
   return (
     <div className="ambient grid min-h-full lg:grid-cols-[1.1fr_1fr]">
@@ -51,6 +52,7 @@ export default function AccesoNegocio() {
             <div><label htmlFor="u" className="mb-1.5 block text-sm font-medium">Usuario</label><input id="u" type="text" autoCapitalize="none" spellCheck={false} autoComplete="username" required value={user} onChange={(e) => setUser(e.target.value)} placeholder={t.profiles[0].username} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
             <div><label htmlFor="p" className="mb-1.5 block text-sm font-medium">Contraseña</label><input id="p" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
             {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+            <RememberMe checked={remember} onChange={setRemember} />
             <button type="submit" disabled={busy || !user || !password} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-on-brand hover:brightness-110 disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <>Entrar<ArrowRight size={16} aria-hidden /></>}</button>
           </form>
         </div>

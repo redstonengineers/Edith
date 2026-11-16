@@ -71,5 +71,5 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
 export const onboardingBody = onboardingSchema.extend({
   type: academyType, logoUrl: dataUrl.optional(), modules: z.array(z.enum(moduleIds)).max(60), primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
-export const loginBody = z.object({ email: z.string().min(1).max(200), password: z.string().min(1).max(200), academy: z.string().regex(/^[a-z0-9-]{1,40}$/).optional() });
+export const loginBody = z.object({ email: z.string().min(1).max(200), password: z.string().min(1).max(200), academy: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(), remember: z.boolean().optional() });
 export const aiBody = z.object({ question: z.string().min(1).max(400), history: z.array(z.object({ role: z.enum(['user', 'ai']), text: z.string().max(500) })).max(20).optional() });

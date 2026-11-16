@@ -21,6 +21,8 @@ export const config = {
   /** Cookie Secure: por defecto activa en producción (requiere HTTPS). */
   cookieSecure: process.env.COOKIE_SECURE !== undefined ? bool(process.env.COOKIE_SECURE) : process.env.NODE_ENV === 'production',
   sessionHours: Number(process.env.SESSION_HOURS ?? 12),
+  /** Duración de la sesión cuando la persona marca «mantener la sesión iniciada». */
+  rememberDays: Number(process.env.REMEMBER_DAYS ?? 30),
   bootstrapEmail: process.env.BOOTSTRAP_ADMIN_EMAIL,
   bootstrapPassword: process.env.BOOTSTRAP_ADMIN_PASSWORD,
   /** Detrás de un proxy inverso confiable (nginx, Caddy…) para leer la IP real. */

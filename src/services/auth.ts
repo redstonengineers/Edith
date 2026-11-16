@@ -6,7 +6,7 @@ import { clearOfflineCache, get, OfflineError, post } from './http';
 import { publicTenants, type PublicTenant } from '@/data/tenants';
 
 export interface AuthProvider {
-  signIn(email: string, password: string, academy?: string): Promise<User>;
+  signIn(email: string, password: string, academy?: string, remember?: boolean): Promise<User>;
   signOut(): Promise<void>;
   restore(): Promise<User | null>;
 }
@@ -45,7 +45,7 @@ export const mockAuth: AuthProvider = {
 
 /** Sesión real: el servidor emite una cookie httpOnly; el navegador nunca ve el token. */
 export const httpAuth: AuthProvider = {
-  async signIn(email, password, academy) { const { user } = await post<{ user: User }>('/auth/login', { email, password, ...(academy ? { academy } : {}) }); await clearOfflineCache(); return user; },
+  async signIn(email, password, academy, remember) { const { user } = await post<{ user: User }>('/auth/login', { email, password, ...(academy ? { academy } : {}), ...(remember ? { remember: true } : {}) }); await clearOfflineCache(); return user; },
   async signOut() { try { await post('/auth/logout'); } catch (e) { if (!(e instanceof OfflineError)) throw e; } await clearOfflineCache(); },
   async restore() { try { return (await get<{ user: User | null }>('/auth/me')).user; } catch { return null; } },
 };

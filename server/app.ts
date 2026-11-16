@@ -77,10 +77,11 @@ export function buildApp(store: Store) {
     });
   }
 
-  const startSession = (reply: FastifyReply, u: User) => {
-    const token = randomBytes(32).toString('base64url'); const exp = Date.now() + config.sessionHours * 3_600_000;
+  const startSession = (reply: FastifyReply, u: User, remember = false) => {
+    const hours = remember ? config.rememberDays * 24 : config.sessionHours;
+    const token = randomBytes(32).toString('base64url'); const exp = Date.now() + hours * 3_600_000;
     store.saveSession(sha(token), u.id, u.academyId, exp);
-    reply.setCookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, path: '/', maxAge: config.sessionHours * 3600 });
+    reply.setCookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, path: '/', maxAge: hours * 3600 });
   };
 
   /** Usuario autenticado desde la cookie; se revalida en cada petición (cuenta activa, academia activa). */
@@ -146,7 +147,7 @@ export function buildApp(store: Store) {
       if (u.disabled) return fail(reply, 403, 'Tu cuenta está desactivada. Contacta con el administrador.');
       const a = db.academies.find((x) => x.id === u.academyId);
       if (!a || (a.status !== 'active' && u.role !== 'SUPER_ADMIN')) return fail(reply, 403, 'Esta academia está suspendida. Contacta con soporte.');
-      startSession(reply, u); logActivity(u, 'inició sesión', 'session', `${u.name} inició sesión`); flush();
+      startSession(reply, u, !!p.data.remember); logActivity(u, 'inició sesión', 'session', `${u.name} inició sesión`); flush();
       return { user: publicUser(u) };
     });
   });
