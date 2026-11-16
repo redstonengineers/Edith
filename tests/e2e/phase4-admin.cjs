@@ -54,7 +54,7 @@ const U = process.env.APP_URL || 'http://127.0.0.1:5173';
   await p.keyboard.press('Escape');
   // ── incidents
   await p.goto(U + '/incidencias?nuevo=1'); await p.waitForSelector('[role=dialog]');
-  await p.locator('[role=dialog] input').first().fill('Fuga de agua en aseos'); await p.locator('[role=dialog] select').nth(0).selectOption('Instalaciones'); await p.locator('[role=dialog] select').nth(1).selectOption('critica'); await p.locator('[role=dialog] textarea').fill('Hay una fuga en la planta baja.');
+  await p.locator('[role=dialog] input').first().fill('Fuga de agua en aseos'); await p.getByLabel('Tipo').fill('Instalaciones'); await p.getByLabel('Prioridad').selectOption('critica'); await p.locator('[role=dialog] textarea').fill('Hay una fuga en la planta baja.');
   await p.getByRole('button', { name: 'Guardar' }).click(); await p.waitForURL(/\/incidencias\/.+/);
   const incUrl = p.url(); await p.getByRole('button', { name: 'En proceso' }).click(); await p.waitForTimeout(300); ok(await p.getByRole('button', { name: 'En proceso' }).getAttribute('aria-current') === 'step', 'incident → en proceso');
   await p.getByRole('button', { name: /Resolver/ }).click(); await p.waitForTimeout(300); ok(await p.getByRole('button', { name: 'Resuelto' }).getAttribute('aria-current') === 'step', 'incident resolved');
