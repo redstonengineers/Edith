@@ -12,18 +12,14 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   await p.getByRole('button', { name: /Entrar como Gazael/ }).click(); await p.waitForSelector('.hud-cols');
   const list = async () => (await ctx.request.get(U + '/api/personal/clients')).json();
   const first = await list(); ok(first.clients.length >= 1 && !JSON.stringify(first).includes('@'), `la API lista ${first.clients.length} negocio(s) sin datos personales`);
-  // Tarjeta grande en la pantalla principal: resumen siempre visible, lista al desplegar, se recuerda
-  const card = p.locator('.clients-card'); await card.waitFor();
-  ok(await card.getByText('Clientes activos').count() === 1 && await card.getByText('Ingreso mensual').count() === 1, 'tarjeta «Clientes» en la pantalla principal con resumen');
-  ok(await card.getByRole('list', { name: 'Clientes' }).count() === 0, 'la tarjeta empieza minimizada');
-  await card.getByRole('button', { name: 'Desplegar clientes' }).click(); await card.getByRole('list', { name: 'Clientes' }).waitFor();
-  ok(await card.getByRole('list', { name: 'Clientes' }).locator('li').count() === first.clients.length, 'desplegada: lista todos los clientes');
-  await p.reload(); await p.locator('.clients-card').waitFor(); await p.locator('.clients-card').getByRole('list', { name: 'Clientes' }).waitFor(); ok(true, 'la tarjeta recuerda que estaba desplegada');
+  // Botón «CLIENTES» sobre el núcleo abre el panel maestro
+  const cb = p.getByRole('button', { name: 'Abrir panel de control de clientes' }); await cb.waitFor();
+  ok(await p.locator('.clients-card').count() === 0, 'ya no hay tarjeta que tape el núcleo');
+  await cb.click(); await p.getByRole('list', { name: 'Clientes' }).waitFor(); ok(true, 'tocar CLIENTES en el núcleo abre el panel maestro');
   const cid = first.clients[0].id; const target = first.clients[0].plan === 'premium' ? 'basic' : 'premium';
-  await p.locator('.clients-card').getByLabel(/^Plan de /).first().selectOption(target); await p.locator('.clients-card').getByText(/: plan /).waitFor();
-  ok((await list()).clients.find((c) => c.id === cid).plan === target, 'cambiar el plan desde la tarjeta funciona');
-  await p.locator('.clients-card').getByRole('button', { name: 'Minimizar clientes' }).click(); ok(await p.locator('.clients-card').getByRole('list', { name: 'Clientes' }).count() === 0, 'minimizar oculta la lista y deja el resumen');
-  await p.locator('.clients-card').getByRole('button', { name: 'Abrir Clientes' }).click(); await p.getByRole('list', { name: 'Clientes' }).waitFor(); ok(true, 'el botón + de la tarjeta abre el panel completo'); await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  await p.getByRole('dialog').getByLabel(/^Plan de /).first().selectOption(target); await p.getByText(/: plan /).waitFor();
+  ok((await list()).clients.find((c) => c.id === cid).plan === target, 'cambiar el plan desde el panel funciona');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400);
   await p.locator('nav[aria-label="Módulos"]').getByRole('button', { name: 'Clientes' }).click(); await p.getByRole('list', { name: 'Clientes' }).waitFor();
   ok(await p.getByRole('dialog').getByText('Clientes activos').count() === 1 && await p.getByRole('dialog').getByText('Ingreso mensual').count() === 1, 'panel de clientes con resumen');
 

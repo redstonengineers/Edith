@@ -9,7 +9,7 @@ import { PROFILES, uid, usePersonal, type Profile } from '@/store/personal';
 import { personalApi } from '@/services/personalApi';
 import { AddForm, Bar, Empty, F, Panel, Row, eur, todayISO, useDevice } from './shared';
 import { AlertStack, FinancePanel, Money, RemindersPanel, Reminders, AgendaCal, CalendarPanel, monthStats, useReminderAlerts } from './life';
-import { Clients, ClientsCard } from './clients';
+import { Clients } from './clients';
 import { Schedule, SchedulePanel, classesOn, mins } from './timetable';
 import { createScene, type HudScene } from './scene';
 import { THEMES, applyTheme, clearTheme, themeOf, useHud, type Quality } from './themes';
@@ -228,9 +228,8 @@ function Hud() {
           <button className="hud-icon" onClick={() => setPanel('settings')} aria-label="Ajustes"><Settings size={16} aria-hidden /></button></header>
         {sync === 'conflict' && <p role="alert" className="mx-3 mb-2 rounded border border-warn bg-black/70 px-3 py-2 text-xs text-warn">Datos modificados desde otro dispositivo. Recarga la página para no perder cambios.</p>}
         <main className="ph-body">
-          <section className="ph-hero" aria-live="off"><p className="hud-sub">{greet}</p><p className="hud-title text-3xl">{name.toUpperCase()}</p><p className="mt-1 text-xs text-muted">{format(now, "EEEE d 'de' MMMM", { locale: es })}</p></section>
+          <section className="ph-hero" aria-live="off"><p className="hud-sub">{greet}</p><p className="hud-title text-3xl">{name.toUpperCase()}</p><p className="mt-1 text-xs text-muted">{format(now, "EEEE d 'de' MMMM", { locale: es })}</p><button className="core-btn core-btn-ph" onClick={() => setOpen('clients')} aria-label="Abrir panel de control de clientes"><Building2 size={14} aria-hidden />CLIENTES</button></section>
           <div className="ph-chips" aria-label="Resumen"><span className="hud-chip"><Clock size={11} aria-hidden />{nextClass ? `${nextClass.title} · ${nextClass.start}` : 'sin más clases hoy'}</span><span className="hud-chip"><BellRing size={11} aria-hidden />{pendingRem} recordatorios</span><span className="hud-chip"><CheckSquare size={11} aria-hidden />{pendingTasks} tareas</span><span className="hud-chip"><Wallet size={11} aria-hidden />{eur(st.total)}</span></div>
-          <ClientsCard onOpen={openMod('clients')} />
           <SchedulePanel now={now} onOpen={openMod('schedule')} compact />
           <RemindersPanel onOpen={openMod('reminders')} />
           <CalendarPanel day={calDay} setDay={setCalDay} onOpen={openMod('agenda')} />
@@ -264,13 +263,13 @@ function Hud() {
           </div>
         </header>
         {sync === 'conflict' && <p role="alert" className="pointer-events-auto absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded border border-warn bg-black/70 px-3 py-2 text-sm text-warn">Datos modificados desde otro dispositivo. Recarga la página para no perder cambios.</p>}
+        <button className="core-btn" onClick={() => { setOpen('clients'); blip('open', sound); hudBus.emit('pulse'); }} aria-label="Abrir panel de control de clientes"><Building2 size={14} aria-hidden />CLIENTES</button>
         <div className="hud-cols">
           <div className="hud-col l"><SchedulePanel now={now} onOpen={openMod('schedule')} /><RemindersPanel onOpen={openMod('reminders')} /></div>
           <div className="hud-mid">
             <div className="pointer-events-auto flex flex-wrap justify-center gap-2" aria-label="Resumen">
               <span className="hud-chip"><Clock size={11} aria-hidden />{nextClass ? `${nextClass.title} · ${nextClass.start}` : 'sin más clases hoy'}</span><span className="hud-chip"><BellRing size={11} aria-hidden />{pendingRem} recordatorios</span><span className="hud-chip"><CheckSquare size={11} aria-hidden />{pendingTasks} tareas</span>
             </div>
-            <ClientsCard onOpen={openMod('clients')} />
             <Chat profile={name} inputRef={chatRef} />
           </div>
           <div className="hud-col r">
