@@ -1,4 +1,4 @@
-import { PRESETS } from '../src/config/presets';
+import { DEFAULT_LABELS, PRESETS } from '../src/config/presets';
 import { applyTenantAccounts, TENANTS } from '../src/data/tenants';
 import { buildShowcase } from '../src/data/seed';
 import { fillAtlantaDemo, fillAtlantaEnrollments } from '../src/data/atlanta-demo';
@@ -28,6 +28,8 @@ export async function provisionTenants(opts: { password: string; atlantaAdminEma
     const a = db.academies.find((x) => x.slug === def.slug); const st = a && db.settings.find((s) => s.academyId === a.id); if (!st) continue;
     for (const m of PRESETS[def.type].modules) if (st.modules[m] === undefined) { st.modules[m] = true; log.push(`módulo ${m} (${def.slug})`); }
   }
+  // «Prácticas» es el módulo del coche; el de sesiones teóricas/cursos se llama «Clases»: se corrige el vocabulario heredado de la plantilla antigua.
+  for (const a of db.academies) { const st = db.settings.find((x) => x.academyId === a.id); if (st && (a.type === 'autoescuela' || a.type === 'nautica') && st.labels.class?.plural === 'Prácticas') { st.labels.class = { ...DEFAULT_LABELS.class }; log.push(`vocabulario «Clases» (${a.name})`); } }
   const pwd = await hashPassword(opts.password);
   const changed = applyTenantAccounts(db, pwd); if (changed.length) log.push(`${changed.length} cuentas`);
   // La contraseña de las cuentas de los negocios es siempre la configurada: si no coincide, se restablece.
