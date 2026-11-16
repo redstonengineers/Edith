@@ -184,6 +184,10 @@ html.hud-mobile textarea.hud-input { height: auto; }
 .hud-panel.clients-card > .hud-body { transform: none; }
 .hud-panel.clients-card::before { display: none; }
 /* Botón «CLIENTES» sobre el núcleo: abre el panel de control maestro */
-.core-btn { position: absolute; left: 50%; top: 47%; transform: translate(-50%, -50%); z-index: 4; display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgb(3 10 20 / .6); color: var(--hud); font: 600 12px/1 var(--hud-font, inherit); letter-spacing: .32em; text-shadow: 0 0 10px rgb(var(--h) / .9); cursor: pointer; transition: background .2s, box-shadow .2s, color .2s; }
+.core-wrap { position: absolute; left: 0; right: 0; top: 47%; height: 0; z-index: 4; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.core-btn { pointer-events: auto; transform: none; position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgb(3 10 20 / .6); color: var(--hud); font: 600 12px/1 var(--hud-font, inherit); letter-spacing: .32em; text-shadow: 0 0 10px rgb(var(--h) / .9); cursor: pointer; transition: background .2s, box-shadow .2s, color .2s; }
+.core-btn:active { transform: scale(.96); }
 .core-btn:hover, .core-btn:focus-visible { background: rgb(var(--h) / .22); box-shadow: 0 0 28px rgb(var(--h) / .6), inset 0 0 14px rgb(var(--h) / .3); color: #fff; }
-.core-btn.core-btn-ph { position: static; transform: none; margin-top: 10px; }
+.core-btn.core-btn-ph { margin-top: 10px; }
+/* El cajón de módulos debe poder desplazarse (el .hud-root base oculta el desbordamiento) */
+.hud-drawer-body { overflow-y: auto !important; overscroll-behavior: contain; }

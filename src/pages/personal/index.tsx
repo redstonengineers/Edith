@@ -263,7 +263,7 @@ function Hud() {
           </div>
         </header>
         {sync === 'conflict' && <p role="alert" className="pointer-events-auto absolute top-16 left-1/2 z-20 -translate-x-1/2 rounded border border-warn bg-black/70 px-3 py-2 text-sm text-warn">Datos modificados desde otro dispositivo. Recarga la página para no perder cambios.</p>}
-        <button className="core-btn" onClick={() => { setOpen('clients'); blip('open', sound); hudBus.emit('pulse'); }} aria-label="Abrir panel de control de clientes"><Building2 size={14} aria-hidden />CLIENTES</button>
+        <div className="core-wrap"><button className="core-btn" onClick={() => { setOpen('clients'); blip('open', sound); hudBus.emit('pulse'); }} aria-label="Abrir panel de control de clientes"><Building2 size={14} aria-hidden />CLIENTES</button></div>
         <div className="hud-cols">
           <div className="hud-col l"><SchedulePanel now={now} onOpen={openMod('schedule')} /><RemindersPanel onOpen={openMod('reminders')} /></div>
           <div className="hud-mid">
@@ -284,7 +284,7 @@ function Hud() {
       </div>
       )}
       <Drawer open={open !== null} onClose={() => setOpen(null)} hideClose={dev.phone} label={open ? MODS.find((m) => m.id === open)?.label ?? '' : ''} className={dev.phone ? 'w-full max-w-none' : open === 'schedule' ? 'w-full max-w-[min(1240px,97vw)]' : open === 'clients' ? 'w-full max-w-[min(760px,97vw)]' : 'w-full max-w-xl'}>
-        <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5">{dev.phone && <button className="ph-back" onClick={() => setOpen(null)}><ChevronLeft size={18} aria-hidden />Volver</button>}<h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
+        <div className="hud-root hud-drawer-body !h-full !min-h-0 p-5">{dev.phone && <button className="ph-back" onClick={() => setOpen(null)}><ChevronLeft size={18} aria-hidden />Volver</button>}<h2 className="hud-title mb-4 text-xl">{open ? MODS.find((m) => m.id === open)?.label.toUpperCase() : ''}</h2>{open && ModBody[open]}</div>
       </Drawer>
       <Drawer open={panel !== null} onClose={() => setPanel(null)} hideClose={dev.phone} label={{ settings: 'Ajustes', help: 'Ayuda', more: 'Más', chat: 'EDITH' }[panel ?? 'help']} className={dev.phone ? 'w-full max-w-none' : 'w-full max-w-md'}>
         <div className="hud-root !h-full !min-h-0 overflow-y-auto p-5">{dev.phone && <button className="ph-back" onClick={() => setPanel(null)}><ChevronLeft size={18} aria-hidden />Volver</button>}

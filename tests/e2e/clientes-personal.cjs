@@ -15,7 +15,9 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   // Botón «CLIENTES» sobre el núcleo abre el panel maestro
   const cb = p.getByRole('button', { name: 'Abrir panel de control de clientes' }); await cb.waitFor();
   ok(await p.locator('.clients-card').count() === 0, 'ya no hay tarjeta que tape el núcleo');
-  await cb.click(); await p.getByRole('list', { name: 'Clientes' }).waitFor(); ok(true, 'tocar CLIENTES en el núcleo abre el panel maestro');
+  const bb = await cb.boundingBox(); await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2, { steps: 8 }); await p.mouse.down(); await p.waitForTimeout(150); await p.mouse.up(); // pulsación real: el botón no debe moverse al pulsarlo
+  await p.getByRole('list', { name: 'Clientes' }).waitFor(); ok(true, 'tocar CLIENTES en el núcleo abre el panel maestro');
+  ok(await p.evaluate(() => getComputedStyle(document.querySelector('[role=dialog] .hud-drawer-body')).overflowY) === 'auto', 'el panel se puede desplazar (no se corta con la pantalla)');
   const cid = first.clients[0].id; const target = first.clients[0].plan === 'premium' ? 'basic' : 'premium';
   await p.getByRole('dialog').getByLabel(/^Plan de /).first().selectOption(target); await p.getByText(/: plan /).waitFor();
   ok((await list()).clients.find((c) => c.id === cid).plan === target, 'cambiar el plan desde el panel funciona');
