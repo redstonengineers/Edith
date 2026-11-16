@@ -179,3 +179,7 @@ html.hud-mobile textarea.hud-input { height: auto; }
 .clients-card { background: rgb(3 10 20 / .93); backdrop-filter: blur(10px); }
 .clients-card .clients-card-body { max-height: 30vh; overflow-y: auto; padding-right: 4px; }
 .hud-mid > .clients-card { flex: 0 0 auto; }
+/* La tarjeta de clientes es interactiva (lista, desplegables): sin inclinación ni elevación al pasar el cursor */
+.hud-panel.clients-card, .hud-panel.clients-card:hover { transform: none !important; transform-style: flat; transition: box-shadow .3s, border-color .25s; }
+.hud-panel.clients-card > .hud-body { transform: none; }
+.hud-panel.clients-card::before { display: none; }
