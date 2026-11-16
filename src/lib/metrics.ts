@@ -56,7 +56,7 @@ export function todayAgenda(snap: Snapshot, now = new Date(), dateISO = todayISO
       else if (!nextAssigned) { status = 'next'; nextAssigned = true; }
     }
     return {
-      id: c.id, start: c.start, end: c.end, groupId: c.groupId, title: g?.name ?? 'Clase', color: subj?.color ?? 'var(--brand)',
+      id: c.id, start: c.start, end: c.end, groupId: c.groupId, title: c.topic?.trim() || g?.name || 'Clase', color: subj?.color ?? 'var(--brand)',
       subtitle: t ? `${t.firstName} ${t.lastName}` : '', room: room?.name ?? '', status,
     };
   });

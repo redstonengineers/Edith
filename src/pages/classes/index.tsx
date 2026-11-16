@@ -20,12 +20,12 @@ export default function ClassesPage() {
   const [open, setOpen] = useState<string | 'new' | null>(sp.get('nuevo') === '1' ? 'new' : null);
   const today = todayISO();
   const preds: Record<F, (c: ClassSession) => boolean> = { proximas: (c) => c.date > today && c.status !== 'cancelada', hoy: (c) => c.date === today && c.status !== 'cancelada', pasadas: (c) => c.date < today && c.status !== 'cancelada', canceladas: (c) => c.status === 'cancelada' };
-  const name = (c: ClassSession) => snap.groups.find((g) => g.id === c.groupId)?.name ?? '';
+  const gname = (c: ClassSession) => snap.groups.find((g) => g.id === c.groupId)?.name ?? ''; const name = (c: ClassSession) => c.topic?.trim() || gname(c);
   const nq = norm(q).split(/\s+/).filter(Boolean);
-  const rows = snap.classes.filter(preds[f]).filter((c) => { const h = norm(`${name(c)} ${snap.teachers.find((t) => t.id === c.teacherId)?.lastName ?? ''}`); return nq.every((t) => h.includes(t)); });
+  const rows = snap.classes.filter(preds[f]).filter((c) => { const h = norm(`${name(c)} ${gname(c)} ${snap.teachers.find((t) => t.id === c.teacherId)?.lastName ?? ''}`); return nq.every((t) => h.includes(t)); });
   const cols: Column<ClassSession>[] = [
     { key: 'date', header: 'Fecha', sort: (a, b) => (a.date + a.start).localeCompare(b.date + b.start), cell: (c) => <button onClick={() => setOpen(c.id)} className="tnum text-left font-medium hover:text-brand-text">{fmtDate(c.date, 'EEE d MMM')} · {c.start}–{c.end}</button> },
-    { key: 'group', header: L.group.singular, cell: (c) => name(c) },
+    { key: 'group', header: 'Nombre', cell: (c) => <span>{name(c)}{c.topic?.trim() && <span className="block text-xs text-muted">{gname(c)}</span>}</span> },
     { key: 'teacher', header: L.teacher.singular, hide: 'md', cell: (c) => { const t = snap.teachers.find((x) => x.id === c.teacherId); return <span className="text-muted">{t ? fullName(t) : ''}</span>; } },
     { key: 'room', header: L.classroom.singular, hide: 'lg', cell: (c) => <span className="text-muted">{snap.classrooms.find((r) => r.id === c.classroomId)?.name}</span> },
     { key: 'st', header: 'Estado', cell: (c) => <Badge tone={c.status === 'cancelada' ? 'bad' : c.status === 'impartida' ? 'ok' : 'brand'}>{c.status}</Badge> },

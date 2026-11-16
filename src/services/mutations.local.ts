@@ -310,7 +310,7 @@ const longDay = (iso: string) => format(parseISO(iso), "EEEE d 'de' MMMM", { loc
 const teacherName = (user: User, id: ID) => { const t = getDatabase().teachers.find((x) => x.id === id && x.academyId === user.academyId); return t ? `${t.firstName} ${t.lastName}` : 'tu profesor'; };
 /** Alumnos de la clase: los de su grupo. */
 const classAudience = (user: User, c: { groupId: ID }) => getDatabase().students.filter((s) => s.academyId === user.academyId && s.status !== 'baja' && s.groupIds.includes(c.groupId)).map((s) => s.id);
-const classVars = (user: User, c: { groupId: ID; date: string; start: string }) => { const db = getDatabase(); const g = db.groups.find((x) => x.id === c.groupId && x.academyId === user.academyId); const sub = g && db.subjects.find((x) => x.id === g.subjectId); return { materia: sub?.name ?? g?.name ?? 'clase', fecha: longDay(c.date), hora: c.start }; };
+const classVars = (user: User, c: { groupId: ID; date: string; start: string; topic?: string }) => { const db = getDatabase(); const g = db.groups.find((x) => x.id === c.groupId && x.academyId === user.academyId); const sub = g && db.subjects.find((x) => x.id === g.subjectId); return { materia: c.topic?.trim() || sub?.name || g?.name || 'clase', fecha: longDay(c.date), hora: c.start }; };
 const pvars = (user: User, p: { date: string; start: string; teacherId: ID }) => ({ fecha: longDay(p.date), hora: p.start, profesor: teacherName(user, p.teacherId) });
 const upcoming = (iso: string) => iso >= new Date().toISOString().slice(0, 10);
 const splitName = (full: string) => { const [first, ...rest] = full.trim().split(/\s+/); return { firstName: first, lastName: rest.join(' ') || '—' }; };

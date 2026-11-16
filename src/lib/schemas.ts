@@ -66,7 +66,7 @@ export type PaymentInput = z.infer<typeof paymentSchema>;
 export const markPaidSchema = z.object({ paidAt: date, method: z.enum(['efectivo', 'tarjeta', 'transferencia', 'domiciliacion']) });
 
 export const incidentSchema = z.object({
-  title: text('Título', 4), type: z.string().min(1, 'Selecciona un tipo'), priority: z.enum(['baja', 'media', 'alta', 'critica']), assigneeId: z.string().optional(),
+  title: text('Título', 4), type: z.string().trim().min(1, 'Indica el tipo').max(60), priority: z.enum(['baja', 'media', 'alta', 'critica']), assigneeId: z.string().optional(),
   description: z.string().trim().min(5, 'Describe brevemente la incidencia').max(1000), relatedStudentId: z.string().optional(), relatedTeacherId: z.string().optional(),
 });
 export type IncidentInput = z.infer<typeof incidentSchema>;

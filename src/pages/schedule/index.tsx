@@ -24,7 +24,7 @@ export default function SchedulePage() {
   const conflicts = useMemo(() => conflictMap(snap.classes, names), [snap.classes, names]);
   const events: CalEvent[] = useMemo(() => snap.classes.filter((c) => (!fTeacher || c.teacherId === fTeacher) && (!fGroup || c.groupId === fGroup) && (!fRoom || c.classroomId === fRoom)).map((c) => {
     const g = snap.groups.find((x) => x.id === c.groupId); const subj = snap.subjects.find((s) => s.id === g?.subjectId); const t = snap.teachers.find((x) => x.id === c.teacherId);
-    return { id: c.id, date: c.date, start: c.start, end: c.end, title: g?.name ?? 'Clase', subtitle: `${t ? fullName(t) : ''} · ${names.classroom(c.classroomId)}`, color: subj?.color ?? 'var(--brand)', cancelled: c.status === 'cancelada', conflict: conflicts.get(c.id)?.[0]?.message, draggable: write };
+    return { id: c.id, date: c.date, start: c.start, end: c.end, title: c.topic?.trim() || g?.name || 'Clase', subtitle: `${t ? fullName(t) : ''} · ${names.classroom(c.classroomId)}`, color: subj?.color ?? 'var(--brand)', cancelled: c.status === 'cancelada', conflict: conflicts.get(c.id)?.[0]?.message, draggable: write };
   }), [snap, fTeacher, fGroup, fRoom, conflicts, names, write]);
   const visibleConflicts = events.filter((e) => e.conflict);
 

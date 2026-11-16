@@ -50,7 +50,8 @@ export function ClassForm({ open, onClose, session, defaults }: { open: boolean;
       <FormModal open={open} onClose={onClose} title={title} onSubmit={submit} error={top} wide submitLabel={write ? 'Guardar' : 'Cerrar'}>
         <fieldset disabled={!write || session?.status === 'cancelada'} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={L.group.singular} required error={err.groupId} className="sm:col-span-2">{(p) => <Select {...p} data-autofocus value={f.groupId} onChange={(e) => onGroup(e.target.value)}><option value="">Seleccionar…</option>{snap.groups.filter((g) => g.active).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select>}</Field>
+            <Field label="Nombre de la clase (opcional)" hint="Escríbelo tú: aparece en el calendario, la lista y los avisos en lugar del nombre del grupo." className="sm:col-span-2" error={err.topic}>{(p) => <Input {...p} data-autofocus value={f.topic} onChange={set('topic')} maxLength={120} placeholder="Ej. Curso de recuperación de puntos" />}</Field>
+            <Field label={`${L.group.singular} (quién asiste)`} required error={err.groupId} className="sm:col-span-2">{(p) => <Select {...p} value={f.groupId} onChange={(e) => onGroup(e.target.value)}><option value="">Seleccionar…</option>{snap.groups.filter((g) => g.active).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select>}</Field>
             <Field label="Fecha" required error={err.date}>{(p) => <Input {...p} type="date" value={f.date} onChange={set('date')} />}</Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Inicio" required error={err.start}>{(p) => <Input {...p} type="time" value={f.start} onChange={set('start')} />}</Field>
@@ -58,7 +59,6 @@ export function ClassForm({ open, onClose, session, defaults }: { open: boolean;
             </div>
             <Field label={L.teacher.singular} required error={err.teacherId}>{(p) => <Select {...p} value={f.teacherId} onChange={set('teacherId')}>{snap.teachers.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}</Select>}</Field>
             <Field label={L.classroom.singular} required error={err.classroomId}>{(p) => <Select {...p} value={f.classroomId} onChange={set('classroomId')}>{snap.classrooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select>}</Field>
-            <Field label="Tema (opcional)" className="sm:col-span-2" error={err.topic}>{(p) => <Input {...p} value={f.topic} onChange={set('topic')} />}</Field>
           </div>
         </fieldset>
         {conflicts.length > 0 && (

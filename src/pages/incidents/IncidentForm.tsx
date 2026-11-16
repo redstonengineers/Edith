@@ -24,7 +24,7 @@ export function IncidentForm({ onClose, onCreated }: { onClose: () => void; onCr
     <FormModal open onClose={onClose} title={`${nuevo(L.incident)}`} onSubmit={submit} wide>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Título" required error={err.title} className="sm:col-span-2">{(p) => <Input {...p} data-autofocus value={f.title} onChange={set('title')} placeholder="Alumno con problemas de asistencia" />}</Field>
-        <Field label="Tipo" required error={err.type}>{(p) => <Select {...p} value={f.type} onChange={set('type')}><option value="">Seleccionar…</option>{INCIDENT_TYPES.map((t) => <option key={t}>{t}</option>)}</Select>}</Field>
+        <Field label="Tipo" required error={err.type}>{(p) => <><Input {...p} list="incident-types" maxLength={60} value={f.type} onChange={set('type')} placeholder="Elige o escribe el tuyo" /><datalist id="incident-types">{INCIDENT_TYPES.map((t) => <option key={t} value={t} />)}</datalist></>}</Field>
         <Field label="Prioridad" required>{(p) => <Select {...p} value={f.priority} onChange={set('priority')}>{PRIORITIES.map((x) => <option key={x} value={x}>{prioLabel[x]}</option>)}</Select>}</Field>
         <Field label="Responsable">{(p) => <Select {...p} value={f.assigneeId} onChange={set('assigneeId')}><option value="">Sin asignar</option>{snap.users.filter((u) => u.role !== 'SUPER_ADMIN').map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>}</Field>
         <Field label={`${L.student.singular} relacionado`}>{(p) => <Select {...p} value={f.relatedStudentId} onChange={set('relatedStudentId')}><option value="">Ninguno</option>{snap.students.map((s) => <option key={s.id} value={s.id}>{fullName(s)}</option>)}</Select>}</Field>

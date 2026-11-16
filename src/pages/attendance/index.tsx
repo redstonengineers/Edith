@@ -42,7 +42,7 @@ function Register() {
   const rates = useMemo(() => attendanceRates(snap), [snap]);
   const th = snap.settings.attendanceAlertThreshold;
   const move = (d: number) => { setDate(format(addDays(parseISO(date), d), 'yyyy-MM-dd')); setSel(null); sp.delete('clase'); setSp(sp, { replace: true }); };
-  const nameOf = (id: string) => snap.groups.find((g) => g.id === id)?.name ?? '';
+  const nameOf = (c: { groupId: string; topic?: string }) => c.topic?.trim() || snap.groups.find((g) => g.id === c.groupId)?.name || '';
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -57,7 +57,7 @@ function Register() {
             {classes.map((c) => { const n = snap.attendance.filter((a) => a.classId === c.id).length; const total = snap.students.filter((s) => s.groupIds.includes(c.groupId) && s.status !== 'baja').length; const active = c.id === cls?.id; return (
               <li key={c.id}><button onClick={() => setSel(c.id)} aria-pressed={active} className={cn('panel w-full p-3.5 text-left transition-colors', active ? 'border-brand/60 bg-brand/8' : 'hover:border-line-strong')}>
                 <p className="tnum text-xs text-muted">{c.start}–{c.end} · {snap.classrooms.find((r) => r.id === c.classroomId)?.name}</p>
-                <p className="mt-0.5 text-sm font-medium">{nameOf(c.groupId)}</p>
+                <p className="mt-0.5 text-sm font-medium">{nameOf(c)}</p>
                 <p className="mt-1.5 text-xs">{n >= total && total > 0 ? <Badge tone="ok">Completa</Badge> : <span className="text-muted">{n} / {total} registrados</span>}</p>
               </button></li>); })}
           </ul>)}
@@ -67,7 +67,7 @@ function Register() {
         {!cls ? <div className="panel"><EmptyState title="Selecciona una clase" description="Aparecerán los alumnos para pasar lista con un clic." /></div> : (
           <div className="panel">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
-              <div><h2 className="font-semibold">{nameOf(cls.groupId)}</h2><p className="tnum text-xs text-muted">{fmtDate(cls.date, "EEEE d 'de' MMMM")} · {cls.start}–{cls.end}</p></div>
+              <div><h2 className="font-semibold">{nameOf(cls)}</h2><p className="tnum text-xs text-muted">{fmtDate(cls.date, "EEEE d 'de' MMMM")} · {cls.start}–{cls.end}</p></div>
               <div className="flex flex-wrap items-center gap-2">
                 {counts.map((c) => <Badge key={c.id} tone={c.id === 'presente' ? 'ok' : c.id === 'ausente' ? 'bad' : c.id === 'retraso' ? 'warn' : 'info'}>{c.label} {c.n}</Badge>)}
                 {write && roster.length > 0 && <Button size="sm" onClick={() => void run(() => markAllPresent(user, cls.id, roster.map((s) => s.id)), 'Todos marcados como presentes')}><CheckCheck size={14} />Marcar todos presentes</Button>}

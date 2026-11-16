@@ -67,7 +67,7 @@ export function PracticeForm({ open, onClose, practice, defaults }: { open: bool
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Día" required error={err.date}>{(p) => <Input {...p} type="date" value={f.date} onChange={set('date')} />}</Field>
             <Field label="Hora" required error={err.start}>{(p) => <Input {...p} type="time" value={f.start} onChange={set('start')} />}</Field>
-            <Field label="Duración">{(p) => <Select {...p} value={f.dur} onChange={set('dur')}>{DURATIONS.map((d) => <option key={d} value={d}>{d} min · hasta {addMin(f.start, d)}</option>)}</Select>}</Field>
+            <Field label="Duración">{(p) => <><Input {...p} type="number" list="practice-durations" min={10} max={480} step={5} value={f.dur} onChange={set('dur')} /><datalist id="practice-durations">{DURATIONS.map((d) => <option key={d} value={d} label={`${d} min`} />)}</datalist><span className="mt-1 block text-xs text-muted">minutos · hasta {addMin(f.start, f.dur || 0)}</span></>}</Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Profesor" required error={err.teacherId}>{(p) => <Select {...p} value={f.teacherId} disabled={user.role === 'PROFESOR'} onChange={set('teacherId')}>{snap.teachers.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}</Select>}</Field>
