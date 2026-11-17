@@ -7,7 +7,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ShortcutsDialog } from '@/components/ui/ShortcutsDialog';
 import { MODULES } from '@/config/modules';
 import { LoadingState } from '@/components/ui/primitives';
-import { useSettings } from '@/hooks';
+import { useSettings, useSnapshot } from '@/hooks';
 import { applyBranding } from '@/lib/branding';
 import { useUi } from '@/store/ui';
 import { Header } from './Header';
@@ -21,7 +21,10 @@ export function AppShell() {
   const theme = pref ?? settings.branding.theme;
   const { pathname } = useLocation();
   const setMobileNav = useUi((s) => s.setMobileNav);
+  const plan = useSnapshot().academy.plan;
   useEffect(() => { applyBranding(settings, theme); }, [settings, theme]);
+  // El aspecto visual sube de nivel con la suscripción: Esencial (el actual) → Profesional → Premium.
+  useEffect(() => { const r = document.documentElement; if (plan === 'pro' || plan === 'premium') r.dataset.tier = plan; else delete r.dataset.tier; return () => { delete r.dataset.tier; }; }, [plan]);
   const main = useRef<HTMLElement>(null); const first = useRef(true);
   useEffect(() => {
     // Foco y scroll al inicio en cada cambio de ruta (lectores de pantalla y teclado).
