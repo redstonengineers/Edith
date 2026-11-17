@@ -3,7 +3,7 @@ import { Modal } from './Overlay';
 import { Kbd } from './primitives';
 import { useUi } from '@/store/ui';
 
-const ROWS: [string[], string][] = [[['Ctrl', 'K'], 'Buscador global y comandos'], [['?'], 'Mostrar esta ayuda'], [['↑', '↓'], 'Navegar por los resultados'], [['↵'], 'Abrir / ejecutar'], [['Esc'], 'Cerrar paneles y diálogos'], [['Tab'], 'Moverse entre controles']];
+const ROWS: [string[], string][] = [[['Ctrl', 'K'], 'Buscador global y comandos'], [['?'], 'Mostrar esta ayuda'], [['↑', '↓'], 'Navegar por los resultados'], [['↵'], 'Abrir / ejecutar'], [['Esc'], 'Cerrar paneles y diálogos'], [['Tab'], 'Moverse entre controles'], [['G', 'luego A'], 'Ir a Alumnos (G + letra: P pagos, C clases, I inicio…)'], [['Clic dcho.'], 'Menú de acciones en las filas de las tablas (o mantener pulsado en el móvil)']];
 export function ShortcutsDialog() {
   const open = useUi((s) => s.shortcutsOpen); const set = useUi((s) => s.setShortcuts);
   useEffect(() => {

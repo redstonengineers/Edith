@@ -15,7 +15,7 @@ export function Sidebar() {
         <BrandMark />
         {!collapsed && <div className="min-w-0"><p className="truncate text-sm leading-tight font-semibold">{branding.name}</p><p className="text-[10px] tracking-[0.14em] text-muted uppercase">EDITH{(plan === 'pro' || plan === 'premium') && <span className="tier-badge ml-1.5" data-tier-badge={plan}>{plan === 'pro' ? 'Pro' : 'Premium'}</span>}</p></div>}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto"><NavList collapsed={collapsed} /></div>
+      <div className="min-h-0 flex-1 overflow-y-auto"><NavList collapsed={collapsed} editorial={plan === 'pro' || plan === 'premium'} /></div>
       <div className="border-t border-line p-3">
         <button onClick={toggle} aria-label={collapsed ? 'Expandir barra lateral' : 'Plegar barra lateral'} aria-expanded={!collapsed}
           className={cn('flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] text-muted hover:bg-surface-2 hover:text-fg', collapsed && 'justify-center px-0')}>

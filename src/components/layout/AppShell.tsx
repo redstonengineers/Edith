@@ -2,6 +2,7 @@ import { Suspense, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AiPanel } from '@/components/ai/AiPanel';
 import { CommandPalette } from '@/components/command/CommandPalette';
+import { GoTo } from '@/components/command/GoTo';
 import { Toaster } from '@/components/ui/Toaster';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ShortcutsDialog } from '@/components/ui/ShortcutsDialog';
@@ -51,6 +52,7 @@ export function AppShell() {
       </div>
       <MobileNav />
       <CommandPalette />
+      <GoTo />
       <AiPanel />
       <ShortcutsDialog />
       <Toaster />
