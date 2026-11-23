@@ -7,7 +7,7 @@ import { resetRolePermissions, setRolePermission } from '@/services/mutations';
 import type { RoleId } from '@/types';
 import { cn } from '@/utils/cn';
 
-const RES_LABEL: Record<Resource, string> = { dashboard: 'Command Center', students: 'Alumnos', teachers: 'Profesores', groups: 'Grupos', classes: 'Clases', subjects: 'Asignaturas', schedule: 'Horarios', exams: 'Exámenes', grades: 'Calificaciones', attendance: 'Asistencia', applications: 'Solicitudes', waitlist: 'Lista de espera', enrollments: 'Matrículas', payments: 'Pagos', billing: 'Facturación', documents: 'Documentos', practicas: 'Prácticas y vehículos', vehiculos: 'Coches', incidents: 'Incidencias', messages: 'Mensajes', announcements: 'Avisos', notifications: 'Notificaciones', statistics: 'Estadísticas', reports: 'Informes', ai: 'JARVIS AI', settings: 'Configuración', users: 'Usuarios', permissions: 'Permisos', customization: 'Personalización', platform: 'Plataforma' };
+const RES_LABEL: Record<Resource, string> = { dashboard: 'Panel', students: 'Alumnos', teachers: 'Profesores', groups: 'Grupos', classes: 'Clases', subjects: 'Asignaturas', schedule: 'Horarios', exams: 'Exámenes', grades: 'Calificaciones', attendance: 'Asistencia', applications: 'Solicitudes', waitlist: 'Lista de espera', enrollments: 'Matrículas', payments: 'Pagos', billing: 'Facturación', documents: 'Documentos', practicas: 'Prácticas y vehículos', vehiculos: 'Coches', incidents: 'Incidencias', messages: 'Mensajes', announcements: 'Avisos', notifications: 'Notificaciones', statistics: 'Estadísticas', reports: 'Informes', ai: 'JARVIS AI', settings: 'Configuración', users: 'Usuarios', permissions: 'Permisos', customization: 'Personalización', platform: 'Plataforma' };
 const ROLES: RoleId[] = ['ADMIN', 'SECRETARIA', 'PROFESOR', 'ALUMNO', 'TUTOR'];
 
 export default function PermissionsPage() {
@@ -19,8 +19,8 @@ export default function PermissionsPage() {
       <PageHeader title="Permisos" description="Qué puede ver («Ver») y modificar («Editar») cada rol. El Administrador siempre conserva todo acceso." />
       <div className="panel overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm" aria-label="Matriz de permisos">
-          <thead><tr className="border-b border-line text-[11px] tracking-[0.1em] text-muted uppercase"><th scope="col" className="px-4 py-3 text-left font-semibold">Sección</th>
-            {ROLES.map((r) => <th key={r} scope="col" className="px-3 py-3 text-center font-semibold"><span className="block">{ROLE_LABELS[r]}</span>{LOCKED_ROLES.includes(r) ? <Lock size={11} className="mx-auto mt-1" aria-label="Bloqueado" /> : write && changed(r) ? <button onClick={() => void run(() => resetRolePermissions(user, r), 'Permisos restablecidos')} className="mt-1 inline-flex items-center gap-1 text-[10px] normal-case text-brand-text hover:underline"><RotateCcw size={10} />Restablecer</button> : null}</th>)}</tr></thead>
+          <thead><tr className="border-b border-line text-xs text-muted"><th scope="col" className="px-4 py-3 text-left font-semibold">Sección</th>
+            {ROLES.map((r) => <th key={r} scope="col" className="px-3 py-3 text-center font-semibold"><span className="block">{ROLE_LABELS[r]}</span>{LOCKED_ROLES.includes(r) ? <Lock size={11} className="mx-auto mt-1" aria-label="Bloqueado" /> : write && changed(r) ? <button onClick={() => void run(() => resetRolePermissions(user, r), 'Permisos restablecidos')} className="mt-1 inline-flex items-center gap-1 text-xs normal-case text-brand-text hover:underline"><RotateCcw size={10} />Restablecer</button> : null}</th>)}</tr></thead>
           <tbody>{EDITABLE_RESOURCES.map((res) => (
             <tr key={res} className="border-b border-line/60 last:border-0"><th scope="row" className="px-4 py-2.5 text-left font-medium">{RES_LABEL[res]}</th>
               {ROLES.map((r) => (

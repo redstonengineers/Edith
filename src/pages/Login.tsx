@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { IS_API } from '@/services/mode';
 import { usePersonal } from '@/store/personal';
 import { ArrowRight, Loader2 } from 'lucide-react';
-import { StatusIndicator } from '@/components/ui/primitives';
+import { ConnectionStatus } from '@/components/layout/ConnectionStatus';
 import { ROLE_LABELS } from '@/lib/permissions';
 import { listDemoAccounts, listTenants, type DemoAccount } from '@/services/auth';
 import type { PublicTenant } from '@/data/tenants';
@@ -46,7 +46,7 @@ export default function LoginPage() {
           <h1 className="max-w-md text-4xl leading-tight font-semibold tracking-tight">El centro de control de tu academia.</h1>
           <p className="mt-4 max-w-md text-muted">Alumnos, horarios, asistencia, pagos y comunicación en un único lugar. Cada academia con su marca, su vocabulario y sus módulos.</p>
         </div>
-        <StatusIndicator label="System online" />
+        <ConnectionStatus />
       </div>
       <div className="relative z-10 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
@@ -63,19 +63,19 @@ export default function LoginPage() {
           </form>
           {tenants.length > 0 && (
             <section className="mt-8" aria-label="Elige tu negocio">
-              <p className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Elige tu negocio</p>
+              <p className="mb-3 text-xs font-semibold text-muted">Elige tu negocio</p>
               <div className="grid gap-3 sm:grid-cols-3">
                 {tenants.map((t) => (
                   <Link key={t.slug} to={`/acceso/${t.slug}`} aria-label={`Entrar en ${t.card}`} className="group flex flex-col items-center gap-2 rounded-xl border border-line bg-surface p-4 text-center transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2" style={{ ['--tc' as string]: t.primary }}>
                     <img src={t.logo} alt="" width={52} height={52} className="rounded-xl shadow-sm" />
                     <span className="text-sm font-semibold">{t.card}</span>
-                    <span className="text-[11px] leading-snug text-muted">{t.tagline}</span>
+                    <span className="text-xs leading-snug text-muted">{t.tagline}</span>
                     <span className="mt-auto h-0.5 w-8 rounded-full opacity-70 transition-all group-hover:w-14" style={{ background: t.primary }} />
                   </Link>))}
               </div>
             </section>)}
           <div className="mt-8">
-            {accounts.length > 0 && <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Acceso demo · sin contraseña</p>}
+            {accounts.length > 0 && <p className="mb-2 text-xs font-semibold text-muted">Acceso demo · sin contraseña</p>}
             <div className="space-y-4">
               {academies.map((name) => (
                 <div key={name}>

@@ -81,7 +81,9 @@ Los colores de marca se inyectan como variables CSS (`--brand`, `--brand-2`) y s
 - `<RequirePermission>` y `useCan()` para UI; los repositorios **vuelven a comprobar** permisos y alcance (un PROFESOR solo ve sus grupos) — misma lógica que se trasladará al servidor.
 - Secretos: ninguno en el frontend. Solo `VITE_*` no sensibles. La IA real se llamará **vía backend**.
 
-## 7. JARVIS AI (arquitectura)
+## 7. Asistente de IA (arquitectura)
+
+Cara al cliente se llama «Asistente» (`ASSISTANT_NAME` en `src/config/brand.ts`); JARVIS y EDITH como nombres de asistente solo existen en el modo personal.
 
 `AIProvider { ask(question, context): AsyncIterable<AIChunk> | Promise<AIAnswer> }`.
 - Hoy: `MockAIProvider` = motor de intents determinista sobre los repositorios (responde con datos reales del seed).
@@ -126,4 +128,17 @@ El frontend implementa los 9 módulos de fases. Todo el acceso a datos pasa por 
 - Datos en `localStorage` (se regeneran cada día en demo). Los documentos guardan solo metadatos.
 - Canales email/WhatsApp/SMS/push y proveedor de IA real: interfaces listas (`services/channels.ts`, `lib/ai`), sin proveedor conectado.
 - Facturación SaaS (suscripciones) y MRR: cifras orientativas.
-- Sin tests unitarios automatizados en el repositorio (la verificación se hizo con pruebas end-to-end en navegador y auditoría axe).
+- Pruebas: `npm test` (`tests/run-all.mjs`) lanza unitarias, API/seguridad, e2e en modo API y local y axe; CI en `.github/workflows/ci.yml`.
+
+
+## 13. Servidor, datos y producción (estado actual)
+
+- **Código compartido**: el servidor (`server/`) reutiliza `src/services`, `src/lib`, `src/data` y `src/types`; esbuild lo empaqueta en `dist-server/` (los alias `@/…` se resuelven al compilar) y se ejecuta con `node`.
+- **Mutaciones y topes de plan**: toda mutación pasa por `src/services/mutations.local.ts`; los topes de plan (`src/lib/planLimits.ts`, `src/config/plans.ts`) viven ahí, así que valen igual en el servidor y en el modo local.
+- **Concurrencia**: una cola por `academyId` (`server/queues.ts`) y una exclusiva para operaciones de plataforma; rollback por negocio (`Store.rollbackAcademy`).
+- **Datos en reposo**: `Store` cifra y descifra campos sensibles al guardar y cargar (`server/fieldcrypto.ts`); el dominio en memoria siempre está en claro y `shadow` compara cuerpos en claro, de modo que solo se reescriben las filas que cambian. Las copias de seguridad (local y S3) llevan los datos cifrados.
+- **Entrega de datos**: `/api/snapshot?part=core` + colecciones grandes por trozos; la sesión (`src/store/session.ts`) pinta con el núcleo y marca `heavyReady`; `Guard` (`src/App.tsx`) hace esperar solo a las pantallas que usan esas colecciones (`LIGHT` = las que no).
+- **Registro de accesos**: tabla `access_log` fuera del dominio en memoria; la escribe `POST /api/access-log`, que el navegador llama desde la ficha del alumno, la exportación CSV (`downloadCsv`) y los informes.
+- **Marca y textos**: `src/config/brand.ts` (`PRODUCT_NAME`, `ASSISTANT_NAME`, `panelTitle(tipo)`); los negocios arrancan en tema claro sin efectos HUD (el modo personal conserva su estilo en `src/pages/personal/hud.css`).
+- **Calendario**: `Calendar` recibe `hours` (de `businessHours(snap)`) para ajustar la franja visible al horario real; los filtros usan `FilterSelect` (sobre `Dropdown`).
+- **Observabilidad**: `/api/health` y Sentry opcional (`src/lib/errorReport.ts`, compartido por servidor y navegador, con depuración de datos de personas).

@@ -35,7 +35,7 @@ export default function PlatformPage() {
   return (
     <>
       <PageHeader title="Plataforma" description="Panel del propietario del SaaS. Solo ves cifras de uso, nunca los datos personales de cada academia." />
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">{kpi.map(([k, v]) => <div key={k} className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">{k}</p><p className="tnum mt-1 text-2xl font-semibold">{v}</p></div>)}</div>
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">{kpi.map(([k, v]) => <div key={k} className="panel p-4"><p className="text-xs text-muted">{k}</p><p className="tnum mt-1 text-2xl font-semibold">{v}</p></div>)}</div>
       <DataTable label="Academias" rows={rows} columns={cols} rowKey={(r) => r.academy.id} defaultSort={{ key: 'n', dir: 'asc' }} empty={{ icon: Building2, title: 'Sin academias' }} />
       <p className="mt-3 text-xs text-muted">MRR estimado con los precios de cada plan (Esencial 39 €, Profesional 69 €, Premium 99 €). WhatsApp (mes) cuenta los avisos automáticos enviados; «Uso alto» es solo un aviso para ti (más de {WA_FAIR_PER_STUDENT} por alumno activo y mes), no limita nada. La facturación real de suscripciones se conectará con el backend.</p>
     </>

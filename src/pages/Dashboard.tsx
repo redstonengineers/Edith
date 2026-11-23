@@ -17,7 +17,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs tracking-[0.14em] text-muted uppercase first-letter:uppercase">{fmtLongToday(now)}</p>
+        <p className="text-xs text-muted first-letter:">{fmtLongToday(now)}</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{greeting(now)}, {first}.</h1>
         <p className="mt-1 text-[15px] text-muted">{allClear && msg !== 'Todo bajo control.' ? `Todo bajo control. ${msg}` : msg}</p>
       </div>

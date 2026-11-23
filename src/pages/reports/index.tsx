@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Download, FileBarChart, Printer } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { useCan, useSettings, useSnapshot, useUser } from '@/hooks';
+import { recordAccess } from '@/services/accessLog';
 import { REPORTS, downloadCsv } from '@/lib/reports';
 import { recordExport } from '@/services/mutations';
 import { cn } from '@/utils/cn';
@@ -13,6 +14,7 @@ export default function ReportsPage() {
   const list = REPORTS.filter((r) => !r.needs || can(r.needs));
   const [id, setId] = useState(list[0]?.id); const rep = list.find((r) => r.id === id) ?? list[0];
   const data = useMemo(() => rep?.build(snap), [rep, snap]);
+  useEffect(() => { if (rep) recordAccess({ action: 'report', entity: 'report', detail: rep.id, who: { id: user.id, name: user.name, role: user.role } }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [rep?.id]);
   const cols: Column<(string | number)[]>[] = (data?.columns ?? []).map((c, i) => ({ key: String(i), header: c, sort: (a, b) => (typeof a[i] === 'number' && typeof b[i] === 'number' ? (a[i] as number) - (b[i] as number) : String(a[i]).localeCompare(String(b[i]), 'es')), cell: (r) => <span className={typeof r[i] === 'number' ? 'tnum' : ''}>{r[i]}</span> }));
   return (
     <>

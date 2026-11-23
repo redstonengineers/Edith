@@ -38,7 +38,7 @@ export default function BillingPage() {
         {sel && (
           <div>
             <div className="print-area p-8">
-              <p className="text-xs tracking-[0.2em] uppercase opacity-60">Recibo</p>
+              <p className="text-xs opacity-60">Recibo</p>
               <h2 className="mt-1 text-2xl font-semibold">{branding.name}</h2>
               <p className="tnum mt-1 text-sm opacity-70">{sel.no} · {fmtDate(sel.paidAt!, "d 'de' MMMM 'de' yyyy")}</p>
               <dl className="mt-6 space-y-2 border-t border-current/20 pt-4 text-sm">

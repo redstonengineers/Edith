@@ -47,18 +47,25 @@ const PAGES: Partial<Record<ModuleId, React.ComponentType>> = {
   settings: lazy(() => import('@/pages/settings')),
   users: lazy(() => import('@/pages/users')),
   permissions: lazy(() => import('@/pages/permissions')),
+  accessLog: lazy(() => import('@/pages/accessLog')),
   platform: lazy(() => import('@/pages/platform')),
   ai: lazy(() => import('@/pages/ai')),
   statistics: lazy(() => import('@/pages/statistics')),
   reports: lazy(() => import('@/pages/reports')),
 };
 
+/** Pantallas que no necesitan las colecciones grandes. */
+const LIGHT = new Set<ModuleId>(['settings', 'customization', 'users', 'permissions', 'accessLog', 'notifications', 'announcements', 'messages', 'subjects', 'platform', 'ai']);
+
 function Guard({ m }: { m: ModuleDef }) {
   const user = useSession((s) => s.user);
   const settings = useSession((s) => s.data?.settings);
+  const heavyReady = useSession((s) => s.heavyReady);
   if (!settings) return null;
   if (!isModuleEnabled(settings, m)) return <ForbiddenPage reason="disabled" />;
   if (!can(user, m.permission)) return <ForbiddenPage reason="denied" />;
+  // Las pantallas que usan alumnos, asistencia, pagos o prácticas esperan a que lleguen (el resto se abre al instante con el núcleo).
+  if (!heavyReady && !LIGHT.has(m.id)) return <div className="p-8"><LoadingState label="Cargando datos…" /></div>;
   const Page = PAGES[m.id];
   return Page ? <Page /> : <ModulePlaceholder module={m} />;
 }

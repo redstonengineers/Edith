@@ -31,3 +31,10 @@ async function newClient(U, { academyName, type = 'otro', plan = 'basic', adminE
   return { cookie: cookieOf(ch, 'ac_session'), email: j.adminEmail, password, academyId: j.academyId };
 }
 module.exports = { J, cookieOf, ownerCookie, demoSession, realClient, newClient };
+
+/** Modo local (Vite, datos en el navegador): la pantalla de login lista las cuentas de demostración (sin contraseña); se pulsa la de `who` (nombre de la persona). */
+async function mockLogin(p, U, who) {
+  await p.goto(U + '/'); await p.getByRole('button', { name: new RegExp(who) }).first().click();
+  await p.locator('main h1').first().waitFor();
+}
+module.exports.mockLogin = mockLogin;

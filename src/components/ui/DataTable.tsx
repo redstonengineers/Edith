@@ -42,15 +42,15 @@ export function DataTable<T>({ rows, columns, rowKey, onRowClick, rowMenu, pageS
   return (
     <div className="panel overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-left text-sm" aria-label={label}>
+        <table className="w-full min-w-[480px] sm:min-w-[560px] text-left text-sm" aria-label={label}>
           <thead>
-            <tr className="border-b border-line text-[11px] tracking-[0.1em] text-muted uppercase">
+            <tr className="border-b border-line text-xs text-muted">
               {columns.map((c) => {
                 const active = sort?.key === c.key;
                 return (
                   <th key={c.key} scope="col" aria-sort={active ? (sort!.dir === 'asc' ? 'ascending' : 'descending') : undefined} className={cn('px-4 py-3 font-semibold', c.hide && hideCls[c.hide], c.align === 'right' && 'text-right')}>
                     {c.sort ? (
-                      <button onClick={() => toggle(c.key)} className="inline-flex items-center gap-1 uppercase hover:text-fg">
+                      <button onClick={() => toggle(c.key)} className="inline-flex items-center gap-1 hover:text-fg">
                         {c.header}{active ? (sort!.dir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ChevronsUpDown size={12} className="opacity-40" />}
                       </button>) : c.header}
                   </th>);

@@ -74,10 +74,10 @@ export default function PaymentsPage() {
   return (
     <>
       <PageHeader title="Pagos" description="Cobros, pendientes y vencidos." actions={write && <Button variant="primary" onClick={() => setSp({ nuevo: '1' })}><Plus size={16} />Nuevo cobro</Button>} />
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <div className="panel p-5"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Ingresos del mes</p><p className="tnum mt-1 text-3xl font-semibold text-ok">{fmtMoney(sum(paidMonth), currency)}</p><p className="mt-1 text-xs text-muted">{paidMonth.length} cobros</p></div>
-        <div className="panel p-5"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Pendiente de cobro</p><p className="tnum mt-1 text-3xl font-semibold">{fmtMoney(sum(pending), currency)}</p><p className="mt-1 text-xs text-muted">{pending.length} recibos</p></div>
-        <div className="panel p-5"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Pagos vencidos</p><p className={`tnum mt-1 text-3xl font-semibold ${overdue.length ? 'text-bad' : ''}`}>{fmtMoney(sum(overdue), currency)}</p><p className="mt-1 text-xs text-muted">{overdue.length} recibos · {new Set(overdue.map((p) => p.studentId)).size} alumnos</p></div>
+      <div className="mb-4 grid grid-cols-3 gap-2 sm:mb-6 sm:gap-4">
+        <div className="panel p-3 sm:p-5"><p className="text-xs text-muted">Ingresos del mes</p><p className="tnum mt-1 text-lg font-semibold sm:text-3xl text-ok">{fmtMoney(sum(paidMonth), currency)}</p><p className="mt-1 text-xs text-muted">{paidMonth.length} cobros</p></div>
+        <div className="panel p-3 sm:p-5"><p className="text-xs text-muted">Pendiente de cobro</p><p className="tnum mt-1 text-lg font-semibold sm:text-3xl">{fmtMoney(sum(pending), currency)}</p><p className="mt-1 text-xs text-muted">{pending.length} recibos</p></div>
+        <div className="panel p-3 sm:p-5"><p className="text-xs text-muted">Pagos vencidos</p><p className={`tnum mt-1 text-lg font-semibold sm:text-3xl ${overdue.length ? 'text-bad' : ''}`}>{fmtMoney(sum(overdue), currency)}</p><p className="mt-1 text-xs text-muted">{overdue.length} recibos · {new Set(overdue.map((p) => p.studentId)).size} alumnos</p></div>
       </div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><FilterChips<F> label="Estado" value={f} onChange={setF} options={[opt('todos', 'Todos'), opt('vencido', 'Vencidos'), opt('pendiente', 'Pendientes'), opt('pagado', 'Pagados')]} /><SearchInput value={q} onChange={setQ} placeholder="Buscar alumno o concepto…" label="Buscar pagos" /></div>
       <DataTable label="Pagos" rows={rows} columns={cols} rowKey={(p) => p.id} defaultSort={{ key: 'd', dir: 'asc' }} empty={{ icon: CreditCard, title: 'Sin pagos', description: 'Nada con este filtro.' }} />

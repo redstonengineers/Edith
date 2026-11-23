@@ -24,7 +24,7 @@ const CASES = [
       await p.goto(U + '/onboarding'); await p.getByLabel(/Nombre de la academia/).fill('Centro ' + label.slice(0, 6)); await p.getByRole('button', { name: 'Continuar' }).click(); await p.getByRole('button', { name: 'Continuar' }).click();
       await p.getByRole('radio', { name: new RegExp(label.replace(/[()]/g, '')) }).click(); await p.getByRole('button', { name: 'Continuar' }).click(); await p.getByRole('button', { name: 'Continuar' }).click();
       await p.getByLabel(/Tu nombre/).fill('Dueño Prueba'); await p.getByLabel(/Correo/).fill('dueno@prueba.demo'); await p.getByLabel(/Contraseña/).fill('Prueba2026ok'); await p.getByRole('button', { name: 'Crear academia' }).click();
-      await p.waitForSelector('text=Academy Command Center', { timeout: 10000 }); await p.waitForTimeout(500);
+      await p.waitForSelector('main h1', { timeout: 10000 }); await p.waitForTimeout(500);
       ok((await p.locator('aside').innerText()).includes(plural), `menú usa «${plural}»`);
       await p.goto(U + '/alumnos'); await p.locator('main h1').first().waitFor(); ok(await p.getByRole('button', { name: newStudent }).count() >= 1, `botón ${newStudent}`);
       await p.goto(U + route); await p.locator('main h1, main [role=alert]').first().waitFor(); const txt = await p.locator('main').innerText(); const mod = /Módulo no activado/.test(txt);

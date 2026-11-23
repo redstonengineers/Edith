@@ -1,8 +1,9 @@
 // Ajustes → Módulos en una academia recién dada de alta (solo guarda los módulos activos): activar uno con dependencias y guardar.
-const { chromium } = require('playwright');
-const U = process.env.APP_URL || 'http://127.0.0.1:4012'; const EMAIL = process.env.PV_EMAIL; const PW = process.env.PV_PASSWORD;
+const { chromium } = require('playwright'); const { newClient } = require('./acceso-lib.cjs');
+const U = process.env.APP_URL || 'http://127.0.0.1:4012'; const EMAIL = 'ajustes@taller-modular.test'; const PW = 'Modulos2026ok'; // negocio nuevo creado como cliente real (servidor con TENANTS=1 + PERSONAL_PASSWORD; prueba con PERSONAL_TEST_PASSWORD)
 let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!c) fails++; };
 (async () => {
+  await newClient(U, { academyName: 'Taller Modular', type: 'otro', plan: 'premium', adminEmail: EMAIL, password: PW });
   const b = await chromium.launch(); const errs = []; const p = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage(); p.on('pageerror', (e) => errs.push(e.message));
   await p.goto(U + '/login'); await p.getByLabel(/Correo/).fill(EMAIL); await p.getByLabel('Contraseña').fill(PW); await p.getByRole('button', { name: /Entrar/ }).click(); await p.waitForSelector('main h1');
   await p.goto(U + '/personalizacion'); await p.getByRole('tab', { name: 'Módulos' }).click();

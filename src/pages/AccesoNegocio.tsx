@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '@/config/brand';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
@@ -15,7 +16,7 @@ export default function AccesoNegocio() {
   const t = tenants?.find((x) => x.slug === slug);
   useEffect(() => {
     if (!t) return; const root = document.documentElement; root.dataset.theme = t.theme; root.style.setProperty('--brand', t.primary); root.style.setProperty('--brand-2', t.secondary); root.style.setProperty('--on-brand', onColor(t.primary)); document.title = `${t.name} · EDITH`;
-    return () => { root.style.removeProperty('--brand'); root.style.removeProperty('--brand-2'); root.style.removeProperty('--on-brand'); root.dataset.theme = 'dark'; document.title = 'EDITH'; };
+    return () => { root.style.removeProperty('--brand'); root.style.removeProperty('--brand-2'); root.style.removeProperty('--on-brand'); root.dataset.theme = 'light'; document.title = 'EDITH'; };
   }, [t]);
   if (status === 'auth' || status === 'password') return <Navigate to="/" replace />;
   if (tenants && !t) return <Navigate to="/login" replace />;
@@ -33,7 +34,7 @@ export default function AccesoNegocio() {
           <p className="mt-3 max-w-md text-lg" style={{ color: t.primary }}>{t.tagline}</p>
           <p className="mt-4 max-w-md text-muted">{t.blurb}</p>
         </div>
-        <StatusIndicator label="Powered by EDITH" />
+        <StatusIndicator label={`Creado con ${PRODUCT_NAME}`} />
       </div>
       <div className="relative z-10 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
@@ -42,7 +43,7 @@ export default function AccesoNegocio() {
           <h2 className="text-2xl font-semibold tracking-tight">Probar {t.card}</h2>
           <p className="mt-1 text-sm text-muted">Demostración abierta con datos ficticios: elige un perfil y entra, sin contraseña.</p>
           <div className="mt-6" role="group" aria-label="Entrar como">
-            <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Entrar como</p>
+            <p className="mb-2 text-xs font-semibold text-muted">Entrar como</p>
             <div className="grid gap-2 sm:grid-cols-2">{t.profiles.map((p) => (
               <button key={p.username} type="button" disabled={!!busy} onClick={() => void enter(p.username)} className="flex h-12 items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 text-left text-sm font-medium transition hover:border-brand hover:shadow-md disabled:opacity-60">
                 <span>{p.label}</span>{busy === p.username ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ArrowRight size={16} className="text-muted" aria-hidden />}

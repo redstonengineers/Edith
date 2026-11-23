@@ -55,7 +55,7 @@ export type ModuleId =
   | 'exams' | 'grades' | 'attendance' | 'applications' | 'waitlist' | 'enrollments'
   | 'payments' | 'billing' | 'documents' | 'practicas' | 'vehiculos' | 'parte' | 'avisos' | 'incidents' | 'messages' | 'announcements'
   | 'notifications' | 'statistics' | 'reports' | 'ai' | 'settings' | 'users' | 'permissions'
-  | 'customization' | 'platform';
+  | 'customization' | 'platform' | 'accessLog';
 
 export interface Settings extends Tenant {
   branding: { name: string; tagline: string; logoUrl?: string; faviconUrl?: string; primary: string; secondary: string; theme: ThemeMode };

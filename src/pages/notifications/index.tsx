@@ -18,7 +18,7 @@ export default function NotificationsPage() {
       {snap.notifications.length === 0 ? <div className="panel"><EmptyState icon={Bell} title="Sin notificaciones" /></div> : (
         <ul className="panel divide-y divide-line">{snap.notifications.map((n) => (
           <li key={n.id} className="flex items-start gap-3 px-5 py-3.5"><span aria-hidden className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', n.read ? 'bg-line-strong' : tone[n.level])} />
-            <div className="min-w-0 flex-1"><p className={cn('text-sm', !n.read && 'font-semibold')}>{n.title}</p><p className="text-[13px] text-muted">{n.body}</p><p className="mt-0.5 text-[11px] text-muted">{fmtAgo(n.createdAt)}</p></div>
+            <div className="min-w-0 flex-1"><p className={cn('text-sm', !n.read && 'font-semibold')}>{n.title}</p><p className="text-[13px] text-muted">{n.body}</p><p className="mt-0.5 text-xs text-muted">{fmtAgo(n.createdAt)}</p></div>
             {n.href && <Link to={n.href} onClick={() => void markNotificationsRead(user, n.id)} className="text-xs text-brand-text hover:underline">Abrir</Link>}</li>))}</ul>)}
     </>
   );

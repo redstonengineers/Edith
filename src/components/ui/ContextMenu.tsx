@@ -28,7 +28,7 @@ export function ContextMenu({ at, items, onClose }: { at: { x: number; y: number
       {items.map((it) => (
         <button key={it.label} role="menuitem" type="button" onClick={() => { onClose(); it.onSelect(); }}
           className={cn('ctx-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] outline-none', it.danger ? 'text-bad hover:bg-bad/10 focus:bg-bad/10' : 'text-fg hover:bg-surface-2 focus:bg-surface-2')}>
-          {it.icon && <span aria-hidden className="text-muted">{it.icon}</span>}<span className="flex-1">{it.label}</span>{it.hint && <span className="text-[11px] text-muted">{it.hint}</span>}
+          {it.icon && <span aria-hidden className="text-muted">{it.icon}</span>}<span className="flex-1">{it.label}</span>{it.hint && <span className="text-xs text-muted">{it.hint}</span>}
         </button>))}
     </div>, document.body);
 }

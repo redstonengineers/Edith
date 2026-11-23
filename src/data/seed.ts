@@ -34,7 +34,7 @@ const V = (start: string, end: string): ScheduleSlot[] => [{ weekday: 5, start, 
 const SPECS: AcademySpec[] = [
   {
     id: 'acad_001', name: 'Academia Horizonte', tagline: 'Refuerzo, idiomas y preparación académica', type: 'educativa',
-    primary: '#8b7bff', secondary: '#f472b6', theme: 'dark', seed: 1001, students: 44, waitlist: 7,
+    primary: '#8b7bff', secondary: '#f472b6', theme: 'light', seed: 1001, students: 44, waitlist: 7,
     fixedNames: ['María García Ruiz', 'Daniel Moreno Gil', 'Laura García Prieto', 'María Sánchez Vidal', 'Carlos Fernández Cano', 'Juan Pérez Ortega'],
     subjects: [
       { name: 'Matemáticas', code: 'MAT', color: '#8b7bff', level: 'ESO' }, { name: 'Inglés', code: 'ING', color: '#a78bfa' },

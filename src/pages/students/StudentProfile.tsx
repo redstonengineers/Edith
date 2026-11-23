@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { recordAccess } from '@/services/accessLog';
+import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Mail, Pencil, Phone, ShieldAlert, UserMinus, UserX } from 'lucide-react';
 import { AttendanceCell, PayBadge, StudentStatusBadge } from '@/components/domain/badges';
@@ -26,6 +28,7 @@ export default function StudentProfile() {
   const s = snap.students.find((x) => x.id === id);
   const [edit, setEdit] = useState(false); const [confirm, setConfirm] = useState<null | 'baja' | 'inactivo'>(null);
   const [notes, setNotes] = useState(s?.notes ?? ''); const [pick, setPick] = useState('');
+  useEffect(() => { if (s) recordAccess({ action: 'view', entity: 'student', id: s.id, subject: `${s.firstName} ${s.lastName}`, who: { id: user.id, name: user.name, role: user.role } }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [s?.id]);
   if (!s) return <ForbiddenPage reason="denied" />;
 
   const row = studentRows(snap).find((r) => r.student.id === s.id)!;
@@ -56,7 +59,7 @@ export default function StudentProfile() {
               <li className="flex items-center gap-2.5"><Phone size={15} className="text-muted" aria-hidden /><a className="hover:text-brand-text" href={`tel:${s.phone.replace(/\s/g, '')}`}>{s.phone}</a></li>
             </ul>
             {guardian ? (
-              <div className="mt-4 border-t border-line pt-4 text-sm"><p className="mb-1 text-[11px] font-semibold tracking-[0.12em] text-muted uppercase">Tutor legal</p>
+              <div className="mt-4 border-t border-line pt-4 text-sm"><p className="mb-1 text-xs font-semibold text-muted">Tutor legal</p>
                 <p className="font-medium">{guardian.name} <span className="font-normal text-muted">· {guardian.relation}</span></p><p className="text-muted">{guardian.phone}</p><p className="text-muted">{guardian.email}</p></div>
             ) : row.age < 18 && <p className="mt-4 flex items-center gap-2 border-t border-line pt-4 text-[13px] text-warn"><ShieldAlert size={15} aria-hidden />Menor sin tutor registrado</p>}
           </Panel>
@@ -86,9 +89,9 @@ export default function StudentProfile() {
           { id: 'resumen', label: 'Resumen', content: (
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-3">
-                <div className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Asistencia</p><p className="mt-1 text-2xl font-semibold"><AttendanceCell pct={row.attendancePct} low={row.lowAttendance} /></p>{rate && <div className="mt-2"><ProgressBar pct={rate.pct} tone={row.lowAttendance ? 'warn' : 'ok'} label="Asistencia" /></div>}{row.lowAttendance && <p className="mt-2 text-xs text-warn">Inferior al {snap.settings.attendanceAlertThreshold} %.</p>}</div>
-                <div className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Nota media</p><p className="tnum mt-1 text-2xl font-semibold">{grades.filter((g) => g.score !== null).length ? (grades.reduce((a, g) => a + (g.score ?? 0), 0) / grades.filter((g) => g.score !== null).length).toFixed(1) : '—'}</p></div>
-                {can('payments:read') && <div className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Pagos</p><div className="mt-1.5"><PayBadge pay={row.pay} /></div>{row.overdueAmount > 0 && <p className="mt-2 text-xs text-bad">{fmtMoney(row.overdueAmount, snap.settings.currency)} vencidos</p>}</div>}
+                <div className="panel p-4"><p className="text-xs text-muted">Asistencia</p><p className="mt-1 text-2xl font-semibold"><AttendanceCell pct={row.attendancePct} low={row.lowAttendance} /></p>{rate && <div className="mt-2"><ProgressBar pct={rate.pct} tone={row.lowAttendance ? 'warn' : 'ok'} label="Asistencia" /></div>}{row.lowAttendance && <p className="mt-2 text-xs text-warn">Inferior al {snap.settings.attendanceAlertThreshold} %.</p>}</div>
+                <div className="panel p-4"><p className="text-xs text-muted">Nota media</p><p className="tnum mt-1 text-2xl font-semibold">{grades.filter((g) => g.score !== null).length ? (grades.reduce((a, g) => a + (g.score ?? 0), 0) / grades.filter((g) => g.score !== null).length).toFixed(1) : '—'}</p></div>
+                {can('payments:read') && <div className="panel p-4"><p className="text-xs text-muted">Pagos</p><div className="mt-1.5"><PayBadge pay={row.pay} /></div>{row.overdueAmount > 0 && <p className="mt-2 text-xs text-bad">{fmtMoney(row.overdueAmount, snap.settings.currency)} vencidos</p>}</div>}
               </div>
               <Panel title="Historial de actividad">
                 <ol className="space-y-3.5">{timeline.map((e) => (<li key={e.id} className="flex gap-3 text-sm"><span aria-hidden className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', toneDot[e.tone])} /><div><span className="tnum text-muted">{fmtEventDate(e.date)}</span> — {e.text}</div></li>))}</ol>

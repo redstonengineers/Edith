@@ -1,3 +1,4 @@
+import { FilterSelect } from '@/components/ui/FilterSelect';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { addDays, format, parseISO } from 'date-fns';
@@ -111,7 +112,7 @@ function Stats() {
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <FilterChips value={low} onChange={setLow} label="Alertas" options={[{ id: 'todos', label: 'Todos' }, { id: 'baja', label: `Bajo el ${th} %` }]} />
-        <select aria-label={`Filtrar por ${L.group.singular.toLowerCase()}`} value={g} onChange={(e) => setG(e.target.value)} className="h-9 rounded-lg border border-line bg-bg px-3 text-sm"><option value="todos">{L.group.plural}: todos</option>{snap.groups.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+        <FilterSelect label={L.group.singular} value={g} onChange={setG} options={[{ value: 'todos', label: 'Todos' }, ...snap.groups.map((x) => ({ value: x.id, label: x.name }))]} />
       </div>
       <DataTable label="Estadísticas de asistencia" rows={rows} columns={cols} rowKey={(r) => r.s.id} defaultSort={{ key: 'p', dir: 'asc' }} empty={{ title: 'Sin datos' }} />
     </>

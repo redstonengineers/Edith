@@ -26,7 +26,7 @@ export default function TeacherProfile() {
         actions={write && <><Button onClick={() => setEdit(true)}><Pencil size={15} />Editar</Button><Button onClick={() => void run(() => updateTeacher(user, t.id, { active: !t.active }), t.active ? 'Desactivado' : 'Activado')}>{t.active ? 'Desactivar' : 'Activar'}</Button></>} />
       <div className="mb-6 grid gap-4 sm:grid-cols-4">
         {[['Horas esta semana', `${st.weekHours.toFixed(1)} / ${t.weeklyHoursTarget} h`], [`${L.group.plural}`, String(st.groups.length)], [L.student.plural, String(st.students)], ['Horas impartidas', `${st.taughtHours.toFixed(0)} h`]].map(([k, v]) => (
-          <div key={k} className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">{k}</p><p className="tnum mt-1 text-2xl font-semibold">{v}</p></div>))}
+          <div key={k} className="panel p-4"><p className="text-xs text-muted">{k}</p><p className="tnum mt-1 text-2xl font-semibold">{v}</p></div>))}
       </div>
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-6">

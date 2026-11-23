@@ -51,7 +51,7 @@ export function StudentForm({ open, onClose, student, onCreated }: { open: boole
       </div>
       {minor && !student && (
         <fieldset className="rounded-xl border border-line p-4">
-          <legend className="px-2 text-xs font-semibold tracking-[0.1em] text-muted uppercase">Tutor legal (menor de edad)</legend>
+          <legend className="px-2 text-xs font-semibold text-muted">Tutor legal (menor de edad)</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre del tutor" required error={err.g_name}>{(p) => <Input {...p} value={f.gName} onChange={set('gName')} />}</Field>
             <Field label="Parentesco" required error={err.g_relation}>{(p) => <Select {...p} value={f.gRel} onChange={set('gRel')}><option>Madre</option><option>Padre</option><option>Tutor legal</option></Select>}</Field>

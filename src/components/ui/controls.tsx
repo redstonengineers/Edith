@@ -17,7 +17,7 @@ export function FilterChips<T extends string>({ value, onChange, options, label 
       {options.map((o) => (
         <button key={o.id} onClick={() => onChange(o.id)} aria-pressed={value === o.id}
           className={cn('h-8 rounded-full border px-3 text-[13px] transition-colors', value === o.id ? 'border-brand/50 bg-brand/12 text-fg' : 'border-line text-muted hover:border-line-strong hover:text-fg')}>
-          {o.label}{o.count !== undefined && <span className="tnum ml-1.5 text-[11px]">{o.count}</span>}
+          {o.label}{o.count !== undefined && <span className="tnum ml-1.5 text-xs">{o.count}</span>}
         </button>))}
     </div>
   );

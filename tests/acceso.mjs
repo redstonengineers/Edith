@@ -21,7 +21,7 @@ const fake = http.createServer((req, res) => { req.resume(); req.on('end', () =>
 
 const dir = mkdtempSync(join(tmpdir(), 'edith-acceso-')); let child = null;
 const env = { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', DB_PATH: join(dir, 'a.db'), BACKUP_HOURS: '0', TENANTS: '1', PROVISION_ACADEMY_NAME: 'Autoescuela Atlanta', PROVISION_ADMIN_EMAIL: 'owner@atlanta.test', PERSONAL_PASSWORD: PW, SESSION_HOURS: '100',
-  RESEND_API_KEY: 'k', MAIL_API_BASE: `http://127.0.0.1:${FAKE}`, WHATSAPP_TOKEN: 't', WHATSAPP_PHONE_ID: 'p1', WHATSAPP_API_BASE: `http://127.0.0.1:${FAKE}`, ANTHROPIC_API_KEY: 'ak', ANTHROPIC_API_BASE: `http://127.0.0.1:${FAKE}`, NOTICES_TICK_MS: '400', DEMO_RESET_DAILY: '0', NODE_ENV: 'development' };
+  RESEND_API_KEY: 'k', MAIL_API_BASE: `http://127.0.0.1:${FAKE}`, WHATSAPP_TOKEN: 't', WHATSAPP_PHONE_ID: 'p1', WHATSAPP_API_BASE: `http://127.0.0.1:${FAKE}`, ANTHROPIC_API_KEY: 'ak', ANTHROPIC_API_BASE: `http://127.0.0.1:${FAKE}`, NOTICES_TICK_MS: '400', DEMO_RESET_DAILY: '0', LOGIN_FAILS_PER_IP: '100000', NODE_ENV: 'development' };
 for (const k of ['SEED_DEMO', 'TENANT_PASSWORD', 'BOOTSTRAP_ADMIN_EMAIL']) delete env[k];
 async function start() {
   child = spawn('npx', ['tsx', 'server/index.ts'], { env, stdio: ['ignore', 'ignore', 'ignore'], detached: true });

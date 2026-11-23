@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { nuevo } from '@/lib/labels';
 import { AlertTriangle, Plus } from 'lucide-react';
+import { FilterSelect } from '@/components/ui/FilterSelect';
+import { businessHours } from '@/lib/businessHours';
 import { Calendar, CalendarToolbar, type CalEvent, type CalView } from '@/components/calendar/Calendar';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/form';
 import { useAction, useCan, useLabels, usePersistentState, useSnapshot, useUser } from '@/hooks';
 import { conflictMap } from '@/lib/classes';
 import { fullName } from '@/lib/people';
@@ -42,11 +43,11 @@ export default function SchedulePage() {
     <>
       <PageHeader title="Horarios" description={write ? 'Arrastra una clase para moverla. Haz clic en un hueco para crear una nueva.' : 'Tu calendario de clases.'} actions={write && <Button variant="primary" onClick={() => setOpen({})}><Plus size={16} />{nuevo(L.class)}</Button>} />
       <CalendarToolbar view={view} setView={setView} cursor={cursor} setCursor={setCursor} extra={<>
-        <Select aria-label={`Filtrar por ${L.teacher.singular.toLowerCase()}`} value={fTeacher} onChange={(e) => setFTeacher(e.target.value)} className="h-9 w-52"><option value="">Todos: {L.teacher.plural.toLowerCase()}</option>{snap.teachers.map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}</Select>
-        <Select aria-label={`Filtrar por ${L.group.singular.toLowerCase()}`} value={fGroup} onChange={(e) => setFGroup(e.target.value)} className="h-9 w-52"><option value="">Todos: {L.group.plural.toLowerCase()}</option>{snap.groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select>
-        <Select aria-label={`Filtrar por ${L.classroom.singular.toLowerCase()}`} value={fRoom} onChange={(e) => setFRoom(e.target.value)} className="h-9 w-44"><option value="">Todas: {L.classroom.plural.toLowerCase()}</option>{snap.classrooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select></>} />
+        <FilterSelect label={L.teacher.singular} value={fTeacher} onChange={setFTeacher} options={[{ value: '', label: 'Todos' }, ...snap.teachers.map((t) => ({ value: t.id, label: fullName(t) }))]} />
+        <FilterSelect label={L.group.singular} value={fGroup} onChange={setFGroup} options={[{ value: '', label: 'Todos' }, ...snap.groups.map((g) => ({ value: g.id, label: g.name }))]} />
+        <FilterSelect label={L.classroom.singular} value={fRoom} onChange={setFRoom} options={[{ value: '', label: 'Todas' }, ...snap.classrooms.map((r) => ({ value: r.id, label: r.name }))]} /></>} />
       {visibleConflicts.length > 0 && <p role="status" className="mb-3 flex items-center gap-2 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn"><AlertTriangle size={15} aria-hidden />{visibleConflicts.length} {visibleConflicts.length === 1 ? 'clase con conflicto' : 'clases con conflicto'} (marcadas en rojo).</p>}
-      <Calendar view={view} cursor={cursor} events={events} onSelect={(id) => setOpen({ id })} onCreate={write ? (date, start) => setOpen({ defaults: { date, start } }) : undefined} onMove={write ? onMove : undefined}
+      <Calendar hours={businessHours(snap)} view={view} cursor={cursor} events={events} onSelect={(id) => setOpen({ id })} onCreate={write ? (date, start) => setOpen({ defaults: { date, start } }) : undefined} onMove={write ? onMove : undefined}
         onPickDay={(d) => { const [y, m, dd] = d.split('-').map(Number); setCursor(new Date(y, m - 1, dd)); setView('day'); }} />
       {open && <ClassForm key={open.id ?? 'new'} open session={session} defaults={open.defaults} onClose={close} />}
     </>

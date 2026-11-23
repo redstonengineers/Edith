@@ -13,17 +13,17 @@ const tones: Record<Tone, string> = {
   brand: 'bg-brand/12 text-brand-text border-brand/25',
 };
 export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-4', tones[tone], className)}>{children}</span>;
+  return <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium leading-4', tones[tone], className)}>{children}</span>;
 }
 
 export function Kbd({ children }: { children: ReactNode }) {
-  return <kbd className="rounded border border-line-strong bg-surface-2 px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted">{children}</kbd>;
+  return <kbd className="rounded border border-line-strong bg-surface-2 px-1.5 py-0.5 font-sans text-xs font-medium text-muted">{children}</kbd>;
 }
 
 export function StatusIndicator({ tone = 'ok', label, pulse = true }: { tone?: 'ok' | 'warn' | 'bad'; label: string; pulse?: boolean }) {
   const c = { ok: 'bg-ok', warn: 'bg-warn', bad: 'bg-bad' }[tone];
   return (
-    <span className="inline-flex items-center gap-2 text-[11px] font-medium tracking-[0.12em] text-muted uppercase" role="status">
+    <span className="inline-flex items-center gap-2 text-xs font-medium text-muted" role="status">
       <span aria-hidden className={cn('h-2 w-2 rounded-full', c, pulse && tone === 'ok' && 'dot-live')} />
       {label}
     </span>
@@ -45,7 +45,7 @@ export function Panel({ title, action, children, className, bodyClassName, id }:
     <section aria-labelledby={title ? hid : undefined} className={cn('panel', className)}>
       {(title || action) && (
         <header className="flex items-center justify-between gap-3 px-5 pt-4 pb-2">
-          <h2 id={hid} className="text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">{title}</h2>
+          <h2 id={hid} className="text-xs font-semibold text-muted">{title}</h2>
           {action}
         </header>
       )}

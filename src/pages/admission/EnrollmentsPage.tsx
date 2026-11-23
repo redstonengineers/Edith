@@ -48,7 +48,7 @@ export default function EnrollmentsPage() {
           const items = by(st.id); const shown = st.id === 'activa' ? items.slice(0, 6) : items;
           return (
             <section key={st.id} aria-label={st.label} className="panel flex min-h-40 flex-col">
-              <header className="flex items-center justify-between border-b border-line px-4 py-3"><div><h2 className="text-sm font-semibold">{st.label}</h2><p className="text-[11px] text-muted">{st.hint}</p></div><Badge>{items.length}</Badge></header>
+              <header className="flex items-center justify-between border-b border-line px-4 py-3"><div><h2 className="text-sm font-semibold">{st.label}</h2><p className="text-xs text-muted">{st.hint}</p></div><Badge>{items.length}</Badge></header>
               <ul className="flex-1 space-y-2 p-3">
                 {shown.length === 0 && <li className="px-1 py-6 text-center text-xs text-muted">Vacío</li>}
                 {shown.map((e) => (
@@ -56,7 +56,7 @@ export default function EnrollmentsPage() {
                     <p className="text-sm font-medium">{e.studentId ? <Link to={`/alumnos/${e.studentId}`} className="hover:text-brand-text">{enrollmentName(snap, e)}</Link> : enrollmentName(snap, e)}</p>
                     <p className="text-xs text-muted">{e.applicant?.course ?? snap.groups.find((g) => g.id === e.groupId)?.name ?? ''} · {fmtDate(e.createdAt)}{e.applicant?.source === 'web' && <Badge className="ml-1.5">Web</Badge>}{e.applicant?.whatsappConsent && <Badge className="ml-1.5">WhatsApp ✓</Badge>}</p>
                     {e.applicant?.message && <p className="mt-1 line-clamp-2 text-xs text-muted" title={e.applicant.message}>«{e.applicant.message}»</p>}
-                    {e.applicant?.guardianName && <p className="mt-1 text-[11px] text-muted">Tutor: {e.applicant.guardianName} · {e.applicant.guardianPhone}</p>}
+                    {e.applicant?.guardianName && <p className="mt-1 text-xs text-muted">Tutor: {e.applicant.guardianName} · {e.applicant.guardianPhone}</p>}
                     {write && st.next && (
                       <div className="mt-2.5 flex gap-1.5">
                         <Button size="sm" variant="primary" onClick={() => (e.status === 'matriculada' ? setAssign(e) : void act.advance(e))}>{st.next}</Button>

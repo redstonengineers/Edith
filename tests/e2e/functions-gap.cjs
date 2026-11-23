@@ -24,7 +24,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   await p.keyboard.press('Escape');
 
   // Tema + sidebar
-  const theme0 = await p.evaluate(() => document.documentElement.dataset.theme); await p.getByRole('button', { name: /tema|claro|oscuro/i }).first().click(); await p.waitForTimeout(300);
+  const theme0 = await p.evaluate(() => document.documentElement.dataset.theme); await p.getByRole('button', { name: /^Cambiar a tema/ }).click(); await p.waitForTimeout(300);
   ok(await p.evaluate(() => document.documentElement.dataset.theme) !== theme0, 'cambiar tema'); await p.reload(); await p.waitForSelector('main h1'); ok(await p.evaluate(() => document.documentElement.dataset.theme) !== theme0, 'el tema persiste tras recargar');
   const w0 = (await p.locator('aside').boundingBox()).width; await p.getByRole('button', { name: /Plegar/ }).click(); await p.waitForTimeout(400); ok((await p.locator('aside').boundingBox()).width < w0 - 80, 'plegar sidebar'); await p.getByRole('button', { name: /Expandir|Desplegar|Plegar/ }).last().click().catch(() => {});
 

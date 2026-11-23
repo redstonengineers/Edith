@@ -32,10 +32,10 @@ export default function GroupDetail() {
         description={<span className="flex flex-wrap items-center gap-x-5 gap-y-1"><span className="flex items-center gap-1.5"><User size={14} aria-hidden />{teacher ? <Link to={`/profesores/${teacher.id}`} className="hover:text-brand-text">{fullName(teacher)}</Link> : '—'}</span><span className="flex items-center gap-1.5"><Clock size={14} aria-hidden /><span className="tnum">{scheduleText(g)}</span></span><span className="flex items-center gap-1.5"><DoorOpen size={14} aria-hidden />{room?.name}</span></span>}
         actions={can('groups:write') && <Button onClick={() => setEdit(true)}><Pencil size={15} />Editar</Button>} />
       <div className="mb-6 grid gap-4 sm:grid-cols-4">
-        <div className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">{L.student.plural}</p><p className="tnum mt-1 text-2xl font-semibold">{st.members.length}<span className="text-base text-muted"> / {g.capacity}</span></p><div className="mt-2"><ProgressBar pct={st.pct} tone={full ? 'warn' : 'brand'} label="Ocupación" /></div></div>
-        <div className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Asistencia</p><p className="tnum mt-1 text-2xl font-semibold">{st.attendancePct === null ? '—' : `${Math.round(st.attendancePct)} %`}</p></div>
-        <div className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">Nota media</p><p className="tnum mt-1 text-2xl font-semibold">{st.avgGrade === null ? '—' : st.avgGrade.toFixed(1)}</p></div>
-        <div className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">{L.incident.plural}</p><p className="tnum mt-1 text-2xl font-semibold">{incidents.length}</p></div>
+        <div className="panel p-4"><p className="text-xs text-muted">{L.student.plural}</p><p className="tnum mt-1 text-2xl font-semibold">{st.members.length}<span className="text-base text-muted"> / {g.capacity}</span></p><div className="mt-2"><ProgressBar pct={st.pct} tone={full ? 'warn' : 'brand'} label="Ocupación" /></div></div>
+        <div className="panel p-4"><p className="text-xs text-muted">Asistencia</p><p className="tnum mt-1 text-2xl font-semibold">{st.attendancePct === null ? '—' : `${Math.round(st.attendancePct)} %`}</p></div>
+        <div className="panel p-4"><p className="text-xs text-muted">Nota media</p><p className="tnum mt-1 text-2xl font-semibold">{st.avgGrade === null ? '—' : st.avgGrade.toFixed(1)}</p></div>
+        <div className="panel p-4"><p className="text-xs text-muted">{L.incident.plural}</p><p className="tnum mt-1 text-2xl font-semibold">{incidents.length}</p></div>
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <Panel title={L.student.plural} bodyClassName="px-0 pb-1">

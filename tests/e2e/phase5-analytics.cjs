@@ -1,9 +1,9 @@
 // Prueba end-to-end con Playwright. Uso: APP_URL=http://127.0.0.1:5173 node tests/e2e/phase5-analytics.cjs
-const { chromium } = require('playwright'); const out = (process.env.SHOT_DIR || '/tmp/'); const U = process.env.APP_URL || 'http://127.0.0.1:5173';
+const { chromium } = require('playwright'); const { mockLogin } = require('./acceso-lib.cjs'); const out = (process.env.SHOT_DIR || '/tmp/'); const U = process.env.APP_URL || 'http://127.0.0.1:5173';
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
 (async () => {
   const b = await chromium.launch(); const errors = [];
-  const login = async (who, vp = { width: 1440, height: 900 }) => { const c = await b.newContext({ viewport: vp, acceptDownloads: true }); const p = await c.newPage(); p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && errors.push(m.text())); await p.goto(U + '/'); await p.getByRole('button', { name: new RegExp(who) }).first().click(); await p.waitForSelector('text=Academy Command Center'); return p; };
+  const login = async (who, vp = { width: 1440, height: 900 }) => { const c = await b.newContext({ viewport: vp, acceptDownloads: true }); const p = await c.newPage(); p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && errors.push(m.text())); await mockLogin(p, U, who); return p; };
   let p = await login('Pablo Vidal');
   await p.goto(U + '/estadisticas'); await p.waitForSelector('svg[role=img]'); await p.waitForTimeout(500);
   ok(await p.locator('svg[role=img]').count() >= 4, 'charts rendered');

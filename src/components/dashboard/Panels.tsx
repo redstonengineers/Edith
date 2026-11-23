@@ -78,7 +78,7 @@ export function ActivityFeed() {
         <ul className="space-y-3.5">{activity.slice(0, 6).map((a) => { const u = users.find((x) => x.id === a.actorId); return (
           <li key={a.id} className="flex items-start gap-3">
             <Avatar name={a.actorName} hue={u?.avatarHue ?? 200} size={26} />
-            <div className="min-w-0"><p className="text-[13.5px] leading-snug">{a.summary}</p><p className="text-[11px] text-muted">{fmtAgo(a.at)}</p></div>
+            <div className="min-w-0"><p className="text-[13.5px] leading-snug">{a.summary}</p><p className="text-xs text-muted">{fmtAgo(a.at)}</p></div>
           </li>); })}</ul>
       )}
     </Panel>

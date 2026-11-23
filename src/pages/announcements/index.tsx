@@ -43,7 +43,7 @@ export default function AnnouncementsPage() {
       {items.length === 0 ? <div className="panel"><EmptyState icon={Megaphone} title="Sin avisos" description="Publica el primero para informar a tu comunidad." /></div> : (
         <ul className="space-y-4">{items.map((m) => (
           <li key={m.id} className="panel p-5"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">{m.subject}</h2><div className="flex items-center gap-2"><Badge>{m.audienceGroupId ? snap.groups.find((g) => g.id === m.audienceGroupId)?.name ?? L.group.singular : 'Toda la academia'}</Badge><Badge tone={CHANNELS[m.channel].live ? 'ok' : 'neutral'}>{CHANNELS[m.channel].label}</Badge></div></div>
-            <p className="mt-2 text-sm whitespace-pre-wrap text-muted">{m.body}</p><p className="mt-3 text-[11px] text-muted">{snap.users.find((u) => u.id === m.fromUserId)?.name} · {fmtAgo(m.sentAt)}</p></li>))}</ul>)}
+            <p className="mt-2 text-sm whitespace-pre-wrap text-muted">{m.body}</p><p className="mt-3 text-xs text-muted">{snap.users.find((u) => u.id === m.fromUserId)?.name} · {fmtAgo(m.sentAt)}</p></li>))}</ul>)}
       {adding && <NewAnnouncement onClose={() => setAdding(false)} />}
     </>
   );

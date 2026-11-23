@@ -1,3 +1,4 @@
+import { ASSISTANT_NAME } from '@/config/brand';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarDays, CheckSquare, CreditCard, FileText, Hourglass, Keyboard, Palette, Plus, Settings, Sparkles, AlertTriangle, UserPlus, type LucideIcon } from 'lucide-react';
@@ -33,7 +34,7 @@ export function useCommands(): Command[] {
     action('payments', 'payments:write', { id: 'new-payment', title: `Nuevo ${l('payment')}`, hint: `Registrar ${l('payment')}`, icon: CreditCard, keywords: `nuevo registrar ${l('payment')} pago cobro`, run: () => navigate('/pagos?nuevo=1'), quick: true });
     if (enabled.has('schedule')) out.push({ id: 'open-calendar', title: 'Abrir calendario', icon: CalendarDays, group: 'Acciones rápidas', keywords: 'calendario horarios agenda semana', run: () => navigate('/horarios') });
     if (enabled.has('waitlist')) out.push({ id: 'open-waitlist', title: 'Abrir lista de espera', icon: Hourglass, group: 'Acciones rápidas', keywords: 'lista espera waitlist', run: () => navigate('/lista-espera') });
-    if (enabled.has('ai')) out.push({ id: 'open-ai', title: 'Abrir JARVIS AI', icon: Sparkles, group: 'Sistema', keywords: 'jarvis ia asistente preguntar inteligencia', run: () => setAi(true) });
+    if (enabled.has('ai')) out.push({ id: 'open-ai', title: `Abrir ${ASSISTANT_NAME}`, icon: Sparkles, group: 'Sistema', keywords: 'ia asistente preguntar inteligencia', run: () => setAi(true) });
     const current = theme ?? settingsTheme ?? 'dark';
     out.push({ id: 'toggle-theme', title: `Cambiar a tema ${current === 'dark' ? 'claro' : 'oscuro'}`, icon: Palette, group: 'Sistema', keywords: 'tema claro oscuro modo dark light apariencia', run: () => setTheme(current === 'dark' ? 'light' : 'dark') });
     out.push({ id: 'shortcuts', title: 'Atajos de teclado', icon: Keyboard, group: 'Sistema', keywords: 'atajos teclado ayuda shortcuts', run: () => setShortcuts(true) });

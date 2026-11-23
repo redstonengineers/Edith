@@ -44,7 +44,7 @@ export default function ExamDetail() {
           {gradeWrite && e.status === 'pendiente' && <Button variant="primary" onClick={() => void run(() => openGrading(user, e.id), 'Marcado como realizado')}><ClipboardCheck size={15} />Marcar realizado y calificar</Button>}
           {can('exams:write') && e.status === 'corregido' && <Button onClick={() => void run(() => setExamStatus(user, e.id, 'realizado'), 'Reabierto')}>Reabrir corrección</Button>}</>} />
       <div className="mb-6 grid gap-4 sm:grid-cols-4">
-        {[[L.group.singular, group?.name ?? '—'], [L.teacher.singular, t ? fullName(t) : '—'], ['Nota media', avg === null ? '—' : avg.toFixed(1)], ['Aprobados', scored.length ? `${pass} / ${scored.length}` : '—']].map(([k, v]) => <div key={k} className="panel p-4"><p className="text-[11px] tracking-[0.12em] text-muted uppercase">{k}</p><p className="mt-1 truncate text-lg font-semibold">{v}</p></div>)}
+        {[[L.group.singular, group?.name ?? '—'], [L.teacher.singular, t ? fullName(t) : '—'], ['Nota media', avg === null ? '—' : avg.toFixed(1)], ['Aprobados', scored.length ? `${pass} / ${scored.length}` : '—']].map(([k, v]) => <div key={k} className="panel p-4"><p className="text-xs text-muted">{k}</p><p className="mt-1 truncate text-lg font-semibold">{v}</p></div>)}
       </div>
       {e.description && <p className="mb-6 text-sm text-muted">{e.description}</p>}
       <Panel title={`Calificaciones · ${members.length} ${L.student.plural.toLowerCase()}`} bodyClassName="px-0 pb-1">

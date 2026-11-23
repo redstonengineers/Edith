@@ -7,7 +7,7 @@ import { fmtLongToday, greeting, todayISO } from '@/utils/format';
 import { addDays, format, startOfWeek } from 'date-fns';
 
 const Kpi = ({ icon: I, value, label, sub, to }: { icon: typeof Car; value: string; label: string; sub?: string; to: string }) => (
-  <Link to={to} className="panel block p-4 transition hover:border-brand/50"><I size={16} className="text-brand-text" aria-hidden /><p className="tnum mt-2 text-3xl font-semibold">{value}</p><p className="text-xs tracking-[0.12em] text-muted uppercase">{label}</p>{sub && <p className="mt-1 text-xs text-muted">{sub}</p>}</Link>
+  <Link to={to} className="panel block p-3 transition hover:border-brand/50 sm:p-4"><I size={16} className="text-brand-text" aria-hidden /><p className="tnum mt-1 text-2xl font-semibold sm:mt-2 sm:text-3xl">{value}</p><p className="text-xs text-muted">{label}</p>{sub && <p className="mt-1 text-xs text-muted">{sub}</p>}</Link>
 );
 
 /** Portada de la autoescuela: prácticas de hoy, horas de la semana, coches y avisos. */
@@ -24,9 +24,9 @@ export default function DashboardAutoescuela() {
   const stuName = (id: string) => { const s = snap.students.find((x) => x.id === id); return s ? `${s.firstName} ${s.lastName}` : ''; };
   return (
     <div className="space-y-6">
-      <div><p className="text-xs tracking-[0.14em] text-muted uppercase first-letter:uppercase">{fmtLongToday(now)}</p><h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{greeting(now)}, {user.name.split(' ')[0]}.</h1>
+      <div><p className="text-xs text-muted first-letter:">{fmtLongToday(now)}</p><h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{greeting(now)}, {user.name.split(' ')[0]}.</h1>
         <p className="mt-1 text-[15px] text-muted">{todays.length ? `Hoy tienes ${todays.length} ${todays.length === 1 ? 'práctica' : 'prácticas'}.` : 'Hoy no hay prácticas.'}</p></div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi icon={Clock} value={`${todays.filter((p) => p.status === 'hecha').length}/${todays.length}`} label="Prácticas hoy" sub="hechas / programadas" to="/practicas" />
         <Kpi icon={CheckCircle2} value={fmtHours(weekHours)} label="Horas esta semana" sub={`${fmtHours(weekDone)} ya hechas`} to="/practicas" />
         <Kpi icon={Users} value={String(active.length)} label="Alumnos activos" sub={finished.length ? `${finished.length} con las horas cumplidas` : undefined} to="/alumnos" />

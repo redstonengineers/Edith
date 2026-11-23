@@ -23,10 +23,10 @@ function Preview({ name, tagline, logo, primary, secondary, theme }: { name: str
     <div data-theme={theme} style={{ ['--brand' as string]: primary, ['--brand-2' as string]: secondary, ['--on-brand' as string]: onColor(primary), background: theme === 'dark' ? '#070b13' : '#f4f6fb', color: theme === 'dark' ? '#e8edf6' : '#0f172a', ['--surface' as string]: surface }} className="rounded-xl border border-line p-4" aria-label="Vista previa de la marca" role="group">
       <div className="mb-3 flex items-center gap-3">
         {logo ? <img src={logo} alt="" className="h-8 w-8 rounded-lg object-contain" /> : <span aria-hidden className="grid h-8 w-8 place-items-center rounded-[10px] text-sm font-bold text-on-brand" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>{name.trim()[0]?.toUpperCase() ?? 'A'}</span>}
-        <div><p className="text-sm leading-tight font-semibold">{name || 'Tu academia'}</p><p className="text-[10px] opacity-60">{tagline || 'EDITH'}</p></div>
+        <div><p className="text-sm leading-tight font-semibold">{name || 'Tu academia'}</p><p className="text-xs opacity-60">{tagline || 'EDITH'}</p></div>
       </div>
       <div className="mb-3 rounded-lg px-3 py-2 text-[13px] font-medium" style={{ background: `color-mix(in oklab, ${primary} 14%, transparent)`, borderLeft: `3px solid ${primary}` }}>Command Center</div>
-      <div className="flex flex-wrap items-center gap-2"><span className="rounded-lg bg-brand px-3 py-1.5 text-[13px] font-medium text-on-brand">Acción principal</span><span className="rounded-md px-2 py-0.5 text-[11px] font-medium" style={{ background: `color-mix(in oklab, ${primary} 15%, transparent)`, color: theme === 'dark' ? `color-mix(in oklab, ${primary} 82%, white)` : `color-mix(in oklab, ${primary} 62%, black)` }}>Etiqueta</span><span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})` }} /></div>
+      <div className="flex flex-wrap items-center gap-2"><span className="rounded-lg bg-brand px-3 py-1.5 text-[13px] font-medium text-on-brand">Acción principal</span><span className="rounded-md px-2 py-0.5 text-xs font-medium" style={{ background: `color-mix(in oklab, ${primary} 15%, transparent)`, color: theme === 'dark' ? `color-mix(in oklab, ${primary} 82%, white)` : `color-mix(in oklab, ${primary} 62%, black)` }}>Etiqueta</span><span className="h-2 w-24 rounded-full" style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})` }} /></div>
     </div>
   );
 }
@@ -50,7 +50,7 @@ function BrandTab() {
   };
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
   const color = (k: 'primary' | 'secondary', label: string) => (
-    <Field label={label} error={err[k]}>{(p) => <div className="flex gap-2"><input type="color" aria-label={`${label} (selector)`} value={f[k]} onChange={set(k)} className="h-10 w-12 cursor-pointer rounded-lg border border-line bg-transparent p-1" /><Input {...p} value={f[k]} onChange={set(k)} className="font-mono uppercase" maxLength={7} /></div>}</Field>
+    <Field label={label} error={err[k]}>{(p) => <div className="flex gap-2"><input type="color" aria-label={`${label} (selector)`} value={f[k]} onChange={set(k)} className="h-10 w-12 cursor-pointer rounded-lg border border-line bg-transparent p-1" /><Input {...p} value={f[k]} onChange={set(k)} className="font-mono" maxLength={7} /></div>}</Field>
   );
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_340px]">

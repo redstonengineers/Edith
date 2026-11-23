@@ -8,6 +8,8 @@ interface NetState {
   staleAt: number | null;
   pending: PendingItem[];
   syncing: boolean;
+  /** Última vez que se recibieron datos del servidor. */
+  syncedAt: number | null;
 }
-export const useNet = create<NetState>(() => ({ offline: typeof navigator !== 'undefined' && navigator.onLine === false, staleAt: null, pending: [], syncing: false }));
+export const useNet = create<NetState>(() => ({ offline: typeof navigator !== 'undefined' && navigator.onLine === false, staleAt: null, pending: [], syncing: false, syncedAt: null }));
 export const setOffline = (offline: boolean) => { if (useNet.getState().offline !== offline) useNet.setState(offline ? { offline } : { offline, staleAt: null }); };

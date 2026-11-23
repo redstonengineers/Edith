@@ -1,16 +1,16 @@
 // Prueba end-to-end con Playwright. Uso: APP_URL=http://127.0.0.1:5173 node tests/e2e/phase7-9-platform.cjs
-const { chromium } = require('playwright'); const out = (process.env.SHOT_DIR || '/tmp/'); const U = process.env.APP_URL || 'http://127.0.0.1:5173';
+const { chromium } = require('playwright'); const { mockLogin } = require('./acceso-lib.cjs'); const out = (process.env.SHOT_DIR || '/tmp/'); const U = process.env.APP_URL || 'http://127.0.0.1:5173';
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
 (async () => {
   const b = await chromium.launch(); const errors = []; const shared = await b.newContext({ viewport: { width: 1440, height: 900 } });
   const ctx = async (vp = { width: 1440, height: 900 }) => { const p = await shared.newPage(); await p.setViewportSize(vp); p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && errors.push(m.text())); await p.goto(U + '/login'); await p.evaluate(() => localStorage.removeItem('ac.session')); return p; };
-  const login = async (who, vp) => { const p = await ctx(vp); await p.goto(U + '/'); await p.getByRole('button', { name: new RegExp(who) }).first().click(); await p.locator('main h1').first().waitFor(); return p; };
+  const login = async (who, vp) => { const p = await ctx(vp); await mockLogin(p, U, who); return p; };
   const toasts = async (p) => (await p.locator('[role=status],[role=alert]').allInnerTexts()).join(' | ');
   // ── Personalización
   let p = await login('Pablo Vidal'); await p.goto(U + '/personalizacion'); await p.waitForSelector('[role=tablist]');
   await p.locator('input').first().fill('Academia Horizonte Pro'); await p.getByLabel('Color principal (selector)').fill('#16a34a');
   ok(/Academia Horizonte Pro/.test(await p.getByRole('group', { name: 'Vista previa de la marca' }).innerText()), 'live preview updates');
-  await p.getByLabel('Color principal', { exact: true }).fill('#0a0a0a'); ok(await p.getByText(/poco contraste/).count() === 1, 'low-contrast warning for near-black brand');
+  const lowC = (await p.evaluate(() => document.documentElement.dataset.theme)) === 'light' ? '#fafafa' : '#0a0a0a'; await p.getByLabel('Color principal', { exact: true }).fill(lowC); ok(await p.getByText(/poco contraste/).count() === 1, 'low-contrast warning for a brand color too close to the background');
   await p.getByLabel('Color principal', { exact: true }).fill('#16a34a'); await p.getByRole('button', { name: 'Guardar marca' }).click(); await p.waitForTimeout(500);
   ok(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()) === '#16a34a', 'brand color applied app-wide'); ok(await p.locator('aside').getByText('Academia Horizonte Pro').count() === 1, 'name updated in sidebar');
   await p.getByRole('tab', { name: 'Vocabulario' }).click(); await p.locator('main input').nth(0).fill('Conductor'); await p.locator('main input').nth(1).fill('Conductores'); await p.getByRole('button', { name: 'Guardar vocabulario' }).click(); await p.waitForTimeout(400);
@@ -34,12 +34,10 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   await d.locator('input').nth(0).fill('Lucía Prieto'); await d.locator('input[type=email]').fill('lucia@horizonte.demo'); await d.locator('input[type=password]').fill('corta'); await d.getByRole('button', { name: 'Guardar' }).click(); ok(/Mínimo 8/.test(await d.innerText()), 'weak password rejected');
   await d.locator('input[type=password]').fill('Segura2026'); await d.getByRole('button', { name: 'Guardar' }).click(); await p.waitForTimeout(500); ok(await p.getByText('Lucía Prieto').count() === 1, 'user created');
   await p.getByRole('button', { name: 'Nuevo usuario' }).click(); await d.locator('input').nth(0).fill('Dup'); await d.locator('input[type=email]').fill('lucia@horizonte.demo'); await d.locator('input[type=password]').fill('Segura2026'); await d.getByRole('button', { name: 'Guardar' }).click(); await p.waitForTimeout(300); ok(/Ya existe/.test(await toasts(p)), 'duplicate email rejected'); await p.keyboard.press('Escape');
-  // new user can log in with own password, wrong password fails
-  const pn = await ctx(); await pn.goto(U + '/login'); await pn.locator('#email').fill('lucia@horizonte.demo'); await pn.locator('#pw').fill('mala'); await pn.getByRole('button', { name: /Entrar/ }).click(); await pn.waitForTimeout(400); ok(/Credenciales/.test(await pn.locator('body').innerText()), 'wrong password rejected');
-  await pn.locator('#pw').fill('Segura2026'); await pn.getByRole('button', { name: /Entrar/ }).click(); await pn.waitForSelector('text=Academy Command Center'); ok(true, 'new user logs in with hashed password');
-  // disable user → cannot login
-  await p.getByRole('row', { name: /Lucía Prieto/ }).getByRole('button', { name: 'Desactivar' }).click(); await p.waitForTimeout(300);
-  const pn2 = await ctx(); await pn2.goto(U + '/login'); await pn2.locator('#email').fill('lucia@horizonte.demo'); await pn2.locator('#pw').fill('Segura2026'); await pn2.getByRole('button', { name: /Entrar/ }).click(); await pn2.waitForTimeout(400); ok(/desactivada/.test(await pn2.locator('body').innerText()), 'disabled user blocked');
+  // Una cuenta creada en un negocio de DEMOSTRACIÓN no entra con contraseña por /login (las demos no tienen contraseña; el acceso con contraseña es solo de clientes)
+  const pn = await ctx(); await pn.goto(U + '/login'); await pn.getByLabel(/Correo o usuario/).fill('lucia@horizonte.demo'); await pn.getByLabel('Contraseña').fill('Segura2026'); await pn.getByRole('button', { name: /Entrar/ }).click(); await pn.waitForTimeout(500); ok(/Credenciales/.test(await pn.locator('body').innerText()) && new URL(pn.url()).pathname === '/login', 'a user of a demo business cannot log in with a password');
+  // disable user
+  await p.getByRole('row', { name: /Lucía Prieto/ }).getByRole('button', { name: 'Desactivar' }).click(); await p.waitForTimeout(300); ok(await p.getByRole('row', { name: /Lucía Prieto/ }).getByRole('button', { name: 'Activar' }).count() === 1, 'user can be disabled');
   // last admin protection / self role
   ok(await p.getByRole('row', { name: /Pablo Vidal/ }).getByRole('combobox').count() === 0, 'cannot edit own role');
   // ── Portal roles

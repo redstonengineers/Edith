@@ -12,7 +12,7 @@ function Kpi({ label, value, delta, goodWhenUp = true, suffix = '', sub }: { lab
   const Icon = flat ? Minus : up ? ArrowUpRight : ArrowDownRight;
   return (
     <div className="panel p-4">
-      <p className="text-[11px] tracking-[0.12em] text-muted uppercase">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="tnum mt-1 text-2xl font-semibold">{value}</p>
       {delta !== undefined && delta !== null ? <p className={cn('mt-1 flex items-center gap-1 text-xs', good === null ? 'text-muted' : good ? 'text-ok' : 'text-bad')}><Icon size={13} aria-hidden /><span className="tnum">{flat ? 'Sin cambios' : `${up ? '+' : ''}${Math.round(delta! * 10) / 10}${suffix}`}</span>{!flat && <span className="text-muted">vs. anterior</span>}</p> : sub ? <p className="mt-1 text-xs text-muted">{sub}</p> : null}
     </div>

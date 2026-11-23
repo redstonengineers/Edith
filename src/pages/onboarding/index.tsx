@@ -43,7 +43,7 @@ export default function OnboardingPage() {
     <div className="ambient min-h-full" style={{ ['--brand' as string]: color }}>
       <div className="relative z-10 mx-auto max-w-2xl px-5 py-10">
         <div className="mb-8 flex items-center justify-between"><Link to="/login" className="text-sm text-muted hover:text-fg">← Volver al acceso</Link><Logo withWord size={28} /></div>
-        <ol aria-label="Progreso" className="mb-8 flex gap-1.5">{STEPS.map((s, i) => <li key={s} aria-current={i === step ? 'step' : undefined} className="flex-1"><span className={cn('block h-1 rounded-full', i <= step ? 'bg-brand' : 'bg-line')} /><span className={cn('mt-1.5 block text-[11px]', i === step ? 'text-fg' : 'text-muted')}>{i + 1}. {s}</span></li>)}</ol>
+        <ol aria-label="Progreso" className="mb-8 flex gap-1.5">{STEPS.map((s, i) => <li key={s} aria-current={i === step ? 'step' : undefined} className="flex-1"><span className={cn('block h-1 rounded-full', i <= step ? 'bg-brand' : 'bg-line')} /><span className={cn('mt-1.5 block text-xs', i === step ? 'text-fg' : 'text-muted')}>{i + 1}. {s}</span></li>)}</ol>
         <form onSubmit={(e) => { e.preventDefault(); void next(); }} noValidate className="panel p-7">
           {step === 0 && <div className="space-y-4"><h1 className="text-2xl font-semibold tracking-tight">¿Cómo se llama tu academia?</h1><p className="text-sm text-muted">Aparecerá en la barra lateral, el acceso y los documentos.</p>
             <Field label="Nombre de la academia" required error={err.academyName}>{(p) => <Input {...p} autoFocus value={f.academyName} onChange={set('academyName')} placeholder="Nombre de tu centro" />}</Field></div>}

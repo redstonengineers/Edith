@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Comprobaciones y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Navegador para las pruebas e2e
+        run: npx playwright install --with-deps chromium
+      - name: Tipos (web)
+        run: npm run typecheck
+      - name: Tipos (servidor)
+        run: npm run typecheck:server
+      - name: Compilar (web en modo API + servidor)
+        run: npm run build:api && npm run build:server
+      - name: Compilar (modo local)
+        run: npm run build
+      - name: Auditoría de dependencias
+        run: npm audit --audit-level=high
+      - name: Pruebas unitarias
+        run: npm run test:unit
+      - name: Pruebas de API y seguridad
+        run: npm run test:api
+      - name: Pruebas e2e (modo API y modo local)
+        run: npm run test:e2e
+      - name: Accesibilidad (axe, tema claro y oscuro)
+        run: npm run test:a11y
+      - name: Conservar capturas de fallos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-pruebas
+          path: |
+            /tmp/*.png
+          if-no-files-found: ignore
+
+  imagen:
+    name: Imagen de Docker
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir la imagen (no se publica)
+        run: docker build -t edith:ci .

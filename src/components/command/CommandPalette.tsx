@@ -86,7 +86,7 @@ export function CommandPalette() {
           const Icon = r.icon;
           return (
             <li key={r.key} role="presentation">
-              {header && <div role="presentation" className="px-3 pt-3 pb-1 text-[10px] font-semibold tracking-[0.14em] text-muted uppercase">{r.group}</div>}
+              {header && <div role="presentation" className="px-3 pt-3 pb-1 text-xs font-semibold text-muted">{r.group}</div>}
               <div id={`${listId}-${i}`} data-idx={i} role="option" aria-selected={i === active} onMouseMove={() => setActive(i)} onClick={r.run}
                 className={cn('flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5', i === active ? 'bg-brand/12 text-fg' : 'text-fg/90')}>
                 <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-md border', i === active ? 'border-brand/40 text-brand-text' : 'border-line text-muted')}><Icon size={16} aria-hidden /></span>
@@ -97,7 +97,7 @@ export function CommandPalette() {
           );
         })}
       </ul>
-      <div className="flex items-center gap-4 border-t border-line px-4 py-2 text-[11px] text-muted">
+      <div className="flex items-center gap-4 border-t border-line px-4 py-2 text-xs text-muted">
         <span><Kbd>↑</Kbd> <Kbd>↓</Kbd> navegar</span><span><Kbd>↵</Kbd> abrir</span><span className="ml-auto"><Kbd>Ctrl</Kbd> <Kbd>K</Kbd></span>
       </div>
     </Modal>

@@ -1,3 +1,4 @@
+import { ASSISTANT_NAME } from '@/config/brand';
 import { Eraser } from 'lucide-react';
 import { Chat } from '@/components/ai/Chat';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -12,7 +13,7 @@ export default function AiPage() {
   const scope = [['students:read', 'Alumnos y fichas'], ['teachers:read', 'Profesores y carga docente'], ['classes:read', 'Clases y horarios'], ['attendance:read', 'Asistencia'], ['exams:read', 'Exámenes y notas'], ['payments:read', 'Pagos y morosidad'], ['waitlist:read', 'Lista de espera'], ['incidents:read', 'Incidencias'], ['statistics:read', 'Estadísticas']] as const;
   return (
     <>
-      <PageHeader title="JARVIS AI" description="Pregunta en lenguaje natural sobre tu academia." actions={msgs.length > 0 && <Button onClick={() => clear(user)}><Eraser size={15} />Borrar conversación</Button>} />
+      <PageHeader title={ASSISTANT_NAME} description="Pregunta en lenguaje natural sobre tu negocio." actions={msgs.length > 0 && <Button onClick={() => clear(user)}><Eraser size={15} />Borrar conversación</Button>} />
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="panel flex h-[68vh] min-h-[420px] flex-col"><Chat autoFocus /></div>
         <div className="space-y-6">

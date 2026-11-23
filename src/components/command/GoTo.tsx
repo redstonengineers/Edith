@@ -21,7 +21,7 @@ export function GoTo() {
   if (!armed) return null;
   return (
     <div role="status" aria-label="Ir a…" className="goto-pill anim-pop fixed bottom-5 left-1/2 z-[85] max-w-[94vw] -translate-x-1/2 rounded-2xl border border-line-strong bg-surface/95 p-3 shadow-2xl backdrop-blur">
-      <p className="mb-2 text-[11px] tracking-[0.14em] text-muted uppercase">Ir a…</p>
+      <p className="mb-2 text-xs tracking-[0.14em] text-muted uppercase">Ir a…</p>
       <ul className="flex max-w-[640px] flex-wrap gap-x-4 gap-y-1.5 text-[13px]">{options.map((o) => <li key={o.k} className="flex items-center gap-1.5"><Kbd>{o.k.toUpperCase()}</Kbd><span>{title(o.m!)}</span></li>)}</ul>
     </div>
   );

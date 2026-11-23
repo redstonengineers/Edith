@@ -10,6 +10,8 @@ let f = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!c) f
   const p = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
   const real = await realClient(U); await p.goto(U + '/login'); await p.getByLabel(/Correo o usuario/).fill(real.email); await p.getByLabel('Contraseña').fill(real.password); await p.getByRole('button', { name: /Entrar/ }).click(); await p.locator('main h1').first().waitFor();
   const stu = await p.evaluate(async () => { const s = await (await fetch('/api/snapshot', { credentials: 'include' })).json(); return s.students.find((x) => x.phone && (!x.notifyVia || x.notifyVia === 'whatsapp' || x.notifyVia === 'ambos') && x.status === 'activo' && !x.guardianId); });
+  // Las horas de descanso por defecto (22:00–08:00, Madrid) retrasarían el envío según la hora a la que se pase la prueba: se desactivan.
+  await p.evaluate(async () => { await fetch('/api/rpc/updateNoticeSettings', { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'x-requested-with': 'edith' }, body: JSON.stringify({ args: [{ quiet: { enabled: false }, reminderHours: 0 }] }) }); });
   const dlg = p.locator('[role=dialog]'); await p.goto(U + '/practicas'); await p.locator('main h1').first().waitFor();
   await p.getByRole('button', { name: /Apuntar práctica/ }).click(); await dlg.getByLabel(/Alumno/).fill(stu.firstName + ' ' + stu.lastName);
   const d = new Date(); d.setDate(d.getDate() + 3); await dlg.getByLabel('Día').fill(d.toISOString().slice(0, 10)); await dlg.getByLabel('Hora').fill('12:40'); await dlg.getByLabel('Coche').selectOption({ index: 1 }); await dlg.getByRole('button', { name: /Guardar/ }).click(); await p.waitForSelector('text=Práctica apuntada');

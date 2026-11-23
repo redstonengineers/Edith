@@ -9,6 +9,7 @@ import { practiceConflicts, type PracticeConflict } from '@/lib/practices';
 import { addDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { logActivity } from './activity';
+import { assertCapacity, modulesOutOfPlan, moduleTitle } from '@/lib/planLimits';
 import { getDatabase, persist } from './database';
 
 export class DomainError extends Error {}
@@ -26,7 +27,7 @@ const done = <T,>(v: T) => { persist(); return v; };
 // ───────── Alumnos ─────────
 export function createStudent(user: User, input: StudentInput): Student {
   need(user, 'students:write');
-  const db = getDatabase();
+  const db = getDatabase(); assertCapacity(db, user.academyId, 'students', 1, (m) => new DomainError(m));
   let guardianId: ID | undefined;
   if (input.guardian) { guardianId = newId(user, 'gua'); db.guardians.push({ academyId: user.academyId, id: guardianId, ...input.guardian }); }
   if (input.groupId) assertSeat(user, input.groupId);
@@ -52,6 +53,7 @@ export function updateStudent(user: User, id: ID, patch: Partial<Pick<Student, '
 export function setStudentStatus(user: User, id: ID, status: StudentStatus) {
   need(user, 'students:write');
   const s = own(user, getDatabase().students.find((x) => x.id === id), 'Alumno');
+  if ((s.status === 'baja' || s.status === 'inactivo') && status !== 'baja' && status !== 'inactivo') assertCapacity(getDatabase(), user.academyId, 'students', 1, (m) => new DomainError(m));
   s.status = status; s.lastActivityAt = new Date().toISOString();
   if (status === 'baja' || status === 'inactivo') s.groupIds = [];
   s.leftAt = status === 'baja' ? new Date().toISOString().slice(0, 10) : undefined;
@@ -328,6 +330,7 @@ const splitName = (full: string) => { const [first, ...rest] = full.trim().split
 
 /** Crea el alumno a partir de datos de un solicitante / lista de espera. Único punto de conversión. */
 function studentFromApplicant(user: User, a: { name: string; email: string; phone: string; birthDate?: string; whatsappConsent?: boolean }): Student {
+  assertCapacity(getDatabase(), user.academyId, 'students', 1, (m) => new DomainError(m));
   const { firstName, lastName } = splitName(a.name);
   const s: Student = { academyId: user.academyId, id: newId(user, 'stu'), firstName, lastName, birthDate: a.birthDate || '2000-01-01', email: a.email, phone: a.phone, groupIds: [], status: 'nuevo', enrolledAt: today(), lastActivityAt: new Date().toISOString(), notes: '', avatarHue: Math.floor(Math.random() * 360) };
   // Solicitud web: si no marcó WhatsApp, no se le avisa (nunca se le escribe sin permiso).
@@ -552,6 +555,8 @@ export const MODULE_DEPS: Partial<Record<ModuleId, ModuleId[]>> = { grades: ['ex
 export function setModules(user: User, modules: Partial<Record<ModuleId, boolean>>) {
   need(user, 'customization:write'); const st = settingsOf(user);
   for (const m of MODULES) if (m.core) modules[m.id] = true;
+  const off = modulesOutOfPlan(getDatabase(), user.academyId, modules).filter((m) => !st.modules[m]); // los ya activos se respetan; solo se impide ACTIVAR otros fuera del plan
+  if (off.length) throw new DomainError(`${off.map(moduleTitle).join(', ')} no está${off.length > 1 ? 'n' : ''} incluido${off.length > 1 ? 's' : ''} en tu plan. Pasa a un plan superior para activar${off.length > 1 ? 'los' : 'lo'}.`);
   for (const [mod, deps] of Object.entries(MODULE_DEPS) as [ModuleId, ModuleId[]][]) if (modules[mod]) for (const d of deps) if (!modules[d]) throw new DomainError(`«${MODULES.find((x) => x.id === mod)?.title}» necesita «${MODULES.find((x) => x.id === d)?.title}» activo.`);
   st.modules = modules;
   logActivity(user, 'modificó', 'settings', `${user.name} cambió los módulos activos`); return done(st);
@@ -565,6 +570,7 @@ export function updateGeneral(user: User, g: { currency: string; attendanceAlert
 export async function createUser(user: User, input: { name: string; email: string; role: RoleId; teacherId?: ID; studentId?: ID; password: string }) {
   need(user, 'users:write'); const db = getDatabase();
   if (input.role === 'SUPER_ADMIN') throw new DomainError('No se puede crear un Super Admin desde la academia.');
+  if (input.role !== 'ALUMNO' && input.role !== 'TUTOR') assertCapacity(db, user.academyId, 'users', 1, (m) => new DomainError(m));
   if (db.users.some((u) => u.email.toLowerCase() === input.email.toLowerCase())) throw new DomainError('Ya existe un usuario con ese correo.');
   if (input.role === 'PROFESOR' && input.teacherId) own(user, db.teachers.find((t) => t.id === input.teacherId), 'Profesor');
   if (input.role === 'ALUMNO' && input.studentId) own(user, db.students.find((t) => t.id === input.studentId), 'Alumno');
@@ -580,6 +586,8 @@ export function updateUser(user: User, id: ID, patch: { role?: RoleId; disabled?
   if (patch.role === 'SUPER_ADMIN') throw new DomainError('Rol no permitido.');
   const admins = db.users.filter((x) => x.academyId === user.academyId && x.role === 'ADMIN' && !x.disabled);
   if (u.role === 'ADMIN' && admins.length <= 1 && ((patch.role && patch.role !== 'ADMIN') || patch.disabled)) throw new DomainError('Debe quedar al menos un administrador activo.');
+  const wasTeam = !u.disabled && u.role !== 'ALUMNO' && u.role !== 'TUTOR'; const willTeam = !(patch.disabled ?? u.disabled) && (patch.role ?? u.role) !== 'ALUMNO' && (patch.role ?? u.role) !== 'TUTOR';
+  if (willTeam && !wasTeam) assertCapacity(db, user.academyId, 'users', 1, (m) => new DomainError(m));
   Object.assign(u, patch);
   logActivity(user, 'modificó', 'user', `${user.name} modificó al usuario ${u.name}${patch.role ? ` (rol ${patch.role})` : ''}${patch.disabled !== undefined ? (patch.disabled ? ' (desactivado)' : ' (activado)') : ''}`, u.id);
   return done(u);
@@ -631,7 +639,7 @@ export async function createAcademy(input: { academyName: string; type: AcademyT
   for (const m of input.modules) modules[m] = true;
   for (const m of MODULES) if (m.core) modules[m.id] = true;
   db.academies.push({ id, name: input.academyName, type: input.type, plan: 'trial', status: 'active', createdAt: new Date().toISOString().slice(0, 10) });
-  db.settings.push({ academyId: id, branding: { name: input.academyName, tagline: '', logoUrl: input.logoUrl, primary: input.primary ?? '#8b7bff', secondary: '#f472b6', theme: 'dark' }, labels: { ...DEFAULT_LABELS, ...preset.labels }, modules, locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
+  db.settings.push({ academyId: id, branding: { name: input.academyName, tagline: '', logoUrl: input.logoUrl, primary: input.primary ?? '#8b7bff', secondary: '#f472b6', theme: 'light' }, labels: { ...DEFAULT_LABELS, ...preset.labels }, modules, locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
   const admin: User = { academyId: id, id: `${id}_usr_001`, name: input.adminName, email: input.adminEmail, role: 'ADMIN', avatarHue: Math.floor(Math.random() * 360), pwd: await hashPassword(input.adminPassword) };
   db.users.push(admin);
   db.activity.unshift({ academyId: id, id: `${id}_log_1`, at: new Date().toISOString(), actorId: admin.id, actorName: admin.name, action: 'creó', entityType: 'academy', summary: `${admin.name} creó la academia ${input.academyName}` });
@@ -772,7 +780,7 @@ export function deleteDrivingExam(user: User, studentId: ID, examId: ID) {
 }
 /** Importación masiva de alumnos (CSV/Excel ya parseado en el cliente). Cada fila se valida por separado. */
 export function importStudents(user: User, rows: StudentInput[]): { created: number } {
-  need(user, 'students:write');
+  need(user, 'students:write'); assertCapacity(getDatabase(), user.academyId, 'students', rows.length, (m) => new DomainError(m)); // todo o nada: si no caben, no se importa ninguno
   for (const r of rows) createStudent(user, r);
   return { created: rows.length };
 }

@@ -32,7 +32,7 @@ export function SignFlow({ practice, onClose, onDone }: { practice: Practice; on
     <Modal open onClose={onClose} label="Firmar práctica" className="max-w-lg">
       <div className="space-y-4 p-6">
         {step !== 'entrega' && (<>
-          <div><p className="text-xs tracking-[0.14em] text-muted uppercase">{step === 'alumno' ? 'Firma del alumno' : 'Firma del profesor'}</p>
+          <div><p className="text-xs text-muted">{step === 'alumno' ? 'Firma del alumno' : 'Firma del profesor'}</p>
             <p className="mt-1 text-lg font-semibold">{names.student(practice.studentId)}</p>
             <p className="text-sm text-muted">Práctica del {fmtDate(practice.date, "EEEE d 'de' MMMM")} · {practice.start}–{practice.end} ({fmtHours(hoursOf(practice))}){v ? ` · ${v.model} ${v.plate}` : ''} · {names.teacher(practice.teacherId)}</p></div>
           <SignaturePad key={step} ref={pad} label={`Firma del ${step}`} onChange={setEmpty} />

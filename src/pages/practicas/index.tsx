@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import { FilterSelect } from '@/components/ui/FilterSelect';
+import { businessHours } from '@/lib/businessHours';
 import { Calendar, CalendarToolbar, type CalEvent, type CalView } from '@/components/calendar/Calendar';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/form';
 import { ConfirmDialog } from '@/components/ui/Overlay';
 import { useAction, useCan, usePersistentState, useSnapshot, useUser } from '@/hooks';
 import { fullName } from '@/lib/people';
@@ -40,8 +41,8 @@ export default function PracticasPage() {
   return (
     <>
       <PageHeader title="Prácticas" description={write ? 'Arrastra una práctica para moverla. Toca un hueco para apuntar una nueva.' : 'Calendario de prácticas.'} actions={write && <Button variant="primary" onClick={() => setOpen({})}><Plus size={16} />Apuntar práctica</Button>} />
-      <CalendarToolbar view={view} setView={setView} cursor={cursor} setCursor={setCursor} extra={snap.teachers.length > 1 && user.role !== 'PROFESOR' ? <Select aria-label="Filtrar por profesor" value={fTeacher} onChange={(e) => setFTeacher(e.target.value)} className="h-9 w-52"><option value="">Todos los profesores</option>{snap.teachers.map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}</Select> : undefined} />
-      <Calendar view={view} cursor={cursor} events={events} onSelect={(id) => setOpen({ id })} onCreate={write ? (date, start) => setOpen({ defaults: { date, start } }) : undefined} onMove={write ? onMove : undefined}
+      <CalendarToolbar view={view} setView={setView} cursor={cursor} setCursor={setCursor} extra={snap.teachers.length > 1 && user.role !== 'PROFESOR' ? <FilterSelect label="Profesor" value={fTeacher} onChange={setFTeacher} options={[{ value: '', label: 'Todos' }, ...snap.teachers.map((t) => ({ value: t.id, label: fullName(t) }))]} /> : undefined} />
+      <Calendar hours={businessHours(snap)} view={view} cursor={cursor} events={events} onSelect={(id) => setOpen({ id })} onCreate={write ? (date, start) => setOpen({ defaults: { date, start } }) : undefined} onMove={write ? onMove : undefined}
         onPickDay={(d) => { const [y, m, dd] = d.split('-').map(Number); setCursor(new Date(y, m - 1, dd)); setView('day'); }} />
       {cancelled > 0 && <p className="mt-3 text-xs text-muted">{cancelled} {cancelled === 1 ? 'práctica cancelada' : 'prácticas canceladas'} (aparecen atenuadas en el calendario).</p>}
       {open && <PracticeForm key={open.id ?? 'new'} open practice={open.id ? snap.practices.find((p) => p.id === open.id) : undefined} defaults={open.defaults} onClose={() => setOpen(null)} />}

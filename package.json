@@ -14,24 +14,26 @@
     "server:dev": "SEED_DEMO=1 tsx watch server/index.ts",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "gen:remote": "node scripts-gen-remote.mjs",
-    "test:api": "node tests/api-security.mjs",
-    "test:a11y": "node tests/axe.cjs",
+    "test:api": "node tests/run-all.mjs --only api-security,acceso,seguridad,snapshot-partes",
+    "test:a11y": "node tests/run-all.mjs --only axe",
     "client:new": "tsx server/new-client.ts",
-    "demo:reset": "tsx server/demo-reset.ts"
+    "demo:reset": "tsx server/demo-reset.ts",
+    "test:cifrado": "tsx tests/cifrado.ts",
+    "test:colas": "tsx tests/colas.ts",
+    "test:planes": "tsx tests/planes.ts",
+    "test:monitor": "tsx tests/monitorizacion.ts",
+    "backup:verify": "tsx server/backup-verify.ts",
+    "build:server": "esbuild server/index.ts server/new-client.ts server/demo-reset.ts server/backup-verify.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outdir=dist-server --log-level=warning",
+    "start": "node dist-server/index.js",
+    "test": "node tests/run-all.mjs",
+    "test:unit": "tsx tests/cifrado.ts && tsx tests/colas.ts && tsx tests/planes.ts && tsx tests/monitorizacion.ts && tsx tests/acceso-migracion.ts",
+    "test:e2e": "node tests/run-all.mjs --only nuevo-cliente,clientes-personal,tenants,matricula-publica,recordar-sesion,offline,personal,personal-mobile,tier-estilo,interacciones,clase-nombre,registro-accesos,autoescuela,avisos-ui,avisos-infra,avisos,wa-contador,phase2-people,phase3-operations,phase4-admin,phase5-analytics,phase6-ai,phase7-9-platform,functions-gap,modules,verticals,personal-voice,smoke-all"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",
-    "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "fastify": "^5.12.8",
-    "lucide-react": "^1.72.0",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.5",
-    "tailwind-merge": "^3.7.0",
-    "three": "^0.187.0",
-    "zod": "^4.6.7",
-    "zustand": "^5.1.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
@@ -41,9 +43,19 @@
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "clsx": "^2.1.1",
+    "esbuild": "^0.28.2",
+    "lucide-react": "^1.72.0",
+    "playwright": "^1.63.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5",
+    "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.5",
+    "three": "^0.187.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "zustand": "^5.1.0"
   }
 }

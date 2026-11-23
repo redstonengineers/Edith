@@ -9,7 +9,7 @@ export class OfflineError extends DomainError { constructor() { super('Sin conex
 export class ApiError extends DomainError { constructor(message: string, public status: number) { super(message); } }
 
 /** Lecturas que se guardan en el dispositivo para poder abrir la app sin conexión (se borran al cerrar sesión). */
-const CACHED = new Set(['/snapshot', '/auth/me']);
+const isCached = (path: string) => path === '/auth/me' || path === '/snapshot' || path.startsWith('/snapshot?');
 export const clearOfflineCache = () => idb.clear('cache').catch(() => undefined);
 
 /** Cliente HTTP: cookies de sesión httpOnly + cabecera anti-CSRF. Nunca guarda tokens en JS. */
@@ -24,7 +24,7 @@ export async function request<T>(method: 'GET' | 'POST', path: string, body?: un
   } catch {
     // fetch solo lanza si no hay red: lecturas básicas se sirven de la copia local; lo demás falla con un aviso claro.
     setOffline(true);
-    if (method === 'GET' && CACHED.has(path)) {
+    if (method === 'GET' && isCached(path)) {
       const c = await idb.get<{ data: T; ts: number }>('cache', path).catch(() => undefined);
       if (c) { useNet.setState({ staleAt: c.ts }); return c.data; }
     }
@@ -37,7 +37,7 @@ export async function request<T>(method: 'GET' | 'POST', path: string, body?: un
     if (res.status === 401 && path !== '/auth/login') { void clearOfflineCache(); window.dispatchEvent(new Event('ac:unauthorized')); }
     throw new ApiError(data.error ?? `Error ${res.status}`, res.status);
   }
-  if (method === 'GET' && CACHED.has(path)) {
+  if (method === 'GET' && isCached(path)) {
     if (path === '/auth/me' && !(data as { user?: unknown }).user) void clearOfflineCache(); else void idb.put('cache', { k: path, data, ts: Date.now() }).catch(() => undefined);
   }
   return data as T;

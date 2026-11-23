@@ -9,7 +9,7 @@ import { cn } from '@/utils/cn';
 export type CalView = 'day' | 'week' | 'month';
 export interface CalEvent { id: string; date: string; start: string; end: string; title: string; subtitle?: string; color: string; cancelled?: boolean; conflict?: string; draggable?: boolean }
 
-const H0 = 7, H1 = 22, HOUR = 56, SNAP = 15;
+const HOUR = 56, SNAP = 15;
 const iso = (d: Date) => format(d, 'yyyy-MM-dd');
 const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 
@@ -23,11 +23,12 @@ export function shiftCursor(view: CalView, cursor: Date, dir: 1 | -1) { return v
 
 interface Props {
   view: CalView; cursor: Date; events: CalEvent[];
+  /** Franja horaria visible [desde, hasta] en horas; por defecto 8–20. */ hours?: [number, number];
   onSelect: (id: string) => void; onCreate?: (date: string, start: string) => void; onMove?: (id: string, date: string, start: string) => void; onPickDay?: (date: string) => void;
 }
 
-export function Calendar({ view, cursor, events, onSelect, onCreate, onMove, onPickDay }: Props) {
-  const [dragOver, setDragOver] = useState<string | null>(null);
+export function Calendar({ view, cursor, events, hours, onSelect, onCreate, onMove, onPickDay }: Props) {
+  const [dragOver, setDragOver] = useState<string | null>(null); const [H0, H1] = hours ?? [8, 20];
   const today = todayISO();
   if (view === 'month') return <MonthGrid {...{ cursor, events, today, onSelect, onMove, onPickDay, onCreate, dragOver, setDragOver }} />;
 
@@ -56,19 +57,19 @@ export function Calendar({ view, cursor, events, onSelect, onCreate, onMove, onP
             <div />
             {days.map((d) => (
               <button key={iso(d)} onClick={() => onPickDay?.(iso(d))} className={cn('border-l border-line px-2 py-2.5 text-center text-xs', iso(d) === today && 'text-brand-text')}>
-                <span className="block text-[10px] tracking-[0.12em] text-muted uppercase">{format(d, 'EEE', { locale: es })}</span>
+                <span className="block text-xs text-muted">{format(d, 'EEE', { locale: es })}</span>
                 <span className={cn('tnum mt-0.5 inline-grid h-7 min-w-7 place-items-center rounded-full text-sm font-semibold', iso(d) === today && 'bg-brand text-on-brand')}>{format(d, 'd')}</span>
               </button>))}
           </div>
           <div className="grid" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div className="relative" style={{ height: (H1 - H0) * HOUR }}>
-              {Array.from({ length: H1 - H0 }, (_, i) => <span key={i} className="tnum absolute right-2 -translate-y-1/2 text-[10px] text-muted" style={{ top: i * HOUR }}>{i === 0 ? '' : `${String(H0 + i).padStart(2, '0')}:00`}</span>)}
+              {Array.from({ length: H1 - H0 }, (_, i) => <span key={i} className="tnum absolute right-2 -translate-y-1/2 text-xs text-muted" style={{ top: i * HOUR }}>{i === 0 ? '' : `${String(H0 + i).padStart(2, '0')}:00`}</span>)}
             </div>
             {days.map((d) => {
               const date = iso(d); const evs = events.filter((e) => e.date === date); const lanes = layoutLanes(evs);
               return (
                 <div key={date} role="group" aria-label={format(d, "EEEE d 'de' MMMM", { locale: es })} onDragOver={(e) => { if (onMove) { e.preventDefault(); setDragOver(date); } }} onDragLeave={() => setDragOver(null)} onDrop={(e) => dropAt(e, date)} onClick={(e) => clickSlot(e, date)}
-                  className={cn('relative border-l border-line', dragOver === date && 'bg-brand/6', onCreate && 'cursor-cell')} style={{ height: (H1 - H0) * HOUR, backgroundImage: `repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent ${HOUR}px)` }}>
+                  data-h0={H0} className={cn('relative border-l border-line', dragOver === date && 'bg-brand/6', onCreate && 'cursor-cell')} style={{ height: (H1 - H0) * HOUR, backgroundImage: `repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent ${HOUR}px)` }}>
                   {date === today && nowMin >= H0 * 60 && nowMin < H1 * 60 && <div aria-hidden className="pointer-events-none absolute right-0 left-0 z-10 h-px bg-bad" style={{ top: ((nowMin - H0 * 60) / 60) * HOUR }}><span className="absolute -top-[3px] -left-[3px] h-[7px] w-[7px] rounded-full bg-bad" /></div>}
                   {evs.map((ev) => {
                     const top = ((hhmmToMin(ev.start) - H0 * 60) / 60) * HOUR; const h = Math.max(22, ((hhmmToMin(ev.end) - hhmmToMin(ev.start)) / 60) * HOUR - 2);
@@ -78,9 +79,10 @@ export function Calendar({ view, cursor, events, onSelect, onCreate, onMove, onP
                         onDragStart={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.dataTransfer.setData('text/plain', `${ev.id}|${Math.round(((e.clientY - r.top) / HOUR) * 60)}`); e.dataTransfer.effectAllowed = 'move'; }}
                         onClick={(e) => { e.stopPropagation(); onSelect(ev.id); }}
                         aria-label={`${ev.title}, ${ev.start} a ${ev.end}${ev.cancelled ? ', cancelada' : ''}${ev.conflict ? `, conflicto: ${ev.conflict}` : ''}`}
-                        className={cn('absolute z-[5] overflow-hidden rounded-lg border-l-[3px] px-2 py-1 text-left text-[11.5px] leading-tight transition-shadow hover:z-10 hover:shadow-lg', ev.cancelled && 'opacity-50 [&_.t]:line-through', ev.conflict && 'ring-1 ring-bad')}
+                        title={`${ev.title} · ${ev.start}–${ev.end}${ev.subtitle ? ` · ${ev.subtitle}` : ''}`}
+                        className={cn('absolute z-[5] overflow-hidden rounded-lg border-l-[3px] px-2 py-1 text-left text-xs leading-tight transition-shadow hover:z-10 hover:shadow-lg', ev.cancelled && 'opacity-50 [&_.t]:line-through', ev.conflict && 'ring-1 ring-bad')}
                         style={{ top, height: h, left: `calc(${(l.lane / l.lanes) * 100}% + 2px)`, width: `calc(${100 / l.lanes}% - 4px)`, borderLeftColor: ev.color, background: `color-mix(in oklab, ${ev.color} 18%, var(--surface))` }}>
-                        <span className="t flex items-center gap-1 font-semibold">{ev.conflict && <AlertTriangle size={11} className="shrink-0 text-bad" aria-hidden />}<span className="truncate">{ev.title}</span></span>
+                        <span className="t flex items-start gap-1 font-semibold">{ev.conflict && <AlertTriangle size={11} className="mt-0.5 shrink-0 text-bad" aria-hidden />}<span className="break-words">{ev.title}</span></span>
                         {h > 34 && <span className="tnum block truncate text-muted">{ev.start}–{ev.end}</span>}
                         {h > 50 && ev.subtitle && <span className="block truncate text-muted">{ev.subtitle}</span>}
                       </button>);
@@ -100,7 +102,7 @@ function MonthGrid({ cursor, events, today, onSelect, onMove, onPickDay, onCreat
   return (
     <div className="panel overflow-hidden">
       <div className="overflow-x-auto"><div style={{ minWidth: 640 }}>
-        <div className="grid grid-cols-7 border-b border-line text-center text-[10px] tracking-[0.12em] text-muted uppercase">{['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'].map((d) => <div key={d} className="py-2.5">{d}</div>)}</div>
+        <div className="grid grid-cols-7 border-b border-line text-center text-xs text-muted">{['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'].map((d) => <div key={d} className="py-2.5">{d}</div>)}</div>
         <div className="grid grid-cols-7">
           {days.map((d) => {
             const date = iso(d); const evs = events.filter((e) => e.date === date).sort((a, b) => a.start.localeCompare(b.start));
@@ -110,15 +112,15 @@ function MonthGrid({ cursor, events, today, onSelect, onMove, onPickDay, onCreat
                 className={cn('min-h-[104px] border-r border-b border-line p-1.5 [&:nth-child(7n)]:border-r-0', !isSameMonth(d, cursor) && 'bg-bg/40 text-muted', dragOver === date && 'bg-brand/8')}>
                 <div className="mb-1 flex items-center justify-between">
                   <button onClick={() => onPickDay?.(date)} aria-label={`Ver ${format(d, "d 'de' MMMM", { locale: es })}`} className={cn('tnum grid h-6 min-w-6 place-items-center rounded-full px-1 text-xs hover:bg-surface-2', date === today && 'bg-brand font-semibold text-on-brand hover:bg-brand')}>{format(d, 'd')}</button>
-                  {onCreate && isSameMonth(d, cursor) && <button onClick={() => onCreate(date, '17:00')} aria-label={`Nueva clase el ${format(d, "d 'de' MMMM", { locale: es })}`} className="text-[11px] text-muted opacity-0 hover:text-fg focus:opacity-100 [div:hover>div>&]:opacity-100">+</button>}
+                  {onCreate && isSameMonth(d, cursor) && <button onClick={() => onCreate(date, '17:00')} aria-label={`Nueva clase el ${format(d, "d 'de' MMMM", { locale: es })}`} className="text-xs text-muted opacity-0 hover:text-fg focus:opacity-100 [div:hover>div>&]:opacity-100">+</button>}
                 </div>
                 <div className="space-y-0.5">
                   {evs.slice(0, 3).map((ev) => (
-                    <button key={ev.id} draggable={!!onMove && ev.draggable !== false && !ev.cancelled} onDragStart={(e) => { e.dataTransfer.setData('text/plain', `${ev.id}|0`); }} onClick={() => onSelect(ev.id)}
-                      className={cn('flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px]', ev.cancelled && 'line-through opacity-50', ev.conflict && 'ring-1 ring-bad')} style={{ background: `color-mix(in oklab, ${ev.color} 20%, var(--surface))` }}>
-                      {ev.conflict && <AlertTriangle size={10} className="shrink-0 text-bad" aria-hidden />}<span className="tnum shrink-0 text-muted">{ev.start}</span><span className="truncate">{ev.title}</span>
+                    <button key={ev.id} draggable={!!onMove && ev.draggable !== false && !ev.cancelled} onDragStart={(e) => { e.dataTransfer.setData('text/plain', `${ev.id}|0`); }} onClick={() => onSelect(ev.id)} title={`${ev.title} · ${ev.start}–${ev.end}`}
+                      className={cn('flex w-full items-start gap-1 rounded px-1.5 py-0.5 text-left text-xs', ev.cancelled && 'line-through opacity-50', ev.conflict && 'ring-1 ring-bad')} style={{ background: `color-mix(in oklab, ${ev.color} 20%, var(--surface))` }}>
+                      {ev.conflict && <AlertTriangle size={10} className="shrink-0 text-bad" aria-hidden />}<span className="tnum shrink-0 text-muted">{ev.start}</span><span className="break-words">{ev.title}</span>
                     </button>))}
-                  {evs.length > 3 && <button onClick={() => onPickDay?.(date)} className="px-1.5 text-[11px] text-muted hover:text-fg">+{evs.length - 3} más</button>}
+                  {evs.length > 3 && <button onClick={() => onPickDay?.(date)} className="px-1.5 text-xs text-muted hover:text-fg">+{evs.length - 3} más</button>}
                 </div>
               </div>);
           })}

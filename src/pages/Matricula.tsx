@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '@/config/brand';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
@@ -17,7 +18,7 @@ export default function Matricula() {
   useEffect(() => { void loadApplyForm(key).then(setInfo); }, [key]);
   useEffect(() => {
     if (!info) return; const root = document.documentElement; root.dataset.theme = info.theme; root.style.setProperty('--brand', info.primary); root.style.setProperty('--brand-2', info.secondary); root.style.setProperty('--on-brand', onColor(info.primary)); document.title = `Solicitar plaza · ${info.name}`;
-    return () => { root.style.removeProperty('--brand'); root.style.removeProperty('--brand-2'); root.style.removeProperty('--on-brand'); root.dataset.theme = 'dark'; document.title = 'EDITH'; };
+    return () => { root.style.removeProperty('--brand'); root.style.removeProperty('--brand-2'); root.style.removeProperty('--on-brand'); root.dataset.theme = 'light'; document.title = 'EDITH'; };
   }, [info]);
   if (info === undefined) return <div className="grid min-h-full place-items-center"><Loader2 className="animate-spin text-muted" aria-label="Cargando" /></div>;
   if (info === null) return <div className="grid min-h-full place-items-center p-6 text-center"><div><h1 className="text-xl font-semibold">Este formulario no está disponible</h1><p className="mt-2 text-sm text-muted">El enlace no es correcto o el negocio no acepta solicitudes por internet ahora mismo.</p></div></div>;
@@ -52,7 +53,7 @@ export default function Matricula() {
                 {info.interests.length > 0 ? <select id="m-interest" className={field} required value={f.interest} onChange={(e) => set('interest', e.target.value)}><option value="">Elige una opción…</option>{info.interests.map((i) => <option key={i} value={i}>{i}</option>)}<option value="Otra / no lo sé aún">Otra / no lo sé aún</option></select>
                   : <input id="m-interest" className={field} required value={f.interest} onChange={(e) => set('interest', e.target.value)} />}</div>
             </div>
-            {minor && <fieldset className="grid gap-4 rounded-lg border border-line p-4 sm:grid-cols-2"><legend className="px-1 text-xs font-semibold tracking-wider text-muted uppercase">Madre, padre o tutor</legend>
+            {minor && <fieldset className="grid gap-4 rounded-lg border border-line p-4 sm:grid-cols-2"><legend className="px-1 text-xs font-semibold text-muted">Madre, padre o tutor</legend>
               <div><label htmlFor="m-gname" className="mb-1.5 block text-sm font-medium">Nombre</label><input id="m-gname" className={field} required value={f.guardianName} onChange={(e) => set('guardianName', e.target.value)} /></div>
               <div><label htmlFor="m-gphone" className="mb-1.5 block text-sm font-medium">Teléfono</label><input id="m-gphone" type="tel" className={field} required value={f.guardianPhone} onChange={(e) => set('guardianPhone', e.target.value)} /></div></fieldset>}
             <div><label htmlFor="m-msg" className="mb-1.5 block text-sm font-medium">Mensaje <span className="font-normal text-muted">(opcional)</span></label><textarea id="m-msg" rows={3} maxLength={500} className="w-full rounded-lg border border-line bg-surface p-3 text-sm outline-none focus:border-brand" value={f.message} onChange={(e) => set('message', e.target.value)} /></div>
@@ -65,7 +66,7 @@ export default function Matricula() {
             <p className="flex items-center gap-1.5 text-xs text-muted"><ShieldCheck size={13} aria-hidden />Tus datos solo los verá {info.name}. No se comparten con nadie más.</p>
           </form>
         )}
-        <div className="mt-6 flex justify-center"><StatusIndicator label="Powered by EDITH" /></div>
+        <div className="mt-6 flex justify-center"><StatusIndicator label={`Creado con ${PRODUCT_NAME}`} /></div>
       </div>
     </div>
   );

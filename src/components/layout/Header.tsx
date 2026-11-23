@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Bell, LogOut, Menu, Moon, Palette, Search, Sparkles, Sun } from 'lucide-react';
 import { Dropdown } from '@/components/ui/Dropdown';
-import { Avatar, Kbd, StatusIndicator } from '@/components/ui/primitives';
+import { ConnectionStatus } from './ConnectionStatus';
+import { ASSISTANT_NAME } from '@/config/brand';
+import { Avatar, Kbd } from '@/components/ui/primitives';
 import { useSettings, useSnapshot, useUser, useVisibleModules } from '@/hooks';
 import { ROLE_LABELS } from '@/lib/permissions';
 import { useSession } from '@/store/session';
@@ -49,17 +51,17 @@ export function Header({ theme }: { theme: 'dark' | 'light' }) {
       <div className="flex-1 md:hidden" />
       <button onClick={() => setPalette(true)} aria-label="Buscar" className={cn(iconBtn, 'md:hidden')}><Search size={19} /></button>
 
-      <div className="hidden xl:block"><StatusIndicator label="System online" /></div>
+      <div className="hidden xl:block"><ConnectionStatus /></div>
 
       {modules.some((m) => m.id === 'ai') && (
-        <button onClick={() => setAi(true)} className="hidden h-9 items-center gap-2 rounded-lg border border-brand/30 bg-brand/10 px-3 text-[13px] font-medium text-brand-text hover:bg-brand/15 sm:flex"><Sparkles size={15} aria-hidden />JARVIS</button>
+        <button onClick={() => setAi(true)} className="hidden h-9 items-center gap-2 rounded-lg border border-brand/30 bg-brand/10 px-3 text-[13px] font-medium text-brand-text hover:bg-brand/15 sm:flex"><Sparkles size={15} aria-hidden />{ASSISTANT_NAME}</button>
       )}
 
       <Dropdown label="Notificaciones" width="w-[min(92vw,360px)]"
         trigger={({ props, open }) => (
           <button {...props} aria-label={`Notificaciones${unread ? `, ${unread} sin leer` : ''}`} className={cn(iconBtn, open && 'bg-surface-2 text-fg')}>
             <span ref={bell}><Bell size={19} /></span>
-            {unread > 0 && <span className="absolute top-1.5 right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-on-brand">{unread}</span>}
+            {unread > 0 && <span className="absolute top-1.5 right-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-xs font-bold text-on-brand">{unread}</span>}
           </button>
         )}>
         {(close) => (
@@ -70,7 +72,7 @@ export function Header({ theme }: { theme: 'dark' | 'light' }) {
               {snap.notifications.map((n) => (
                 <li key={n.id}><button role="menuitem" onClick={() => { close(); if (n.href) navigate(n.href); }} className="flex w-full gap-3 px-4 py-3 text-left hover:bg-surface-2">
                   <span aria-hidden className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', n.read ? 'bg-line-strong' : 'bg-brand')} />
-                  <span className="min-w-0"><span className="block text-sm font-medium">{n.title}</span><span className="block text-[13px] text-muted">{n.body}</span><span className="mt-0.5 block text-[11px] text-muted">{fmtAgo(n.createdAt)}</span></span>
+                  <span className="min-w-0"><span className="block text-sm font-medium">{n.title}</span><span className="block text-[13px] text-muted">{n.body}</span><span className="mt-0.5 block text-xs text-muted">{fmtAgo(n.createdAt)}</span></span>
                 </button></li>
               ))}
             </ul>

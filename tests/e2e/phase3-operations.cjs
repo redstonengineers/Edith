@@ -1,5 +1,5 @@
 // Prueba end-to-end con Playwright. Uso: APP_URL=http://127.0.0.1:5173 node tests/e2e/phase3-operations.cjs
-const { chromium } = require('playwright');
+const { chromium } = require('playwright'); const { mockLogin } = require('./acceso-lib.cjs');
 const out = (process.env.SHOT_DIR || '/tmp/');
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
 const U = process.env.APP_URL || 'http://127.0.0.1:5173';
@@ -8,7 +8,7 @@ const U = process.env.APP_URL || 'http://127.0.0.1:5173';
   const login = async (who, vp = { width: 1440, height: 900 }) => {
     const c = await b.newContext({ viewport: vp }); const p = await c.newPage();
     p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && errors.push(m.text()));
-    await p.goto(U + '/'); await p.getByRole('button', { name: new RegExp(who) }).first().click(); await p.waitForSelector('text=Academy Command Center'); return p;
+    await mockLogin(p, U, who); return p;
   };
   const toast = async (p, re) => { await p.waitForTimeout(250); return (await p.locator('[role=status],[role=alert]').allInnerTexts()).some(t => re.test(t)); };
   let p = await login('Pablo Vidal');
@@ -18,18 +18,18 @@ const U = process.env.APP_URL || 'http://127.0.0.1:5173';
   await p.getByRole('button', { name: 'Siguiente' }).click(); await p.waitForTimeout(200);
   // conflicting drop: Mat A (Mon 16:00, Carlos, Aula1) -> Tuesday 16:00 where Mat B lives
   const evA = p.getByRole('button', { name: /^Matemáticas ESO · Grupo A, 16:00/ }).first();
-  await evA.dragTo(p.locator('[role=group][aria-label^="martes"]'), { targetPosition: { x: 40, y: (16 - 7) * 56 + 10 } });
+  const tue = p.locator('[role=group][aria-label^="martes"]'); await evA.dragTo(tue, { targetPosition: { x: 40, y: (16 - Number(await tue.getAttribute('data-h0'))) * 56 + 10 } });
   ok(await toast(p, /Conflicto/), 'drag onto busy slot rejected with conflict');
   // valid drop: -> Saturday 10:00
   await p.waitForTimeout(500);
-  await p.getByRole('button', { name: /^Matemáticas ESO · Grupo A, 16:00/ }).first().dragTo(p.locator('[role=group][aria-label^="sábado"]'), { targetPosition: { x: 40, y: (10 - 7) * 56 + 4 } });
+  await p.getByRole('button', { name: /^Matemáticas ESO · Grupo A, 16:00/ }).first().dragTo(p.locator('[role=group][aria-label^="sábado"]'), { targetPosition: { x: 40, y: (10 - Number(await p.locator('[role=group][aria-label^="sábado"]').getAttribute('data-h0'))) * 56 + 4 } });
   await p.waitForTimeout(400);
   ok(await p.locator('[role=group][aria-label^="sábado"] button', { hasText: 'Matemáticas ESO · Grupo A' }).count() === 1, 'valid drag moved class to Saturday');
   const lbl = await p.locator('[role=group][aria-label^="sábado"] button').first().getAttribute('aria-label'); ok(/, (09|10):\d\d a/.test(lbl) && /(00|15|30|45) a/.test(lbl), 'snapped to 15 min near drop: ' + lbl);
   // create by clicking empty slot
-  await p.locator('[role=group][aria-label^="viernes"]').click({ position: { x: 20, y: (20 - 7) * 56 + 5 } });
+  const col = p.locator('[role=group][aria-label^="viernes"]'); const h0 = Number(await col.getAttribute('data-h0')); await col.click({ position: { x: 20, y: (20 - h0) * 56 + 5 } });
   await p.waitForSelector('[role=dialog]'); ok(await p.getByLabel('Inicio').inputValue() === '20:00', 'click slot prefilled 20:00');
-  await p.getByLabel(/^Grupo/).fill('Matemáticas ESO · Grupo A'); await p.getByRole('button', { name: 'Guardar' }).click(); await p.waitForTimeout(500); ok(await p.locator('[role=dialog]').count() === 0, 'class created from slot');
+  await p.locator('[role=dialog]').getByLabel(/^Grupo/).fill('Matemáticas ESO · Grupo A'); await p.getByRole('button', { name: 'Guardar' }).click(); await p.waitForTimeout(500); ok(await p.locator('[role=dialog]').count() === 0, 'class created from slot');
   // open class, duplicate then cancel
   await p.locator('[role=group][aria-label^="sábado"] button').first().click(); await p.waitForSelector('[role=dialog]');
   await p.getByRole('button', { name: 'Cancelar clase' }).click(); await p.getByRole('button', { name: 'Cancelar clase' }).last().click(); await p.waitForTimeout(500);

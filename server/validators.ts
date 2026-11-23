@@ -78,3 +78,5 @@ export const demoBody = z.object({ academy: z.string().min(1).max(60), profile: 
 export const passwordBody = z.object({ current: z.string().min(1).max(200), next: passwordSchema });
 export const loginBody = z.object({ email: z.string().min(1).max(200), password: z.string().min(1).max(200), remember: z.boolean().optional() });
 export const aiBody = z.object({ question: z.string().min(1).max(400), history: z.array(z.object({ role: z.enum(['user', 'ai']), text: z.string().max(500) })).max(20).optional() });
+
+export const accessLogBody = z.object({ action: z.enum(['view', 'export', 'report']), entity: z.enum(['student', 'report']), id: z.string().max(80).optional(), detail: z.string().trim().max(120).optional() });

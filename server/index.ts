@@ -17,10 +17,17 @@ import { AUTO } from '../src/services/channels';
 import { config } from './config';
 import { scryptHasher } from './password';
 import { Store } from './store';
+import { installProcessHandlers } from './sentry';
+import { FieldCipher } from './fieldcrypto';
+import { runBackup, s3FromEnv } from './backup';
 import { randomBytes } from 'node:crypto';
 
 setHasher(scryptHasher);
-const store = new Store(config.dbPath);
+installProcessHandlers();
+if (config.production && !config.dataKey) { console.error('✖ Falta DATA_ENCRYPTION_KEY (32 bytes en base64; genera una con «openssl rand -base64 32»). En producción el servidor no arranca sin ella: los datos personales y de salud se guardan cifrados.'); process.exit(1); }
+if (!config.dataKey) console.warn('⚠ DATA_ENCRYPTION_KEY no definida: en desarrollo los datos se guardan SIN cifrar. En producción es obligatoria.');
+const cipher = config.dataKey ? new FieldCipher(config.dataKey, config.dataKeyPrevious) : null;
+const store = new Store(config.dbPath, cipher);
 if (config.reseed) store.wipe();
 
 /** Cuenta del propietario de la plataforma (Super Admin) a partir de BOOTSTRAP_ADMIN_*: la única cuenta con contraseña que no es de un cliente. */
@@ -59,6 +66,7 @@ if (config.provision) {
   }
 }
 if (config.tenants) { const r = await provisionTenants({ atlantaAdminEmail: config.provision?.adminEmail, atlantaDemo: process.env.ATLANTA_DEMO !== '0' }); if (r.length) console.warn(`Negocios de demostración preparados: ${r.join(', ')}`); }
+if (cipher) { const pn = store.encryptPersonal(); if (store.migrated || pn) console.warn(`Cifrado: ${store.migrated} registros y ${pn} estados personales cifrados o re-cifrados con la clave actual.`); }
 store.flush(getDatabase());
 
 if (mailEnabled()) registerChannel(emailChannel);
@@ -67,7 +75,8 @@ const app = buildApp(store);
 await app.listen({ port: config.port, host: config.host });
 scheduleDemoReset(store, (fn) => app.runExclusive(fn)); // restauración diaria de los datos de las demos
 if (config.backupHours > 0) {
-  const snap = () => { try { const f = store.backup(config.backupDir, config.backupKeep); console.warn(`Copia de seguridad: ${f}`); } catch (e) { console.error('Copia de seguridad fallida', e); } };
+  const s3 = s3FromEnv(); if (!s3) console.warn('Copias solo locales: define BACKUP_S3_ENDPOINT/BUCKET/KEY/SECRET para subirlas también a un almacenamiento externo.');
+  const snap = () => { void runBackup(store, config.backupDir, config.backupKeep, s3).then((r) => console.warn(`Copia de seguridad: ${r.file} · comprobada: ${r.verified ? 'sí' : 'NO'} · subida a S3: ${r.uploaded ? 'sí' : 'no'}${r.error ? ' · ' + r.error : ''}`), (e) => console.error('Copia de seguridad fallida', e)); };
   setTimeout(snap, 30_000).unref(); setInterval(snap, config.backupHours * 3_600_000).unref();
 }
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => void app.close().then(() => process.exit(0)));

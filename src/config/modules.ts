@@ -3,9 +3,10 @@ import {
   LayoutDashboard, Users, GraduationCap, UsersRound, CalendarDays, BookOpen, Clock, FileText, Award,
   CheckSquare, Inbox, Hourglass, ClipboardCheck, CreditCard, Receipt, FolderOpen, AlertTriangle,
   MessageSquare, Megaphone, Bell, BarChart3, FileBarChart, Settings, UserCog, ShieldCheck, Palette,
-  Sparkles, Building2, Car,
+  Sparkles, Building2, Car, ScrollText,
 } from 'lucide-react';
 import type { LabelKey, ModuleId } from '@/types';
+import { ASSISTANT_NAME } from './brand';
 import type { Permission } from '@/lib/permissions';
 
 export type NavSection = 'core' | 'management' | 'evaluation' | 'admission' | 'admin' | 'communication' | 'analytics' | 'system' | 'platform';
@@ -28,14 +29,14 @@ export interface ModuleDef {
 }
 
 export const SECTION_TITLES: Record<NavSection, string> = {
-  core: 'Command Center', management: 'Gestión', evaluation: 'Evaluación', admission: 'Admisión',
+  core: 'Panel', management: 'Gestión', evaluation: 'Evaluación', admission: 'Admisión',
   admin: 'Administración', communication: 'Comunicación', analytics: 'Analítica', system: 'Sistema', platform: 'Plataforma',
 };
 export const SECTION_ORDER: NavSection[] = ['core', 'management', 'evaluation', 'admission', 'admin', 'communication', 'analytics', 'system', 'platform'];
 
 /** Registro único: sidebar, router, buscador y command palette se generan de aquí. */
 export const MODULES: ModuleDef[] = [
-  { id: 'dashboard', path: '/', icon: LayoutDashboard, section: 'core', title: 'Command Center', permission: 'dashboard:read', core: true, phase: 1, description: 'Estado global de la academia.' },
+  { id: 'dashboard', path: '/', icon: LayoutDashboard, section: 'core', title: 'Panel', permission: 'dashboard:read', core: true, phase: 1, description: 'Estado global de la academia.' },
   { id: 'students', path: '/alumnos', icon: Users, section: 'management', title: 'Alumnos', labelKey: 'student', permission: 'students:read', phase: 2, description: 'Fichas, estado, asistencia y pagos.' },
   { id: 'teachers', path: '/profesores', icon: GraduationCap, section: 'management', title: 'Profesores', labelKey: 'teacher', permission: 'teachers:read', phase: 2, description: 'Equipo docente, disponibilidad y carga.' },
   { id: 'groups', path: '/grupos', icon: UsersRound, section: 'management', title: 'Grupos', labelKey: 'group', permission: 'groups:read', phase: 2, description: 'Grupos, aulas y ocupación.' },
@@ -61,11 +62,12 @@ export const MODULES: ModuleDef[] = [
   { id: 'notifications', path: '/notificaciones', icon: Bell, section: 'communication', title: 'Notificaciones', permission: 'notifications:read', phase: 4, description: 'Centro de notificaciones.' },
   { id: 'statistics', path: '/estadisticas', icon: BarChart3, section: 'analytics', title: 'Estadísticas', permission: 'statistics:read', phase: 5, description: 'Métricas y evolución.' },
   { id: 'reports', path: '/informes', icon: FileBarChart, section: 'analytics', title: 'Informes', permission: 'reports:read', phase: 5, description: 'Informes exportables.' },
-  { id: 'ai', path: '/jarvis', icon: Sparkles, section: 'analytics', title: 'JARVIS AI', permission: 'ai:read', phase: 6, keywords: ['ia', 'asistente'], description: 'Asistente inteligente.' },
+  { id: 'ai', path: '/jarvis', icon: Sparkles, section: 'analytics', title: ASSISTANT_NAME, permission: 'ai:read', phase: 6, keywords: ['ia', 'asistente'], description: 'Asistente inteligente.' },
   { id: 'settings', path: '/configuracion', icon: Settings, section: 'system', title: 'Configuración', permission: 'settings:read', core: true, phase: 7, description: 'Ajustes generales.' },
   { id: 'users', path: '/usuarios', icon: UserCog, section: 'system', title: 'Usuarios', permission: 'users:read', phase: 8, description: 'Cuentas de acceso.' },
   { id: 'permissions', path: '/permisos', icon: ShieldCheck, section: 'system', title: 'Permisos', permission: 'permissions:read', phase: 8, description: 'Matriz de roles.' },
   { id: 'customization', path: '/personalizacion', icon: Palette, section: 'system', title: 'Personalización', permission: 'customization:read', core: true, phase: 7, keywords: ['marca', 'colores', 'logo'], description: 'Marca, colores, etiquetas y módulos.' },
+  { id: 'accessLog', path: '/registro-accesos', icon: ScrollText, section: 'system', title: 'Registro de accesos', permission: 'users:read', core: true, phase: 8, keywords: ['auditoria', 'quien', 'consultas', 'rgpd', 'privacidad'], description: 'Quién consulta o exporta datos de personas.' },
   { id: 'platform', path: '/plataforma', icon: Building2, section: 'platform', title: 'Plataforma (Super Admin)', permission: 'platform:read', core: true, phase: 7, description: 'Academias, suscripciones y uso.' },
 ];
 

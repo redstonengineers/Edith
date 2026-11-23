@@ -53,7 +53,7 @@ export function NavList({ collapsed = false, onNavigate, editorial = false }: { 
         }
         return (
           <div key={s}>
-            {s !== 'core' && (collapsed ? <hr className="mx-2 mb-2 border-line" /> : <h3 className="mb-1.5 px-2.5 text-[10px] font-semibold tracking-[0.16em] text-muted uppercase">{SECTION_TITLES[s]}</h3>)}
+            {s !== 'core' && (collapsed ? <hr className="mx-2 mb-2 border-line" /> : <h3 className="mb-1.5 px-2.5 text-xs font-semibold tracking-[0.16em] text-muted uppercase">{SECTION_TITLES[s]}</h3>)}
             <div className="flex flex-col gap-0.5">{items.map(item)}</div>
           </div>);
       })}

@@ -1,96 +1,96 @@
-# EDITH — Pendientes que requieren a una persona
+# EDITH — Estado y pendientes
 
-Lo que no puedo resolver desde la sesión (credenciales, DNS, cuentas de terceros, decisiones de negocio).
-Marca cada punto cuando esté hecho.
+Tres secciones: **A. Hecho**, **B. Pendiente de ti** (cuentas, claves, decisiones) y **C. Pendiente técnico** (lo puedo hacer yo cuando lo pidas).
+Sin historial cronológico: cada punto dice cómo está ahora.
 
-## 1. Despliegue y dominio
-- [ ] **Comprobar en un navegador `https://edith.redstonengineers.com`** (la única app: servidor y modo personal EDITH). Desde la sesión el proxy bloquea el dominio, así que solo he podido confirmar el estado en Coolify. Verificar DNS y certificado.
-- [ ] **Decidir si se despliega el modo servidor.** Ahora está publicada la demo estática (datos en el navegador de cada visitante). Para datos compartidos hay que desplegar el `Dockerfile` de la raíz en Coolify (app aparte, volumen persistente `/data`) con `BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_PASSWORD` (o `SEED_DEMO=1` solo para una demo). Pasar el frontend a `VITE_DATA_MODE=api`.
-- [~] **Copias de seguridad**: el servidor ya hace una copia consistente de la base cada 24 h en `/app/data/backups` (últimas 7; variables `BACKUP_HOURS`, `BACKUP_KEEP`, `BACKUP_DIR`). Falta sacarlas fuera del volumen (Coolify → Backups o S3), porque si se pierde el volumen se pierden también.
-- [ ] Token de GitHub con permisos de creación de repos si quieres que la sesión cree repos nuevos por sí sola (hoy hay que crearlos a mano).
+---
 
-## 2. Servicios externos (cada uno necesita una cuenta o clave tuya)
-- [ ] **Email (Resend)**: el código ya está (`server/mailer.ts`, canal «Correo electrónico»). Falta: cuenta en resend.com, verificar un dominio (SPF/DKIM en el DNS) y definir en Coolify `RESEND_API_KEY` y `MAIL_FROM` en la app del servidor.
-- [ ] **WhatsApp / SMS / push**: hoy los canales están simulados y marcados como tal. Requiere WhatsApp Business API (Meta o proveedor como Twilio) y plantillas aprobadas.
-- [ ] **JARVIS con Claude**: el código ya está (`server/claude.ts`). Falta crear una clave en console.anthropic.com y definir en Coolify `ANTHROPIC_API_KEY` (y opcionalmente `ANTHROPIC_MODEL`) en la app del servidor. Sin clave usa el motor local.
-- [ ] **Pagos online** (cobro con tarjeta, domiciliación SEPA): Stripe o Redsys; hoy los pagos se registran a mano.
-- [ ] **Almacenamiento en Google Drive** (decidido): hoy solo se guardan metadatos. Falta: proyecto en Google Cloud con la API de Drive activada, una cuenta de servicio con su clave JSON (variable `GOOGLE_SERVICE_ACCOUNT_JSON` en Coolify) y una carpeta raíz de Drive compartida con esa cuenta (`DRIVE_ROOT_FOLDER_ID`). Si hay clínicas, usar Google Workspace de pago con el acuerdo de tratamiento de datos firmado, no una cuenta personal. Después lo implemento en el servidor (una subcarpeta por academia, descargas autenticadas por el servidor).
-- [ ] **Facturación SaaS** (suscripciones y MRR de la plataforma): cifras orientativas; depende del proveedor de pagos anterior.
+## B. Pendiente de ti (lo primero, porque bloquea el despliegue)
 
-## 3. Producto y negocio (decisiones tuyas)
-- [ ] **Qué sectores se venden primero.** Hay 18 plantillas (ver `docs/VERTICALES.md`). Elegir 2-3 y definir precio por sector.
-- [x] **Autoescuelas / Volanta**: hecho por integración (módulo «Prácticas y vehículos» que abre Volanta, ya desplegada). Pendiente: inicio de sesión único y alumnos compartidos entre EDITH y Volanta (requiere unificar usuarios), o portarlo por completo a EDITH.
-- [ ] **Textos legales**: política de privacidad, aviso legal y contrato de encargado de tratamiento (RGPD), imprescindibles al guardar datos de alumnos, menores y, en clínicas, datos de salud. Revisión por un abogado.
-- [x] **Logo**: elegida la propuesta B (hexágono con E), aplicada en acceso, onboarding y favicon. Pendiente: iconos PWA y versión de una sola tinta si se imprime.
-- [ ] **Dominio por cliente** (white-label): decidir si cada academia tendrá subdominio propio (`cliente.edith…`) o dominio propio.
+### B0. Variables de Coolify (app `edith`)
 
-## 4. Seguridad antes de producción real
-- [ ] Prueba con HTTPS real de la cookie `Secure` y del proxy (`TRUST_PROXY=1`).
-- [ ] Recuperación de contraseña y MFA (necesita email, punto 2).
-- [ ] Migrar a PostgreSQL con aislamiento por fila (RLS) si se esperan muchas academias (hoy SQLite, un solo proceso).
-- [ ] Revisión externa de seguridad / pentest antes de gestionar datos de clientes reales.
-- [ ] Rotar cualquier credencial que se haya compartido fuera de los canales seguros.
+| Variable | Qué hacer | Obligatoria |
+| --- | --- | --- |
+| `DATA_ENCRYPTION_KEY` | **Definirla ANTES del próximo despliegue.** 32 bytes en base64: `openssl rand -base64 32`. Cifra los datos personales y de salud en la base. **Sin ella, en producción el servidor NO arranca.** Guarda una copia de la clave fuera de Coolify (gestor de contraseñas): si se pierde, los datos cifrados no se pueden recuperar. | **Sí** |
+| `DATA_ENCRYPTION_KEY_PREVIOUS` | Solo al rotar la clave: pon aquí la antigua (varias separadas por comas) y la nueva en `DATA_ENCRYPTION_KEY`; al arrancar se re-cifra todo. Después se puede borrar. | No |
+| `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_KEY`, `BACKUP_S3_SECRET` (+ `BACKUP_S3_REGION`, por defecto `us-east-1`) | Copia externa de cada copia diaria (cualquier almacenamiento compatible con S3: Cloudflare R2, Backblaze B2, AWS, MinIO…). Necesita que crees el bucket y una clave de acceso. Sin ellas las copias solo quedan en el volumen. | Recomendada |
+| `SENTRY_DSN` | Informe de errores (servidor y navegador, con datos de personas tachados). Necesita una cuenta de Sentry; el DSN es la dirección del proyecto. Sin ella no se envía nada. | No |
+| `TENANT_PASSWORD`, `PROVISION_ADMIN_PASSWORD` | **Borrarlas** (ya no existen: las demos no llevan contraseña). | — |
+| `PERSONAL_PASSWORD`, `TENANTS=1`, `PROVISION_ACADEMY_NAME`, `PROVISION_ADMIN_EMAIL` | Mantener como están. | Sí |
+| `NODE_ENV=production`, `TRUST_PROXY=1` | Ya los pone el `Dockerfile`. | — |
+| Opcionales | `DEMO_RESET_HOUR`, `DEMO_RESET_DAILY=0`, `DEMO_RATE_PER_HOUR` (40), `API_RATE_PER_MINUTE` (600), `LOGIN_FAILS_PER_IP` (30), `ACCESS_LOG_DAYS` (730), `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL`, `RESEND_API_KEY`/`MAIL_FROM`, `WHATSAPP_*`, `NOTIFY_WEBHOOK_*`. | No |
 
-## 5. Mejoras técnicas conocidas (las puedo hacer yo cuando lo pidas)
-- [ ] Paginación de `/api/snapshot` para academias grandes.
+Orden recomendado: 1) definir `DATA_ENCRYPTION_KEY` (y guardarla), 2) desplegar, 3) comprobar en el log «Cifrado: N registros… cifrados» y `GET /api/health` → `"encrypted": true`, 4) (opcional) definir las variables S3 y comprobar `"backup": { "external": true }` tras la primera copia.
+
+### B1. Cuentas y servicios de terceros
+- [ ] **S3 para copias externas** (ver tabla). Hasta entonces, si se pierde el volumen se pierden también las copias.
+- [ ] **Sentry** (cuenta + proyecto) → `SENTRY_DSN`.
+- [ ] **Correo (Resend)**: cuenta, dominio verificado (SPF/DKIM) y `RESEND_API_KEY` + `MAIL_FROM`. Hoy el correo se usa para avisos al equipo por solicitudes de matrícula; los avisos a alumnos son solo por WhatsApp.
+- [ ] **WhatsApp automático**: cuenta de WhatsApp Business (Meta), número, plantilla aprobada con un único parámetro `{{1}}` → `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_TEMPLATE` (y `WHATSAPP_LANG`). Sin ellas queda «por enviar» con un toque. Meta puede cobrar por mensaje.
+- [ ] **Asistente con Claude**: clave en console.anthropic.com → `ANTHROPIC_API_KEY` (y `ANTHROPIC_MODEL`). Sin clave usa el motor local. Las demos nunca la usan.
+- [ ] **Pagos online** (tarjeta, SEPA): Stripe o Redsys; hoy los cobros se registran a mano. De ahí depende la facturación SaaS y el MRR exacto.
+- [ ] **Almacenamiento de documentos (Google Drive)**: proyecto de Google Cloud, cuenta de servicio (`GOOGLE_SERVICE_ACCOUNT_JSON`) y carpeta raíz (`DRIVE_ROOT_FOLDER_ID`). Para clínicas, Google Workspace de pago con acuerdo de tratamiento firmado.
+- [ ] Token de GitHub con permiso de creación de repos, si quieres que la sesión cree repos por sí sola.
+
+### B2. Decisiones y trámites
+- [ ] **Textos legales con un abogado**: política de privacidad, aviso legal y contrato de encargado de tratamiento (RGPD). Imprescindibles al guardar datos de alumnos, menores y, en clínicas, de salud. El formulario público de matrícula debe enlazar la política. El cifrado y el registro de accesos son medidas técnicas; no sustituyen esto.
+- [ ] **Qué sectores se venden primero** (hay 18 plantillas, ver `docs/VERTICALES.md`) y precio por sector.
+- [ ] **Dominio por cliente** (white-label): subdominio propio (`cliente.edith…`) o dominio del cliente.
+- [ ] **Sedes**: el PDF limita a 1 sede en Esencial y Profesional, pero el programa aún no tiene la entidad «sede»; el tope es solo comercial hasta que se decida cómo modelarlas.
+- [ ] **Atlanta**: logo definitivo y datos fiscales (el logo actual es de muestra en `public/brand/`). Si Atlanta pasa a ser cliente real, usar «Pasar a cliente real» en el panel Clientes.
+- [ ] **Pentest o revisión de seguridad externa** antes de gestionar datos reales de clientes; rotar cualquier credencial compartida fuera de canales seguros.
+- [ ] **Probar en un iPad/móvil real** el modo sin conexión (instalar en pantalla de inicio) y la prueba con HTTPS real de la cookie `Secure` y del proxy.
+- [ ] Revisar tras desplegar el log de arranque: «isDemo marcado en…» y «Negocios SIN isDemo…» (esos se tratan como clientes; si alguno es una demo, márcalo a mano).
+
+---
+
+## A. Hecho
+
+### Acceso (detalle técnico en `docs/BACKEND.md`)
+- **Demos sin contraseña**: Atlanta, Academia y Clínica son los únicos negocios con `isDemo: true`. `/acceso/<negocio>` entra directo con `POST /api/auth/demo`; sus cuentas no tienen contraseña ni entran por `/login`. Sesiones ≤ 12 h, sin envíos reales (correo, WhatsApp, Claude), sin cambios de plan ni de plataforma, límite de aperturas por IP; los datos se restauran cada día o con `npm run demo:reset` / «Restaurar demos» en el panel Clientes.
+- **Clientes con contraseña**: `/login` con correo y contraseña. `POST /api/onboarding` solo con tu sesión personal; panel **Clientes → Nuevo cliente** (o `npm run client:new`) genera una contraseña aleatoria que se muestra una vez y obliga a cambiarla en el primer acceso. Los arranques nunca tocan a los clientes.
+
+### Seguridad y datos
+- **Cifrado de campos sensibles** (AES-256-GCM, `server/fieldcrypto.ts`): correo, teléfono, fecha de nacimiento y notas de alumnos; datos del tutor; solicitudes de matrícula y lista de espera; teléfonos y correos de profesores; correo de los usuarios; mensajes, incidencias, avisos y el estado del modo personal. El modelo actual **no tiene** campos de DNI, historia clínica ni informes clínicos: están ya previstos en la lista de campos cifrados (`students.dni`, `document`, `clinicalHistory`, `clinicalNotes`, `reports`…) y se cifrarán en cuanto se creen; las notas del paciente sí van cifradas. Migración idempotente al arrancar, rotación con `DATA_ENCRYPTION_KEY_PREVIOUS`, sin clave en producción no arranca. Test: `tests/cifrado.ts` (volcado en bruto sin datos en claro, reinicio, clave equivocada, migración, rotación).
+- **Cabeceras**: HSTS (producción), Permissions-Policy restrictiva, CSP con `script-src 'self'`, `object-src 'none'`, `base-uri 'self'`.
+- **Límites de acceso**: 8 fallos / 15 min por IP+correo, 30 fallos / 15 min por IP en total, 600 peticiones/min a `/api` por IP, aperturas demo y envíos del formulario público limitados.
+- **Registro de accesos**: página **Registro de accesos** (solo administrador) con fichas abiertas, exportaciones CSV e informes, filtrable por usuario y fecha; el nombre de la persona se guarda cifrado; retención `ACCESS_LOG_DAYS`.
+- **Copias**: diaria local (7), comprobación de que la copia se abre y es íntegra, subida opcional a S3 firmada (SigV4) y resultado visible en `/api/health`. Restauración documentada en `docs/BACKEND.md`.
+- **Monitorización**: `/api/health` (base de datos, antigüedad de la última copia, cifrado) y Sentry opcional con datos de personas tachados.
+
+### Escalado y producción
+- Servidor compilado a JavaScript (`dist-server/`) y ejecutado con `node`; imagen de Docker en tres fases, solo dependencias de ejecución, con healthcheck.
+- `/api/snapshot?part=core` + colecciones grandes (alumnos, asistencia, pagos, prácticas) por trozos; el modo sin conexión sigue funcionando (caché por parte y vuelta a la instantánea completa).
+- Una cola de escritura por negocio (los negocios no se bloquean entre sí; rollback solo del negocio que falla; operaciones de plataforma en exclusiva). Test: `tests/colas.ts`.
+- **Topes de plan en el servidor** (según el PDF): Esencial 150 alumnos activos / 4 usuarios del equipo; Profesional 500 alumnos / usuarios ilimitados; Premium sin topes; módulos fuera de plan no se pueden activar desde los ajustes (WhatsApp automático y permisos desde Profesional; Asistente de IA solo Premium). Mensajes claros y sin pérdida de datos. WhatsApp sin tope (contador de uso razonable). Test: `tests/planes.ts`.
+
+### Diseño y textos
+- Todo en español y por etiquetas del negocio («Panel de la clínica», «Panel de la autoescuela»…); «SYSTEM ONLINE» sustituido por el estado real (conectado, hora de la última sincronización, sin conexión).
+- `PRODUCT_NAME`, `ASSISTANT_NAME` («Asistente») y `PERSONAL_ASSISTANT_NAME` (JARVIS, solo modo personal) en `src/config/brand.ts`.
+- Tema claro por defecto y sin efectos HUD en los negocios, mayúsculas espaciadas solo en etiquetas de sección, texto mínimo de 12 px, contraste revisado con axe (claro y oscuro).
+- Calendario: títulos completos (varias líneas y tooltip), franja horaria ajustada al horario real del negocio, filtros con el desplegable de la app.
+- Móvil: anillo de ocupación reducido y KPIs visibles sin desplazarse.
+- Aspecto por suscripción (Profesional y Premium), barra lateral con contenedores, interacciones cuidadas (atajos `G`+letra, menú contextual, avisos con barra de tiempo).
+
+### Producto
+- Autoescuela Atlanta: coches, prácticas 1 a 1 con choques y series, horas del alumno, firma táctil, parte mensual, exámenes de conducir, importación CSV, modo sin conexión (PWA) con cola de cierres idempotente, datos de demostración.
+- Avisos a alumnos por WhatsApp con plantillas, horas de descanso, recordatorios y reintentos; contador interno de WhatsApp por negocio y mes (Plataforma).
+- Formulario público de matrícula para todos los negocios (antispam y consentimiento RGPD).
+- Panel «Clientes» y modo personal (Gazael/Hokage): HUD, finanzas, voz del sistema, iPad/móvil.
+- Calidad: CI en GitHub Actions (`.github/workflows/ci.yml`), `npm test` lanza todo (`tests/run-all.mjs`).
+
+---
+
+## C. Pendiente técnico
+
+- [ ] **PostgreSQL con aislamiento por fila (RLS)** si se esperan muchas academias (hoy SQLite en un proceso; fuera de esta tanda a propósito).
+- [ ] **Recuperación de contraseña y MFA** (necesita correo, B1).
+- [ ] **Sedes** como entidad propia (para hacer cumplir el tope de sedes del PDF).
+- [ ] **Sentry oficial** (hoy hay un cliente mínimo por «envelope», sin trazas de rendimiento ni breadcrumbs): cambiar por `@sentry/node` y `@sentry/browser` si se quiere más detalle.
+- [ ] **Registro de accesos desde el servidor** para lecturas masivas: hoy lo avisa el navegador (el servidor valida persona y negocio), porque la instantánea envía listas completas.
+- [ ] Recortar en el cliente las colecciones grandes que no usa cada pantalla (hoy se cargan todas tras el núcleo, y las pantallas que las necesitan esperan).
 - [ ] Textos con artículo fijo («este grupo», «del alumno») que aún no usan el género de la etiqueta personalizada.
-- [ ] Módulos propios de sectores: citas con profesional (estética/clínica), historia clínica con consentimiento, recursos y flota (autoescuela/náutica), fichas de jugador y partidos (clubes).
-
-## Ideas para más adelante
-- [~] **Voz en EDITH personal**: HECHO la síntesis con la voz del sistema (Ajustes → Voz de EDITH: activar, elegir voz y velocidad; lee respuestas y recordatorios; altavoz en cada respuesta). Falta el botón de micrófono (dictado); después, si gusta, voz neuronal (p. ej. ElevenLabs) con la clave guardada en el servidor. Descartado de momento: escucha permanente tipo «Oye EDITH» y conversación en tiempo real.
-
-## Autoescuela Atlanta (híbrido EDITH + gestión de prácticas)
-Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/profesor/alumno y series semanales, horas del alumno frente a su objetivo, profesor asignado, portada propia, firma táctil, parte mensual (CSV/impresión) y avisos por WhatsApp.
-- [ ] **Exámenes de conducir** (teórico/práctico, resultado y % de aprobados) en la ficha del alumno y en el parte.
-- [ ] **Importar alumnos** desde Excel/CSV.
-- [ ] **Firma sin conexión**: cola offline que envía las firmas al recuperar la red.
-- [x] Atlanta es una demo abierta (`isDemo`); el alta de clientes reales se hace desde el panel Clientes (ver «Acceso»).
-- [ ] Avisos push de clases y copias de seguridad (equivalentes a los de Volanta).
-- [x] **Modo sin conexión (como Volanta)**: app instalable (manifiesto + service worker), abre sin red con la última copia de datos (IndexedDB, se borra al cerrar sesión) y aviso «Sin conexión». Los cierres de práctica con firma se guardan en el móvil y se envían solos al volver la red (cada cierre lleva un `opId`: el servidor lo reconoce y no duplica km ni firmas; guarda la hora real de la firma). Si el servidor rechaza un cierre (p. ej. práctica cancelada) se conserva con aviso Reintentar / Descartar. Crear/mover prácticas y el resto de acciones siguen necesitando conexión. Test: `tests/e2e/offline.cjs`. Pendiente: probar en un iPad/móvil real (instalar en pantalla de inicio) y, si se quiere, cola offline también para «Marcar como hecha» sin firma.
-
-## Autoescuela Atlanta — fase 3 (hecha)
-- Exámenes de conducir (teórico/práctico, resultado) en la ficha del alumno y «Exámenes del mes» con % de aprobados en el parte mensual.
-- Importar alumnos desde CSV (Excel → Guardar como CSV; coma o punto y coma; fechas dd/mm/aaaa o aaaa-mm-dd), validando fila a fila, con plantilla descargable.
-- Sigue pendiente: firma sin conexión, avisos push y copias de seguridad.
-
-## Acceso: demos abiertas y clientes (modelo vigente; detalle técnico en `docs/BACKEND.md`)
-- **Demos sin contraseña**: Atlanta, Academia y Clínica son los únicos negocios con `isDemo: true` (campo explícito). `/acceso/<negocio>` no pide contraseña: pulsar un perfil entra directamente (`POST /api/auth/demo`). Sus cuentas no tienen contraseña utilizable ni entran por `/login`. Las sesiones demo duran ≤ 12 h, no envían correo ni WhatsApp reales, JARVIS usa el motor local, no pueden tocar planes ni plataforma y tienen límite de aperturas por IP. Sus datos se restauran cada día (4:00) o con `npm run demo:reset` / botón «Restaurar demos» del panel Clientes.
-- **Clientes con contraseña**: entran por `/login` con correo y contraseña. `POST /api/onboarding` está cerrado al público: solo con tu sesión personal. Panel **Clientes → Nuevo cliente** (o `npm run client:new`): EDITH genera una contraseña aleatoria, te la enseña una sola vez y el cliente debe cambiarla en su primer acceso.
-- **Atlanta como cliente real**: pon `isDemo: false` o usa «Pasar a cliente real» en el panel Clientes (da una contraseña provisional a su administrador). Desde ese momento ni el arranque ni la restauración la tocan.
-- **Variables de Coolify**: borrar `TENANT_PASSWORD` (y `PROVISION_ADMIN_PASSWORD` si sigue); mantener `PROVISION_*`, `TENANTS=1`, `PERSONAL_PASSWORD`. Opcionales: `DEMO_RESET_HOUR`, `DEMO_RESET_DAILY=0`.
-- **Tras desplegar**: revisa el log de arranque: «isDemo marcado en: …» y, si hubiera, «Negocios SIN isDemo (se tratan como clientes)»: esos no se marcan solos; si alguno es una demo, hay que marcarlo a mano.
-- Pendiente: el administrador de Atlanta (correo de `PROVISION_ADMIN_EMAIL`) pierde su contraseña al ser demo: si quieres entrar con tu correo en Atlanta, usa «Pasar a cliente real» (solo cuando deje de ser demo). Pendiente también: datos fiscales y logo definitivo de Atlanta (el actual es de muestra en `public/brand/`) y recuperación de contraseña por correo para clientes.
-
-## Avisos automáticos al alumno (correo y WhatsApp)
-Hecho: al apuntar, cambiar de hora o cancelar una práctica, o anotar un examen/resultado, se crea un aviso al alumno (y a su tutor si es menor) según su preferencia (ficha → Prácticas → «Avisar al alumno por»). Página **Avisos a alumnos** (`/avisos-alumnos`) con el estado de cada canal. Cambios seguidos sobre lo mismo antes de enviarse sustituyen al aviso (no spamean).
-- [ ] **Correo**: crear cuenta en Resend (resend.com), verificar el dominio y poner en Coolify `RESEND_API_KEY` y `MAIL_FROM` («Autoescuela Atlanta <avisos@tudominio>»).
-- [ ] **WhatsApp automático** (opcional): WhatsApp Business Platform de Meta → `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` y una plantilla aprobada con un único parámetro `{{1}}` (`WHATSAPP_TEMPLATE`, idioma `WHATSAPP_LANG`, por defecto es). Meta solo permite texto libre si el alumno escribió en las últimas 24 h; fuera de esa ventana hace falta la plantilla.
-- Sin esas claves: el correo no se envía y WhatsApp queda «por enviar» con un botón que abre WhatsApp con el mensaje ya escrito.
-
-## Avisos a alumnos: infraestructura (lista para conectar mensajería)
-Página `/avisos-alumnos` (Bandeja + Configuración). Eventos: práctica nueva/serie/cambio/cancelada/restaurada/recordatorio, examen anotado/aprobado/suspendido, clase cancelada/cambiada. Cada academia activa/desactiva cada evento y edita su texto (variables `{nombre} {fecha} {hora}…`, con vista previa), elige canales, recordatorio automático (horas antes; 0 = no) y horas de descanso (por defecto 22:00–08:00, hora `NOTICES_TZ` = Europe/Madrid). Preferencia por alumno (ficha). Reintentos automáticos (3) y botón Reintentar. Prueba de canales desde la propia página.
-Canales (se activan solos con sus claves en Coolify): correo (`RESEND_API_KEY`, `MAIL_FROM`), WhatsApp Business (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_TEMPLATE`), y **webhook firmado** (`NOTIFY_WEBHOOK_URL`, `NOTIFY_WEBHOOK_SECRET`) para conectar Telegram, SMS, Slack, Make, Zapier o n8n sin tocar el código: JSON con cabeceras `X-Edith-Timestamp` y `X-Edith-Signature: sha256=HMAC(secreto, "timestamp.cuerpo")`.
-
-## Datos de demostración de Autoescuela Atlanta (para enseñarla a clientes)
-Al arrancar, si Atlanta está vacía (sin alumnos ni prácticas) se llena **una sola vez** con datos ficticios: 4 profesores, 5 vehículos (uno en el taller, ITV y seguros próximos), 46 alumnos con permisos B, A2 y AM (algunos menores con tutor), grupos de teórico, ~6 semanas de prácticas hechas (con firmas) y 2 de programadas, exámenes de la DGT con resultados y repeticiones (parte mensual con % de aprobados), ~140 cobros (algunos vencidos), incidencias y avisos. La cuenta «alumno» ve a un alumno modelo (14 de 20 h, teórico aprobado, práctico fijado). Atlanta ya no tiene perfil «padre».
-- No pisa datos reales: si ya hay alumnos (las ffichas de relleno del alta de cuentas no cuentan), profesores o prácticas no hace nada, y no vuelve a rellenarse aunque se borren (marca `demoSeeded`).
-- Para quitarla antes de usar la academia de verdad: borrar los alumnos/prácticas desde la app, o usar `ATLANTA_DEMO=0` en Coolify **antes** del primer arranque para no crearla.
-
-## Formulario público de solicitud de matrícula (todos los negocios)
-Cada negocio tiene un enlace público `/matricula/<slug o id>` (Atlanta: `/matricula/atlanta`) para que cualquiera pida plaza sin cuenta. Las solicitudes llegan a **Matrículas → Solicitud** con la etiqueta «Web», el mensaje y, si es menor, los datos del tutor. El formulario se adapta al negocio (logo, colores y la pregunta «qué te interesa»: permiso, motivo de consulta, actividad…).
-- Control desde Matrículas (tarjeta «Formulario público»): copiar enlace, activar/desactivar, texto de bienvenida y opciones. Activo por defecto en todos los negocios.
-- Antispam: señuelo oculto, tiempo mínimo de relleno, 6 envíos por hora y red, 80 al día por negocio, sin duplicados (mismo correo o teléfono en 7 días) y consentimiento RGPD obligatorio.
-- Avisos: notificación dentro de la app siempre; con correo conectado (Resend) también correo al director/secretaría y acuse al interesado.
-- Pendiente: texto legal propio de privacidad enlazado en el formulario; QR del enlace para carteles.
-
-- [x] **Planes y precios** (el PDF ya no muestra pago anual): `docs/EDITH-planes-y-precios.pdf` (Esencial 39 €/mes, Profesional 69 €/mes, Premium 99 €/mes; altas 590 / 990 / 1.490 €; sin IVA; el Esencial ya incluye prácticas, coches, firma, parte y modo sin conexión; el WhatsApp automático empieza en Profesional). WhatsApp automático incluido en Profesional y Premium **sin tope visible**; cláusula de uso razonable en el contrato. Contador interno: `Academy.waUsage` («AAAA-MM» → avisos enviados por la API de WhatsApp), visible solo en Plataforma (columna «WhatsApp (mes)», aviso «Uso alto» si > 8 por alumno activo, no bloquea). Test: `tests/e2e/wa-contador.cjs`.
-- [ ] Control de plan por negocio (módulos y topes de sedes/usuarios/alumnos según contrato): hoy los límites del PDF no los aplica el programa; los planes de Plataforma son prueba/básico/pro (sin «premium» aún).
-- [x] **Panel «Clientes» en EDITH personal** (módulo 7 del dock, también en «Más»): lista los negocios con plan, precio, usuarios, alumnos y WhatsApp del mes; permite cambiar la suscripción (Prueba / Esencial 39 € / Profesional 69 € / Premium 99 €), con la opción de desactivar los módulos que el nuevo plan no incluye (`src/config/plans.ts`; nunca activa módulos solos), y suspender/reactivar un negocio. API: `GET/POST /api/personal/clients…` (solo con sesión personal; devuelve cifras, nunca datos de personas). Test: `tests/e2e/clientes-personal.cjs`. Pendiente: que el servidor impida activar módulos fuera del plan desde los ajustes del propio negocio (hoy solo se aplica al cambiar de plan) y los topes de usuarios/alumnos por plan.
-- [x] **«Mantener la sesión iniciada»** en el acceso general y en el de cada negocio: sin marcar la sesión dura 12 h (`SESSION_HOURS`); marcada, 30 días (`REMEMBER_DAYS`) en ese dispositivo. La casilla recuerda la elección (nunca guarda credenciales) y viene sin marcar. El acceso personal ya dura 30 días. Test: `tests/e2e/recordar-sesion.cjs`.
-- [x] **Parpadeo del núcleo al empezar (modo personal)**: la escena 3D se destruía y se volvía a crear al elegir perfil (pantalla «INICIANDO SISTEMAS…» desmontaba todo) y los tirones normales de los primeros segundos (compilar shaders) apagaban el brillo. Ahora hay una sola escena para todo el modo personal (el núcleo se desplaza suavemente de «elegir perfil» al HUD) y la degradación automática espera 2,5 s. Verificado por medición de fotogramas (sin flash negro, 1 contexto WebGL); no probado en GPU real.
-- [x] **Tarjeta «Clientes» en la pantalla principal del modo personal**: resumen (clientes activos, ingreso mensual, WhatsApp del mes) siempre visible; con la flecha se despliega la lista con el cambio de plan y suspender/reactivar, y se vuelve a minimizar (se recuerda en el dispositivo; empieza minimizada). Escritorio: columna central sobre el chat; móvil: al principio de «Hoy». Comparte datos con el panel completo (módulo 7). Test: `tests/e2e/clientes-personal.cjs`.
-
-- [x] **Aspecto visual por suscripción** (negocios): Esencial/Prueba = el aspecto de siempre; **Profesional** = superficies con relieve, degradados de marca, subrayado de título, botones con degradado e insignia «PRO»; **Premium** = fondo «aurora» animado, paneles de cristal con borde dorado, titulares serif, destello en botones, foco dorado e insignia «PREMIUM». Se activa solo con el plan del negocio (`html[data-tier]`, estilos al final de `src/styles/index.css`), sin tocar la marca de cada cliente. Prueba: `tests/e2e/tier-estilo.cjs`; axe sin violaciones en ambos temas.
-
-- [x] **Barra lateral con contenedores** (Profesional y Premium; Esencial sigue como estaba): fondo liso sin degradados; cada opción es un contenedor con borde, la activa va en color de marca con borde de acento (azul en Pro, dorado en Premium) y cada sección es una etiqueta plegable con contador (el estado se recuerda y la sección de la página actual se abre sola).
-- [x] **Interacciones cuidadas (todos los planes)**: atajos `G` + letra (G A alumnos, G P pagos, G C clases, G I inicio…) con panel «Ir a…»; menú contextual en las filas de todas las tablas (clic derecho o pulsación larga: Abrir y Copiar fila); avisos con rebote, icono animado y barra de tiempo que se pausa al pasar el cursor; filas que entran escalonadas, cambio de pantalla con desenfoque suave, halo de foco en los campos y onda de luz en los botones principales. Prueba: `tests/e2e/interacciones.cjs`.
+- [ ] Módulos propios de sectores: citas con profesional, historia clínica con consentimiento, recursos y flota (náutica), fichas de jugador y partidos (clubes).
+- [ ] Autoescuela: avisos push, cola offline también para «Marcar como hecha» sin firma, QR del formulario público, inicio de sesión único con Volanta.
+- [ ] Modo personal: botón de micrófono (dictado) y, si gusta, voz neuronal (clave en el servidor).
+- [ ] Iconos PWA definitivos y versión de una sola tinta del logo.

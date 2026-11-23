@@ -17,13 +17,13 @@ export function ChartCard({ title, subtitle, legend, table, children, className 
   return (
     <section aria-labelledby={id} className={cn('panel flex flex-col', className)}>
       <header className="flex items-start justify-between gap-3 px-5 pt-4">
-        <div><h2 id={id} className="text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">{title}</h2>{subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}</div>
-        <button onClick={() => setAsTable(!asTable)} aria-pressed={asTable} className="shrink-0 rounded-md border border-line px-2 py-1 text-[11px] text-muted hover:text-fg">{asTable ? 'Ver gráfico' : 'Ver tabla'}</button>
+        <div><h2 id={id} className="text-xs font-semibold text-muted">{title}</h2>{subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}</div>
+        <button onClick={() => setAsTable(!asTable)} aria-pressed={asTable} className="shrink-0 rounded-md border border-line px-2 py-1 text-xs text-muted hover:text-fg">{asTable ? 'Ver gráfico' : 'Ver tabla'}</button>
       </header>
       {legend && legend.length >= 2 && !asTable && <ul className="flex flex-wrap gap-x-4 gap-y-1 px-5 pt-2 text-xs">{legend.map((l) => <li key={l.label} className="flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ background: l.color }} />{l.label}</li>)}</ul>}
       <div className="flex-1 px-5 pt-3 pb-5">
         {asTable ? (
-          <div className="max-h-64 overflow-auto"><table className="w-full text-left text-[13px]"><thead><tr className="text-[11px] text-muted uppercase">{table.columns.map((c) => <th key={c} scope="col" className="py-1.5 pr-3 font-semibold">{c}</th>)}</tr></thead>
+          <div className="max-h-64 overflow-auto"><table className="w-full text-left text-[13px]"><thead><tr className="text-xs text-muted">{table.columns.map((c) => <th key={c} scope="col" className="py-1.5 pr-3 font-semibold">{c}</th>)}</tr></thead>
             <tbody>{table.rows.map((r, i) => <tr key={i} className="border-t border-line/60">{r.map((c, j) => <td key={j} className="tnum py-1.5 pr-3">{c}</td>)}</tr>)}</tbody></table></div>
         ) : children}
       </div>
