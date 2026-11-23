@@ -9,7 +9,7 @@ export function ContextMenu({ at, items, onClose }: { at: { x: number; y: number
   const ref = useRef<HTMLDivElement>(null); const [pos, setPos] = useState(at); const back = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => { back.current = document.activeElement as HTMLElement; const r = ref.current!.getBoundingClientRect(); setPos({ x: Math.min(at.x, window.innerWidth - r.width - 8), y: Math.min(at.y, window.innerHeight - r.height - 8) }); ref.current!.querySelector<HTMLElement>('[role=menuitem]')?.focus(); }, [at]);
   useEffect(() => {
-    const close = () => onClose();
+    const t0 = Date.now(); const close = () => { if (Date.now() - t0 > 300) onClose(); }; // al abrirse, el enfoque o la animación pueden disparar scroll/blur: se ignoran un instante
     const key = (e: KeyboardEvent) => {
       const els = [...(ref.current?.querySelectorAll<HTMLElement>('[role=menuitem]') ?? [])]; const i = els.indexOf(document.activeElement as HTMLElement);
       if (e.key === 'Escape') { e.preventDefault(); onClose(); back.current?.focus?.(); }

@@ -51,12 +51,12 @@ export function buildApp(store: Store) {
   const serial = <T,>(fn: () => Promise<T> | T): Promise<T> => { const r = chain.then(fn, fn); chain = r.catch(() => undefined); return r; };
   const flush = () => store.flush(getDatabase());
 
-  const loginLimit = limiter(8, 15 * 60_000); const apiLimit = limiter(600, 60_000); const demoLimit = limiter(40, 60 * 60_000);
+  const loginLimit = limiter(8, 15 * 60_000); const apiLimit = limiter(config.apiPerMinute, 60_000); const demoLimit = limiter(config.demoPerHour, 60 * 60_000);
   const fail = (reply: FastifyReply, code: number, error: string) => reply.code(code).send({ error });
 
   app.addHook('onRequest', async (req, reply) => {
     reply.headers({ 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store', 'Cross-Origin-Resource-Policy': 'same-origin' });
-    if (apiLimit(req.ip)) return fail(reply, 429, 'Demasiadas peticiones. Inténtalo en un minuto.');
+    if (req.url.startsWith('/api/') && apiLimit(req.ip)) return fail(reply, 429, 'Demasiadas peticiones. Inténtalo en un minuto.');
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       // CSRF: cabecera personalizada (un sitio externo no puede enviarla sin pasar por CORS, que no habilitamos) + Origin coherente.
       if (req.headers['x-requested-with'] !== 'edith') return fail(reply, 403, 'Petición no permitida.');

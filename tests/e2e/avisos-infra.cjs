@@ -15,7 +15,7 @@ const madrid = (d) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en
   const real = await realClient(U); const mkUser = async (name, email, role, extra = {}) => { const pw = 'Perfil2026ok'; const r = await fetch(U + '/api/rpc/createUser', { method: 'POST', headers: { ...H, cookie: real.cookie }, body: JSON.stringify({ args: [{ name, email, role, password: pw, ...extra }] }) }); if (!r.ok) throw new Error('createUser ' + email); const l = await fetch(U + '/api/auth/login', { method: 'POST', headers: H, body: JSON.stringify({ email, password: pw }) }); return l.headers.get('set-cookie').split(';')[0]; };
   const session = async (who) => { const cookie = who === 'admin' ? real.cookie : who === 'academia' ? await demoSession(U, 'academia', 'director') : await mkUser('Profesor Prueba', 'profesor.prueba@atlanta.test', 'PROFESOR');
     return { call: async (name, args, raw) => { const x = await fetch(U + '/api/rpc/' + name, { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify({ args }) }); const j = await x.json(); if (raw) return { status: x.status, j }; if (!x.ok) throw new Error(name + ': ' + j.error); return j.result; }, snap: async () => (await fetch(U + '/api/snapshot', { headers: { cookie } })).json(), post: async (path, body) => { const x = await fetch(U + path, { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify(body) }); return { status: x.status, j: await x.json() }; } }; };
-  const A = await session('admin'); let s = await A.snap(); const stu = s.students.find((x) => x.email && x.phone); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo').id;
+  const A = await session('admin'); let s = await A.snap(); const stu = s.students.find((x) => x.email && x.phone && !s.outbox.some((o) => o.studentId === x.id)); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo').id;
   const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); }; const base = (n, h = '09:00', e = '10:00') => ({ studentId: stu.id, teacherId: teacher, vehicleId: veh, date: day(n), start: h, end: e });
   const mine = async () => (await A.snap()).outbox.filter((o) => o.studentId === stu.id);
   const cfg = (extra) => A.call('updateNoticeSettings', [{ reminderHours: 0, quiet: { enabled: false }, ...extra }]);
@@ -24,9 +24,8 @@ const madrid = (d) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en
   const p = await A.call('createPractice', [base(40)]); await wait(1500); let ob = await mine();
   ok(ob.length === 1 && /^Hola Lucía: práctica el .* a las 09:00 \(.*\)\.\n— /.test(ob[0].body.replace(stu.firstName, 'Lucía')) || /Hola .*: práctica el/.test(ob[0].body), 'la plantilla propia se aplica con sus variables');
   await A.call('updatePractice', [p.id, base(40, '11:00', '12:00')]); await wait(800); ok((await mine()).length === ob.length, 'un evento desactivado («cambio») no genera aviso');
-  // 2. Webhook firmado
-  const hk = hooks.find((h) => h.body.type === 'notice'); ok(!!hk && hk.body.student && hk.body.event === 'practica_nueva' && hk.body.to.length >= 1, 'el webhook recibe el aviso (evento, alumno, destinatarios)');
-  const ts = hk.headers['x-edith-timestamp']; ok(hk.headers['x-edith-signature'] === 'sha256=' + createHmac('sha256', SECRET).update(`${ts}.${hk.raw}`).digest('hex'), 'el webhook va firmado (HMAC-SHA256 de «timestamp.cuerpo»)');
+  // 2. El aviso a alumnos solo sale por WhatsApp: ni webhook ni correo
+  ok(hooks.length === 0 && mails.length === 0, 'los avisos a alumnos no salen por webhook ni por correo (solo WhatsApp)');
   // 3. Canal de la academia desactivado
   const m0 = mails.length; await cfg({ channels: { email: false } }); await A.call('createPractice', [base(41)]); await wait(1500); ob = await mine(); ok(ob[0].emailStatus === 'no' && mails.length === m0, 'con el correo desactivado en la academia no se envía correo');
   // 4. Horas de descanso

@@ -28,7 +28,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
     }
     // Sin contraseña: la página no tiene campo de contraseña ni habla de ella
     ok(await p.locator('#p, input[type=password]').count() === 0 && !/contraseña demo|contraseña:|contraseña «/i.test(await p.locator('body').innerText()), `${slug}: no pide contraseña ni habla de «contraseña demo»`);
-    const e2 = await page(); await e2.goto(U + '/acceso/' + slug); await e2.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: profiles[0], exact: true }).click(); await e2.waitForSelector('main h1', { timeout: 10000 }); p = e2;
+    const e2 = await page(); await e2.goto(U + '/acceso/' + slug); await e2.waitForSelector('[aria-label="Entrar como"]'); await e2.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: profiles[0], exact: true }).click(); await e2.waitForSelector('main h1', { timeout: 10000 }); p = e2;
     if (slug === 'clinica') { ok(await p.getByRole('link', { name: /Pacientes/ }).count() >= 1, 'clínica: el menú habla de Pacientes'); await p.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + '/clinica-home.png' }); }
     if (slug === 'atlanta') ok(await p.getByRole('link', { name: 'Prácticas' }).count() >= 1 && await p.getByRole('link', { name: 'Coches' }).count() >= 1, 'atlanta: módulos de autoescuela (Prácticas, Coches)');
     if (slug === 'academia') ok(await p.getByRole('link', { name: /Notas|Calificaciones/ }).count() >= 1 && await p.getByRole('link', { name: 'Coches' }).count() === 0, 'academia: módulos de academia (sin Coches)');

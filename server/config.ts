@@ -21,6 +21,10 @@ export const config = {
   sessionHours: Number(process.env.SESSION_HOURS ?? 12),
   /** Duración de la sesión cuando la persona marca «mantener la sesión iniciada». */
   rememberDays: Number(process.env.REMEMBER_DAYS ?? 30),
+  /** Peticiones a /api por IP y minuto (los archivos estáticos no cuentan). */
+  apiPerMinute: Number(process.env.API_RATE_PER_MINUTE ?? 600),
+  /** Aperturas de sesión demo por IP y hora (las pruebas automáticas necesitan más). */
+  demoPerHour: Number(process.env.DEMO_RATE_PER_HOUR ?? 40),
   bootstrapEmail: process.env.BOOTSTRAP_ADMIN_EMAIL,
   bootstrapPassword: process.env.BOOTSTRAP_ADMIN_PASSWORD,
   /** Detrás de un proxy inverso confiable (nginx, Caddy…) para leer la IP real. */

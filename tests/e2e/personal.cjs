@@ -57,6 +57,6 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   await p.getByRole('button', { name: /Entrar como Hokage/ }).click(); await p.waitForSelector('.hud-cols'); ok(await p.getByText('Física').count() === 0, 'Hokage no ve los datos de Gazael');
   await p.getByRole('textbox', { name: 'Pregunta para EDITH' }).fill('¿Qué tengo pendiente?'); await p.getByRole('button', { name: 'Enviar' }).click(); await p.waitForSelector('text=ANTHROPIC_API_KEY', { timeout: 8000 }).catch(() => {}); ok(await p.getByText(/modelo de lenguaje|ANTHROPIC/).count() >= 1, 'chat de EDITH responde (sin clave: avisa)');
   // Las cuentas de academia siguen funcionando con correo
-  const p2 = await (await b.newContext()).newPage(); await p2.goto(U + '/login'); await p2.locator('button[class*="text-xs"]').filter({ hasText: 'Pablo' }).first().click(); await p2.waitForSelector('main h1'); ok(true, 'login de academia sigue funcionando');
+  const p2 = await (await b.newContext()).newPage(); await p2.goto(U + '/acceso/academia'); await p2.waitForSelector('[aria-label="Entrar como"]'); await p2.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p2.waitForSelector('main h1'); ok(true, 'login de academia sigue funcionando');
   console.log('ERRORS', JSON.stringify(errs)); console.log(fails ? `${fails} FALLOS` : 'TODO OK'); await b.close(); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.log('CRASH', e.message.split('\n').slice(0, 3).join(' | ')); process.exit(1); });

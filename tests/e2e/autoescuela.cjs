@@ -6,8 +6,8 @@ const iso = (d) => d.toISOString().slice(0, 10);
 const nextDow = (dow, skip = 0) => { const d = new Date(); d.setDate(d.getDate() + ((dow - d.getDay() + 7) % 7 || 7) + 7 * skip); return iso(d); };
 (async () => {
   const b = await chromium.launch(); const errs = [];
-  const login = async (name) => { const p = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage(); p.on('pageerror', (e) => errs.push(e.message)); await p.goto(U + '/login'); await p.locator('button').filter({ hasText: name }).first().click(); await p.waitForSelector('main h1'); return p; };
-  const p = await login('Director Atlanta'); const dlg = p.locator('[role=dialog]');
+  const login = async (name) => { const p = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage(); p.on('pageerror', (e) => errs.push(e.message)); await p.goto(U + '/acceso/atlanta'); await p.waitForSelector('[aria-label="Entrar como"]'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name, exact: true }).click(); await p.waitForSelector('main h1'); return p; };
+  const p = await login('Director'); const dlg = p.locator('[role=dialog]');
   const go = async (r) => { await p.goto(U + r); await p.locator('main h1').first().waitFor(); await p.waitForTimeout(300); };
   ok(await p.getByRole('link', { name: 'Prácticas' }).count() >= 1 && await p.getByRole('link', { name: 'Coches' }).count() >= 1, 'el menú de la autoescuela tiene Prácticas y Coches');
   await go('/practicas'); ok(await p.locator('[draggable]').count() > 0, 'el calendario muestra prácticas programadas');
@@ -49,8 +49,8 @@ const nextDow = (dow, skip = 0) => { const d = new Date(); d.setDate(d.getDate()
   await dlg.getByRole('button', { name: 'Importar 2' }).click(); await p.waitForSelector('text=2 alumnos importados'); await p.waitForTimeout(500);
   ok(await p.getByText('Álex Importado Uno').count() >= 1 && await p.getByText('Eva Importada Dos').count() >= 1, 'los alumnos importados aparecen en la lista');
   // Profesor: ve solo lo suyo y no gestiona coches
-  const t = await login('David Ruiz'); await t.goto(U + '/alumnos'); await t.waitForTimeout(700); const mine = await t.locator('tbody tr').count(); ok(mine > 0 && mine < 14, `el profesor ve solo sus alumnos (${mine} de 14)`);
+  const t = await login('Profesor'); await t.goto(U + '/alumnos'); await t.waitForTimeout(700); const mine = await t.locator('tbody tr').count(); ok(mine > 0 && mine < 14, `el profesor ve solo sus alumnos (${mine} de 14)`);
   await t.goto(U + '/coches'); await t.waitForTimeout(600); ok(await t.getByRole('button', { name: /Añadir coche/ }).count() === 0, 'el profesor no puede añadir coches');
   await t.goto(U + '/practicas'); await t.waitForTimeout(600); ok(await t.locator('[draggable]').count() > 0, 'el profesor ve sus prácticas');
   console.log('ERRORS', JSON.stringify(errs)); console.log(fails ? `${fails} FALLOS` : 'TODO OK'); await b.close(); process.exit(fails ? 1 : 0);
-})().catch((e) => { console.log('CRASH', e.message.split('\n')[0]); process.exit(1); });
+})().catch((e) => { console.log('CRASH', e.message.split('\n').slice(0, 3).join(' | '), (e.stack || '').split('\n').filter((l) => /autoescuela.cjs/.test(l))[0]); process.exit(1); });

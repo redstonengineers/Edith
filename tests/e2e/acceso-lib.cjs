@@ -23,4 +23,11 @@ async function realClient(U, slug = 'atlanta', adminEmail = process.env.ATLANTA_
   const ch = await fetch(U + '/api/auth/password', { method: 'POST', headers: J(cookieOf(lg, 'ac_session')), body: JSON.stringify({ current: mj.password, next: newPassword }) }); if (!ch.ok) throw new Error('cambio de contraseña ' + ch.status);
   return { cookie: cookieOf(ch, 'ac_session'), email: mj.adminEmail, password: newPassword, academyId: c.id };
 }
-module.exports = { J, cookieOf, ownerCookie, demoSession, realClient };
+/** Alta de un cliente real con la sesión personal (como el panel «Nuevo cliente»); entra, cambia la contraseña provisional y devuelve su sesión. */
+async function newClient(U, { academyName, type = 'otro', plan = 'basic', adminEmail, password = 'Cliente2026ok' }) {
+  const own = await ownerCookie(U); const r = await fetch(U + '/api/onboarding', { method: 'POST', headers: J(own), body: JSON.stringify({ academyName, type, plan, adminEmail }) }); const j = await r.json(); if (!r.ok) throw new Error('alta cliente: ' + r.status + ' ' + (j.error || ''));
+  const lg = await fetch(U + '/api/auth/login', { method: 'POST', headers: J(), body: JSON.stringify({ email: j.adminEmail, password: j.password }) }); if (!lg.ok) throw new Error('login cliente ' + lg.status);
+  const ch = await fetch(U + '/api/auth/password', { method: 'POST', headers: J(cookieOf(lg, 'ac_session')), body: JSON.stringify({ current: j.password, next: password }) }); if (!ch.ok) throw new Error('cambio de contraseña ' + ch.status);
+  return { cookie: cookieOf(ch, 'ac_session'), email: j.adminEmail, password, academyId: j.academyId };
+}
+module.exports = { J, cookieOf, ownerCookie, demoSession, realClient, newClient };

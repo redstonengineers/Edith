@@ -14,7 +14,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const real = await realClient(U); cookie = real.cookie;
   const call = async (name, args) => { const r = await fetch(U + '/api/rpc/' + name, { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify({ args }) }); const j = await r.json(); if (!r.ok) throw new Error(name + ': ' + j.error); return j.result; };
   const snap = async () => (await fetch(U + '/api/snapshot', { headers: { cookie } })).json();
-  let s = await snap(); const stu = s.students.find((x) => x.email && x.phone && x.firstName === 'Lucía') || s.students.find((x) => x.email && x.phone); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo');
+  let s = await snap(); const stu = s.students.find((x) => x.email && x.phone && !s.outbox.some((o) => o.studentId === x.id)); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo');
   const st = await (async () => { const r = await fetch(U + '/api/channels/status', { headers: { cookie } }); return r.json(); })(); ok(st.email === (MODE === 'auto') && st.whatsapp === (MODE === 'auto'), `estado de canales (${MODE})`);
   await call('updateNoticeSettings', [{ quiet: { enabled: false }, reminderHours: 0 }]); // las horas de descanso por defecto (22:00–08:00) retrasarían el envío
   const base = { studentId: stu.id, teacherId: teacher, vehicleId: veh.id, date: day(20), start: '09:00', end: '10:00' };
@@ -22,8 +22,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await wait(1500); s = await snap(); let ob = s.outbox.filter((o) => o.studentId === stu.id);
   ok(ob.length === 1 && /Nueva práctica/.test(ob[0].subject) && /09:00/.test(ob[0].body), 'una práctica nueva genera un aviso al alumno');
   if (MODE === 'auto') {
-    ok(ob[0].emailStatus === 'enviado' && ob[0].waStatus === 'enviado', 'correo y WhatsApp enviados solos');
-    ok(mails.length === 1 && mails[0].auth === 'Bearer k-mail' && JSON.stringify(mails[0].body).includes(stu.email), 'el correo sale a Resend con el correo del alumno');
+    ok(ob[0].emailStatus === 'no' && ob[0].waStatus === 'enviado', 'WhatsApp enviado solo (el aviso a alumnos ya no usa correo)');
+    ok(mails.length === 0, 'los avisos a alumnos no salen por correo');
     const w = was[0]; ok(was.length >= 1 && w.url.startsWith('/' + 'PHONEID/messages') && w.body.type === 'template' && w.body.template.name === 'aviso' && /^34\d{9}$/.test(w.body.to), 'WhatsApp Cloud API: plantilla con el texto y número internacional');
     ok(/09:00/.test(w.body.template.components[0].parameters[0].text), 'el texto de la plantilla lleva el aviso');
   } else ok(ob[0].emailStatus === 'no' && ob[0].waStatus === 'manual', 'sin claves: WhatsApp queda «por enviar» a mano');
