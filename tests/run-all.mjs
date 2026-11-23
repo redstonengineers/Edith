@@ -21,7 +21,7 @@ const SUITES = [
   ['monitorizacion', ['npx', 'tsx', 'tests/monitorizacion.ts'], 'unit'], ['acceso-migracion', ['npx', 'tsx', 'tests/acceso-migracion.ts'], 'unit'],
   ['acceso', ['node', 'tests/acceso.mjs'], 'self', {}, {}, 300],
   ['api-security', ['node', 'tests/api-security.mjs'], 'api', { SEED_DEMO: '1', ...OWNER }, TENV],
-  ['seguridad', ['node', 'tests/seguridad.mjs'], 'self', {}, {}, 200],
+  ['seguridad', ['node', 'tests/seguridad.mjs'], 'self', {}, {}, 200], ['cifrado-servidor', ['node', 'tests/cifrado-servidor.mjs'], 'self', {}, {}, 300],
   ['snapshot-partes', ['node', 'tests/e2e/snapshot-partes.cjs'], 'api', TENANTS, TENV],
   ['nuevo-cliente', ['node', 'tests/e2e/nuevo-cliente.cjs'], 'api', TENANTS, TENV], ['clientes-personal', ['node', 'tests/e2e/clientes-personal.cjs'], 'api', TENANTS, TENV],
   ['tenants', ['node', 'tests/e2e/tenants.cjs'], 'api', TENANTS, TENV], ['matricula-publica', ['node', 'tests/e2e/matricula-publica.cjs'], 'api', TENANTS, TENV],

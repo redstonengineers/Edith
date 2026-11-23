@@ -14,7 +14,7 @@
     "server:dev": "SEED_DEMO=1 tsx watch server/index.ts",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "gen:remote": "node scripts-gen-remote.mjs",
-    "test:api": "node tests/run-all.mjs --only api-security,acceso,seguridad,snapshot-partes",
+    "test:api": "node tests/run-all.mjs --only api-security,acceso,seguridad,cifrado-servidor,snapshot-partes",
     "test:a11y": "node tests/run-all.mjs --only axe",
     "client:new": "tsx server/new-client.ts",
     "demo:reset": "tsx server/demo-reset.ts",
