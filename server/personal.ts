@@ -17,6 +17,8 @@ type Profile = (typeof PROFILES)[number];
 const COOKIE = 'ac_personal'; const TTL = 30 * 24 * 3600_000;
 
 export const personalEnabled = () => !!PASS;
+/** ¿La petición lleva la sesión personal del propietario? (cookie httpOnly firmada). Sin PERSONAL_PASSWORD en el servidor, nunca. */
+export const personalSession = (req: FastifyRequest): boolean => !!read(req);
 const key = () => createHmac('sha256', 'edith-personal').update(PASS ?? '').digest();
 const sign = (v: string) => createHmac('sha256', key()).update(v).digest('base64url');
 const same = (a: string, b: string) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
@@ -28,7 +30,7 @@ function read(req: FastifyRequest): Sess | null {
 }
 function issue(reply: FastifyReply, p: Profile | null) {
   const body = Buffer.from(JSON.stringify({ p, exp: Date.now() + TTL } satisfies Sess)).toString('base64url');
-  reply.setCookie(COOKIE, `${body}.${sign(body)}`, { httpOnly: true, sameSite: 'strict', secure: config.cookieSecure, path: '/api/personal', maxAge: TTL / 1000 });
+  reply.setCookie(COOKIE, `${body}.${sign(body)}`, { httpOnly: true, sameSite: 'strict', secure: config.cookieSecure, path: '/api', maxAge: TTL / 1000 });
 }
 
 /** Gestión de los negocios cliente desde el modo personal del propietario (la lógica vive en app.ts, con la base y la cola de escritura). */
@@ -36,6 +38,8 @@ export interface ClientsOps {
   list: () => unknown;
   setPlan: (id: string, plan: 'trial' | 'basic' | 'pro' | 'premium', applyModules: boolean) => Promise<{ name: string; plan: string; disabled: string[] }>;
   setStatus: (id: string, status: 'active' | 'suspended') => Promise<{ name: string; status: string }>;
+  resetDemos: () => Promise<{ restored: string[] }>;
+  makeReal: (id: string, adminEmail: string) => Promise<{ name: string; adminEmail: string; password: string }>;
 }
 
 export function registerPersonal(app: FastifyInstance, store: Store, lim: ((k: string) => void) & { blocked: (k: string) => boolean; clear: (k: string) => void }, fail: (r: FastifyReply, c: number, e: string) => FastifyReply, clients: ClientsOps) {
@@ -71,7 +75,17 @@ export function registerPersonal(app: FastifyInstance, store: Store, lim: ((k: s
     try { return { ok: true, ...(await clients.setStatus(req.params.id, b.data.status)) }; } catch (e) { return fail(reply, 404, (e as Error).message); }
   });
 
-  app.post('/api/personal/logout', async (_req, reply) => { reply.clearCookie(COOKIE, { path: '/api/personal' }); return { ok: true }; });
+  // Pasa una demo a cliente real (isDemo:false): su administrador recibe una contraseña generada (se muestra una vez) y debe cambiarla al entrar.
+  app.post<{ Params: { id: string } }>('/api/personal/clients/:id/real', async (req, reply) => {
+    if (!secure(req, reply)) return reply;
+    const b = z.object({ adminEmail: z.string().min(3).max(200) }).safeParse(req.body); if (!b.success) return fail(reply, 400, 'Indica el correo del administrador.');
+    try { return { ok: true, ...(await clients.makeReal(req.params.id, b.data.adminEmail)) }; } catch (e) { return fail(reply, 422, (e as Error).message); }
+  });
+
+  // Restaura los datos de las demos (Atlanta, Academia, Clínica) a su estado de fábrica. Nunca toca clientes.
+  app.post('/api/personal/demos/reset', async (req, reply) => { if (!secure(req, reply)) return reply; return { ok: true, ...(await clients.resetDemos()) }; });
+
+  app.post('/api/personal/logout', async (_req, reply) => { reply.clearCookie(COOKIE, { path: '/api' }); reply.clearCookie(COOKIE, { path: '/api/personal' }); return { ok: true }; });
 
   app.get('/api/personal/data', async (req, reply) => {
     const s = secure(req, reply); if (!s) return reply; if (!s.p) return fail(reply, 400, 'Elige un perfil.');

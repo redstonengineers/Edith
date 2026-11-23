@@ -44,20 +44,22 @@ Hecho: coches (km, taller, ITV/seguro), prácticas 1 a 1 con choques de coche/pr
 - [ ] **Exámenes de conducir** (teórico/práctico, resultado y % de aprobados) en la ficha del alumno y en el parte.
 - [ ] **Importar alumnos** desde Excel/CSV.
 - [ ] **Firma sin conexión**: cola offline que envía las firmas al recuperar la red.
-- [ ] Alta real del tenant «Autoescuela Atlanta» desde el onboarding (la demo `@atlanta.demo` solo existe con `SEED_DEMO=1`).
+- [x] Atlanta es una demo abierta (`isDemo`); el alta de clientes reales se hace desde el panel Clientes (ver «Acceso»).
 - [ ] Avisos push de clases y copias de seguridad (equivalentes a los de Volanta).
 - [x] **Modo sin conexión (como Volanta)**: app instalable (manifiesto + service worker), abre sin red con la última copia de datos (IndexedDB, se borra al cerrar sesión) y aviso «Sin conexión». Los cierres de práctica con firma se guardan en el móvil y se envían solos al volver la red (cada cierre lleva un `opId`: el servidor lo reconoce y no duplica km ni firmas; guarda la hora real de la firma). Si el servidor rechaza un cierre (p. ej. práctica cancelada) se conserva con aviso Reintentar / Descartar. Crear/mover prácticas y el resto de acciones siguen necesitando conexión. Test: `tests/e2e/offline.cjs`. Pendiente: probar en un iPad/móvil real (instalar en pantalla de inicio) y, si se quiere, cola offline también para «Marcar como hecha» sin firma.
 
 ## Autoescuela Atlanta — fase 3 (hecha)
 - Exámenes de conducir (teórico/práctico, resultado) en la ficha del alumno y «Exámenes del mes» con % de aprobados en el parte mensual.
 - Importar alumnos desde CSV (Excel → Guardar como CSV; coma o punto y coma; fechas dd/mm/aaaa o aaaa-mm-dd), validando fila a fila, con plantilla descargable.
-- Sigue pendiente: alta real del tenant «Autoescuela Atlanta» desde el onboarding (hoy solo existe la demo con SEED_DEMO=1), firma sin conexión, avisos push y copias de seguridad.
+- Sigue pendiente: firma sin conexión, avisos push y copias de seguridad.
 
-## Acceso por negocio (Atlanta, Academia, Clínica)
-- `/login` muestra tres tarjetas bajo el formulario; cada una lleva a `/acceso/<negocio>` (logo, colores y perfiles propios). Usuario = nombre del perfil (Atlanta: director, secretaria, profesor, alumno; Academia: director, secretaria, profesor, alumno, padre; Clínica: director, recepcion, doctor, paciente, familiar). **Contraseña de todas: `demo`** (variable `TENANT_PASSWORD` para cambiarla; el acceso personal de EDITH no cambia).
-- Al arrancar con `PROVISION_ACADEMY_NAME` + `PROVISION_ADMIN_EMAIL` (o `TENANTS=1`) el servidor deja listos, de forma idempotente: Atlanta (la academia real, vacía), Academia y Clínica (negocios de ejemplo con datos de muestra), sus módulos y una cuenta por perfil. `PROVISION_ADMIN_PASSWORD` ya no se usa (borrarla de Coolify).
-- Aviso de seguridad: con contraseña «demo» cualquiera puede entrar en las cuentas de estos tres negocios. Para uso real de Atlanta conviene `TENANT_PASSWORD` propio o cambiar la contraseña de cada cuenta.
-- Pendiente: datos fiscales y logo definitivo de Atlanta (el actual es un logo de muestra en `public/brand/`).
+## Acceso: demos abiertas y clientes (modelo vigente; detalle técnico en `docs/BACKEND.md`)
+- **Demos sin contraseña**: Atlanta, Academia y Clínica son los únicos negocios con `isDemo: true` (campo explícito). `/acceso/<negocio>` no pide contraseña: pulsar un perfil entra directamente (`POST /api/auth/demo`). Sus cuentas no tienen contraseña utilizable ni entran por `/login`. Las sesiones demo duran ≤ 12 h, no envían correo ni WhatsApp reales, JARVIS usa el motor local, no pueden tocar planes ni plataforma y tienen límite de aperturas por IP. Sus datos se restauran cada día (4:00) o con `npm run demo:reset` / botón «Restaurar demos» del panel Clientes.
+- **Clientes con contraseña**: entran por `/login` con correo y contraseña. `POST /api/onboarding` está cerrado al público: solo con tu sesión personal. Panel **Clientes → Nuevo cliente** (o `npm run client:new`): EDITH genera una contraseña aleatoria, te la enseña una sola vez y el cliente debe cambiarla en su primer acceso.
+- **Atlanta como cliente real**: pon `isDemo: false` o usa «Pasar a cliente real» en el panel Clientes (da una contraseña provisional a su administrador). Desde ese momento ni el arranque ni la restauración la tocan.
+- **Variables de Coolify**: borrar `TENANT_PASSWORD` (y `PROVISION_ADMIN_PASSWORD` si sigue); mantener `PROVISION_*`, `TENANTS=1`, `PERSONAL_PASSWORD`. Opcionales: `DEMO_RESET_HOUR`, `DEMO_RESET_DAILY=0`.
+- **Tras desplegar**: revisa el log de arranque: «isDemo marcado en: …» y, si hubiera, «Negocios SIN isDemo (se tratan como clientes)»: esos no se marcan solos; si alguno es una demo, hay que marcarlo a mano.
+- Pendiente: el administrador de Atlanta (correo de `PROVISION_ADMIN_EMAIL`) pierde su contraseña al ser demo: si quieres entrar con tu correo en Atlanta, usa «Pasar a cliente real» (solo cuando deje de ser demo). Pendiente también: datos fiscales y logo definitivo de Atlanta (el actual es de muestra en `public/brand/`) y recuperación de contraseña por correo para clientes.
 
 ## Avisos automáticos al alumno (correo y WhatsApp)
 Hecho: al apuntar, cambiar de hora o cancelar una práctica, o anotar un examen/resultado, se crea un aviso al alumno (y a su tutor si es menor) según su preferencia (ficha → Prácticas → «Avisar al alumno por»). Página **Avisos a alumnos** (`/avisos-alumnos`) con el estado de cada canal. Cambios seguidos sobre lo mismo antes de enviarse sustituyen al aviso (no spamean).

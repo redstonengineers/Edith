@@ -15,7 +15,9 @@
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "gen:remote": "node scripts-gen-remote.mjs",
     "test:api": "node tests/api-security.mjs",
-    "test:a11y": "node tests/axe.cjs"
+    "test:a11y": "node tests/axe.cjs",
+    "client:new": "tsx server/new-client.ts",
+    "demo:reset": "tsx server/demo-reset.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",

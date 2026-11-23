@@ -7,7 +7,7 @@ const iso = (d) => d.toISOString().slice(0, 10);
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const ctx = await b.newContext({ viewport: { width: 1360, height: 900 } }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
-  const login = async (page) => { await page.goto(U + '/acceso/atlanta'); await page.waitForSelector('#u'); await page.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await page.locator('main h1').first().waitFor(); };
+  const login = async (page) => { await page.goto(U + '/acceso/atlanta'); await page.waitForSelector('[aria-label="Entrar como"]'); await page.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await page.locator('main h1').first().waitFor(); };
   await login(p); const dlg = p.locator('[role=dialog]');
   const go = async (r) => { await p.goto(U + r); await p.locator('main h1').first().waitFor(); await p.waitForTimeout(300); };
   const today = iso(new Date());

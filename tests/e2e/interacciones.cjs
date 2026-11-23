@@ -10,7 +10,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   for (const plan of ['basic', 'premium']) {
     await api.post(U + `/api/personal/clients/${cl.id}/plan`, { data: { plan, applyModules: false }, headers: H });
     const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage(); p.on('pageerror', (e) => errs.push(e.message));
-    await p.goto(U + '/acceso/academia'); await p.waitForSelector('#u'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.locator('main h1').first().waitFor();
+    await p.goto(U + '/acceso/academia'); await p.waitForSelector('[aria-label="Entrar como"]'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.locator('main h1').first().waitFor();
     // Atajos g + letra
     await p.keyboard.press('g'); await p.getByRole('status', { name: 'Ir a…' }).waitFor(); ok(true, `[${plan}] g muestra el panel «Ir a…»`);
     await p.keyboard.press('a'); await p.waitForURL(/\/alumnos$/); ok(true, `[${plan}] g → a abre Alumnos`);

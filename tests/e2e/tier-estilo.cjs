@@ -11,7 +11,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   for (const [plan, tier] of [['basic', null], ['pro', 'pro'], ['premium', 'premium']]) {
     const r = await api.post(U + `/api/personal/clients/${cl.id}/plan`, { data: { plan, applyModules: false }, headers: H }); ok(r.ok(), `plan ${plan} aplicado`);
     const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage(); p.on('pageerror', (e) => errs.push(e.message));
-    await p.goto(U + '/acceso/academia'); await p.waitForSelector('#u'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.locator('main h1').first().waitFor(); await p.waitForTimeout(700);
+    await p.goto(U + '/acceso/academia'); await p.waitForSelector('[aria-label="Entrar como"]'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.locator('main h1').first().waitFor(); await p.waitForTimeout(700);
     ok((await p.evaluate(() => document.documentElement.dataset.tier ?? null)) === tier, `plan ${plan} → data-tier=${tier}`);
     ok((await p.getByText(/^(Pro|Premium)$/).count()) === (tier ? 1 : 0), `insignia de plan ${tier ? 'visible' : 'ausente'} (${plan})`);
     const rects = await p.evaluate(() => { const g = (q) => { const r = document.querySelector(q).getBoundingClientRect(); return [Math.round(r.x), Math.round(r.width)]; }; return JSON.stringify({ aside: g('aside[aria-label="Barra lateral"]'), root: g('#root'), ambient: g('.ambient'), sl: document.documentElement.scrollLeft, sw: document.documentElement.scrollWidth }); });

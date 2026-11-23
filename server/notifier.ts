@@ -73,6 +73,11 @@ export async function deliverOutbox(flush: () => void): Promise<number> {
     const db = getDatabase(); const hhmm = localNow().time;
     for (const o of db.outbox ?? []) {
       if (o.emailStatus !== 'pendiente' && o.waStatus !== 'pendiente' && o.hookStatus !== 'pendiente') continue;
+      // Los negocios de demostración NUNCA envían nada real (ni correo, ni WhatsApp, ni webhook): el aviso se da por entregado en simulación.
+      if (db.academies.find((a) => a.id === o.academyId)?.isDemo === true) {
+        if (o.emailStatus === 'pendiente') o.emailStatus = 'enviado'; if (o.waStatus === 'pendiente') o.waStatus = 'enviado'; if (o.hookStatus === 'pendiente') o.hookStatus = 'enviado';
+        o.note = 'Simulado (demo): no se ha enviado nada real'; n++; continue;
+      }
       const st = db.settings.find((s) => s.academyId === o.academyId); if (inQuietHours(quietHours(st?.notices), hhmm)) continue; // espera a que acabe el descanso
       const notes: string[] = []; o.attempts++;
       if (o.emailStatus === 'pendiente') {

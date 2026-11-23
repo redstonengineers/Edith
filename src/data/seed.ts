@@ -137,7 +137,7 @@ function buildAcademy(spec: AcademySpec, today: Date, db: Database) {
   const preset = PRESETS[spec.type];
   const uid = (p: string, i: number) => `${A}_${p}_${String(i + 1).padStart(3, '0')}`;
 
-  db.academies.push({ id: A, name: spec.name, type: spec.type, plan: spec.id === 'acad_001' ? 'pro' : 'basic', status: 'active', createdAt: d(subYears(today, 1)) });
+  db.academies.push({ id: A, name: spec.name, type: spec.type, plan: spec.id === 'acad_001' ? 'pro' : 'basic', status: 'active', isDemo: true, createdAt: d(subYears(today, 1)) });
   const modules: Partial<Record<ModuleId, boolean>> = {};
   const enabled = new Set<ModuleId>(spec.modules ?? preset.modules);
   for (const m of enabled) modules[m] = true;

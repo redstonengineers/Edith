@@ -1,6 +1,7 @@
 // Avisos automáticos al alumno: correo (Resend) y WhatsApp (Cloud API) simulados, y modo manual (wa.me) sin claves.
 // MODE=auto: el servidor se arranca con las claves apuntando a servidores simulados de este script. MODE=manual: sin claves.
-const http = require('http'); const { chromium } = require('playwright');
+const http = require('http'); const { chromium } = require('playwright'); const { realClient } = require('./acceso-lib.cjs');
+// Servidor además con PERSONAL_PASSWORD y PROVISION_ADMIN_EMAIL; la prueba con PERSONAL_TEST_PASSWORD y ATLANTA_ADMIN_EMAIL (las demos no envían nada real: se pasa Atlanta a cliente real).
 const U = process.env.APP_URL || 'http://127.0.0.1:4014'; const MODE = process.env.MODE || 'auto'; const MAIL_PORT = 4021; const WA_PORT = 4022;
 let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!c) fails++; };
 const mails = []; const was = [];
@@ -10,7 +11,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {
   const servers = MODE === 'auto' ? [await mock(MAIL_PORT, mails), await mock(WA_PORT, was)] : [];
   const H = { 'content-type': 'application/json', origin: U, 'x-requested-with': 'edith' }; let cookie = '';
-  const lg = await fetch(U + '/api/auth/login', { method: 'POST', headers: H, body: JSON.stringify({ email: 'director@atlanta.demo', password: 'demo' }) }); cookie = lg.headers.get('set-cookie').split(';')[0];
+  const real = await realClient(U); cookie = real.cookie;
   const call = async (name, args) => { const r = await fetch(U + '/api/rpc/' + name, { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify({ args }) }); const j = await r.json(); if (!r.ok) throw new Error(name + ': ' + j.error); return j.result; };
   const snap = async () => (await fetch(U + '/api/snapshot', { headers: { cookie } })).json();
   let s = await snap(); const stu = s.students.find((x) => x.email && x.phone && x.firstName === 'Lucía') || s.students.find((x) => x.email && x.phone); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo');
@@ -38,7 +39,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await call('setStudentTraining', [stu.id, { notifyVia: 'nada' }]); const n0 = (await snap()).outbox.length; await call('createPractice', [{ ...base, date: day(21) }]); await wait(800); ok((await snap()).outbox.length === n0, 'con «No avisar» no se genera aviso');
   // Interfaz
   const b = await chromium.launch(); const pg = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
-  await pg.goto(U + '/login'); await pg.getByLabel(/Correo o usuario/).fill('director@atlanta.demo'); await pg.getByLabel('Contraseña').fill('demo'); await pg.getByRole('button', { name: /Entrar/ }).click(); await pg.waitForSelector('main h1');
+  await pg.goto(U + '/login'); await pg.getByLabel(/Correo o usuario/).fill(real.email); await pg.getByLabel('Contraseña').fill(real.password); await pg.getByRole('button', { name: /Entrar/ }).click(); await pg.waitForSelector('main h1');
   await pg.goto(U + '/avisos-alumnos'); await pg.waitForSelector('main h1'); await pg.waitForTimeout(800); ok(await pg.getByText(/Nueva práctica de conducir|Cambio en tu práctica|Resultado de tu examen/).count() >= 1, 'la página Avisos lista los avisos');
   if (MODE === 'manual') { const link = pg.getByRole('link', { name: /Enviar a/ }).first(); ok(/wa\.me\/34\d{9}\?text=/.test(await link.getAttribute('href')), 'WhatsApp manual: enlace wa.me con el mensaje'); }
   else ok(await pg.getByText('WhatsApp · automático').count() === 1, 'la página indica que WhatsApp es automático');

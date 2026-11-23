@@ -13,8 +13,6 @@ export const config = {
   provision: process.env.PROVISION_ADMIN_EMAIL && process.env.PROVISION_ACADEMY_NAME ? { academyName: process.env.PROVISION_ACADEMY_NAME, type: (process.env.PROVISION_ACADEMY_TYPE ?? 'autoescuela') as import('../src/types').AcademyType, adminName: process.env.PROVISION_ADMIN_NAME ?? 'Director', adminEmail: process.env.PROVISION_ADMIN_EMAIL, primary: process.env.PROVISION_PRIMARY } : null,
   /** Negocios con acceso propio (Atlanta, Academia, Clínica): se preparan al arrancar si hay PROVISION_* o TENANTS=1. */
   tenants: bool(process.env.TENANTS) || !!(process.env.PROVISION_ADMIN_EMAIL && process.env.PROVISION_ACADEMY_NAME),
-  /** Contraseña de todas las cuentas de los negocios (usuario = perfil). Por defecto «demo». */
-  tenantPassword: process.env.TENANT_PASSWORD ?? 'demo',
   production: process.env.NODE_ENV === 'production',
   seedDemo: bool(process.env.SEED_DEMO),
   reseed: bool(process.env.RESEED),

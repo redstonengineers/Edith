@@ -24,8 +24,12 @@ export class Store {
       CREATE TABLE IF NOT EXISTS entities (tbl TEXT NOT NULL, id TEXT NOT NULL, academy_id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY (tbl, id));
       CREATE INDEX IF NOT EXISTS idx_entities_tenant ON entities (academy_id, tbl);
       CREATE TABLE IF NOT EXISTS personal (profile TEXT PRIMARY KEY, rev INTEGER NOT NULL, body TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, academy_id TEXT NOT NULL, expires_at INTEGER NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, academy_id TEXT NOT NULL, expires_at INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);`);
   }
+
+  getMeta(k: string): string | null { return (this.db.prepare('SELECT v FROM meta WHERE k = ?').get(k) as { v: string } | undefined)?.v ?? null; }
+  setMeta(k: string, v: string) { this.db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').run(k, v); }
 
   personalGet(profile: string): { rev: number; body: string } | null { return (this.db.prepare('SELECT rev, body FROM personal WHERE profile = ?').get(profile) as { rev: number; body: string } | undefined) ?? null; }
   /** Guarda el estado personal con control de versión (rev): devuelve null si otro dispositivo escribió antes. */
@@ -76,6 +80,7 @@ export class Store {
   saveSession(hash: string, userId: string, academyId: string, expiresAt: number) { this.db.prepare('INSERT INTO sessions VALUES (?, ?, ?, ?)').run(hash, userId, academyId, expiresAt); }
   findSession(hash: string) { return this.db.prepare('SELECT user_id AS userId, academy_id AS academyId, expires_at AS expiresAt FROM sessions WHERE token_hash = ?').get(hash) as { userId: string; academyId: string; expiresAt: number } | undefined; }
   deleteSession(hash: string) { this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hash); }
+  deleteAcademySessions(academyId: string) { this.db.prepare('DELETE FROM sessions WHERE academy_id = ?').run(academyId); }
   deleteUserSessions(userId: string) { this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId); }
   purgeSessions(now: number) { this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(now); }
   close() { this.db.close(); }

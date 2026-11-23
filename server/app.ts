@@ -5,7 +5,12 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import type { User } from '../src/types';
 import { askClaude, claudeEnabled } from './claude';
-import { personalEnabled, registerPersonal } from './personal';
+import { personalEnabled, personalSession, registerPersonal } from './personal';
+import { DEMO_BLOCKED_RPC, generatePassword, isDemoAcademy } from './access';
+import { createClient } from './clients';
+import { resetDemos } from './demo';
+import { mockAIProvider } from '../src/lib/ai';
+import { hashPassword } from '../src/services/crypto';
 import { createRepos } from '../src/services/repositories';
 import { getDatabase, installDatabase } from '../src/services/database';
 import { logActivity } from '../src/services/activity';
@@ -18,13 +23,12 @@ import { PublicApplyError, publicApplyInfo, submitPublicApplication, type Public
 import { can } from '../src/lib/permissions';
 import { publicTenants } from '../src/data/tenants';
 import { changeAcademyPlan, platformRows } from '../src/services/platform';
-import { aiBody, loginBody, onboardingBody, RPC } from './validators';
+import { aiBody, demoBody, loginBody, newClientBody, passwordBody, RPC } from './validators';
 import type { Store } from './store';
 
 const COOKIE = 'ac_session';
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const publicUser = (u: User) => { const { pwd: _p, ...rest } = u; return rest; };
-const DEMO_EMAIL = /@(horizonte|atlas|atlanta)\.demo$|@academycontrol\.demo$/;
 
 /** Limitador en memoria por clave (ventana deslizante simple). Sustituible por Redis al escalar horizontalmente. */
 function limiter(max: number, windowMs: number) {
@@ -47,7 +51,7 @@ export function buildApp(store: Store) {
   const serial = <T,>(fn: () => Promise<T> | T): Promise<T> => { const r = chain.then(fn, fn); chain = r.catch(() => undefined); return r; };
   const flush = () => store.flush(getDatabase());
 
-  const loginLimit = limiter(8, 15 * 60_000); const apiLimit = limiter(600, 60_000); const onboardLimit = limiter(5, 60 * 60_000);
+  const loginLimit = limiter(8, 15 * 60_000); const apiLimit = limiter(600, 60_000); const demoLimit = limiter(40, 60 * 60_000);
   const fail = (reply: FastifyReply, code: number, error: string) => reply.code(code).send({ error });
 
   app.addHook('onRequest', async (req, reply) => {
@@ -77,8 +81,8 @@ export function buildApp(store: Store) {
     });
   }
 
-  const startSession = (reply: FastifyReply, u: User, remember = false) => {
-    const hours = remember ? config.rememberDays * 24 : config.sessionHours;
+  const startSession = (reply: FastifyReply, u: User, remember = false, maxHours?: number) => {
+    const hours = maxHours ?? (remember ? config.rememberDays * 24 : config.sessionHours);
     const token = randomBytes(32).toString('base64url'); const exp = Date.now() + hours * 3_600_000;
     store.saveSession(sha(token), u.id, u.academyId, exp);
     reply.setCookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: config.cookieSecure, path: '/', maxAge: hours * 3600 });
@@ -94,7 +98,13 @@ export function buildApp(store: Store) {
     if (!a || (a.status !== 'active' && u.role !== 'SUPER_ADMIN')) return null;
     return u;
   };
-  const need = (req: FastifyRequest, reply: FastifyReply) => { const u = auth(req); if (!u) { fail(reply, 401, 'Sesión no válida o caducada.'); return null; } return u; };
+  const need = (req: FastifyRequest, reply: FastifyReply) => {
+    const u = auth(req); if (!u) { fail(reply, 401, 'Sesión no válida o caducada.'); return null; }
+    // Primer acceso de un cliente con la contraseña generada: hasta que la cambie solo puede usar /auth/me, /auth/password y /auth/logout.
+    if (u.mustChangePassword) { reply.code(403).send({ error: 'Debes cambiar tu contraseña para continuar.', code: 'password_change_required' }); return null; }
+    return u;
+  };
+  const demoUser = (u: User) => isDemoAcademy(getDatabase(), u.academyId);
 
   app.get('/api/health', async () => ({ ok: true, ai: claudeEnabled() ? 'claude' : 'local', personal: personalEnabled() }));
 
@@ -106,7 +116,7 @@ export function buildApp(store: Store) {
   const realMail = (e?: string) => !!e && !/@(horizonte|atlas|atlanta|vitalia)\.demo$|\.(demo|local|test)$/i.test(e);
   /** Correo al equipo (director y secretaría) y acuse al interesado. Solo si el correo está conectado; los fallos no afectan a la solicitud. */
   const announceApplication = async (r: PublicApplyResult) => {
-    if (!mailEnabled()) return; const db = getDatabase(); const e = db.enrollments.find((x) => x.id === r.enrollmentId); if (!e?.applicant) return; const ap = e.applicant;
+    if (!mailEnabled() || isDemoAcademy(getDatabase(), r.academyId)) return; const db = getDatabase(); const e = db.enrollments.find((x) => x.id === r.enrollmentId); if (!e?.applicant) return; const ap = e.applicant; // las demos nunca envían correo real
     const staff = [...new Set(db.users.filter((u) => u.academyId === r.academyId && !u.disabled && (u.role === 'ADMIN' || u.role === 'SECRETARIA') && realMail(u.email)).map((u) => u.email))];
     const lines = [`Nombre: ${ap.name}`, `Teléfono: ${ap.phone}`, `Correo: ${ap.email}`, `Interés: ${ap.course}`, ap.birthDate ? `Nacimiento: ${ap.birthDate}` : '', ap.guardianName ? `Tutor: ${ap.guardianName} (${ap.guardianPhone})` : '', ap.message ? `Mensaje: ${ap.message}` : ''].filter(Boolean);
     if (staff.length) await sendMail(staff, `Nueva solicitud de matrícula · ${ap.name}`, `Has recibido una solicitud desde el formulario web de ${r.academyName}:\n\n${lines.join('\n')}\n\nEstá en Matrículas, en la columna «Solicitud».`);
@@ -122,32 +132,64 @@ export function buildApp(store: Store) {
       catch (e) { if (e instanceof PublicApplyError) return fail(reply, e.status, e.message); req.log.error(e); return fail(reply, 500, 'Error interno'); }
     });
   });
+  // Cuentas de acceso rápido (solo con SEED_DEMO=1, para desarrollo): únicamente de negocios isDemo y nunca el Super Admin.
   app.get('/api/demo-accounts', async (_req, reply) => {
     if (!config.seedDemo) return fail(reply, 404, 'No disponible');
     const db = getDatabase();
-    return { accounts: db.users.filter((u) => DEMO_EMAIL.test(u.email)).map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, academy: db.academies.find((a) => a.id === u.academyId)?.name ?? '' })) };
+    return { accounts: db.users.filter((u) => isDemoAcademy(db, u.academyId) && u.role !== 'SUPER_ADMIN' && !u.disabled).map((u) => { const a = db.academies.find((x) => x.id === u.academyId)!; return { id: u.id, name: u.name, role: u.role, academy: a.name, key: a.slug ?? a.id, profile: u.username ?? u.email }; }) };
   });
 
+  // ── Acceso 1: demos abiertas, sin contraseña ──
+  // Solo negocios con isDemo: true. Sesión de 12 h como máximo y sin «mantener sesión»; límite de aperturas por IP.
+  app.post('/api/auth/demo', async (req, reply) => {
+    const p = demoBody.safeParse(req.body); if (!p.success) return fail(reply, 400, 'Datos no válidos');
+    if (demoLimit(req.ip)) return fail(reply, 429, 'Demasiados accesos de demostración desde esta red. Inténtalo más tarde.');
+    return serial(() => {
+      const db = getDatabase(); const key = p.data.academy.toLowerCase(); const acad = db.academies.find((a) => (a.slug === key || a.id === p.data.academy) && a.isDemo === true);
+      if (!acad || acad.status !== 'active') return fail(reply, 403, 'Este acceso no está disponible.');
+      const who = p.data.profile.trim().toLowerCase();
+      const u = db.users.find((x) => x.academyId === acad.id && !x.disabled && x.role !== 'SUPER_ADMIN' && (x.username?.toLowerCase() === who || x.email.toLowerCase() === who));
+      if (!u) return fail(reply, 403, 'Este acceso no está disponible.');
+      startSession(reply, u, false, Math.min(12, config.sessionHours)); logActivity(u, 'inició sesión', 'session', `${u.name} entró en la demo`); flush();
+      return { user: publicUser(u) };
+    });
+  });
+
+  // ── Acceso 2: clientes, con correo y contraseña ──
+  // Solo cuentas de negocios que NO son demo; el identificador es el correo (único en toda la plataforma), así que no hay conflictos entre clientes.
   app.post('/api/auth/login', async (req, reply) => {
     const p = loginBody.safeParse(req.body); if (!p.success) return fail(reply, 400, 'Datos no válidos');
-    const key = `${req.ip}|${p.data.academy ?? '*'}|${p.data.email.toLowerCase()}`;
+    const key = `${req.ip}|${p.data.email.toLowerCase()}`;
     if (loginLimit.blocked(key)) return fail(reply, 429, 'Demasiados intentos. Espera unos minutos.');
     return serial(async () => {
-      const db = getDatabase(); const id = p.data.email.trim().toLowerCase(); const scope = p.data.academy ? db.academies.find((a) => a.slug === p.data.academy)?.id : undefined;
-      // El usuario («director»…) solo es único dentro de su negocio: con `academy` se busca ahí; sin él, entre todos.
-      const cands = db.users.filter((x) => (x.email.toLowerCase() === id || x.username?.toLowerCase() === id) && (!p.data.academy || x.academyId === scope));
+      const db = getDatabase(); const id = p.data.email.trim().toLowerCase();
+      const cands = db.users.filter((x) => x.email.toLowerCase() === id && !isDemoAcademy(db, x.academyId));
       // Se verifica siempre (hash ficticio si no existe) para no filtrar por tiempo si el usuario existe.
       const okList: typeof cands = [];
       for (const c of cands) if (c.pwd && await verifyPassword(p.data.password, c.pwd)) okList.push(c);
       if (!cands.length) await verifyPassword(p.data.password, { salt: '00', hash: '00' });
-      if (okList.length > 1) return fail(reply, 409, 'Ese usuario existe en varios negocios. Entra desde la tarjeta de tu negocio.');
-      const u = okList[0]; const ok = !!u;
-      if (!u || !ok) { loginLimit(key); return fail(reply, 401, 'Credenciales no válidas'); }
+      const u = okList.length === 1 ? okList[0] : undefined;
+      if (!u) { loginLimit(key); return fail(reply, 401, 'Credenciales no válidas'); }
       loginLimit.clear(key); // solo cuentan los intentos fallidos
       if (u.disabled) return fail(reply, 403, 'Tu cuenta está desactivada. Contacta con el administrador.');
       const a = db.academies.find((x) => x.id === u.academyId);
       if (!a || (a.status !== 'active' && u.role !== 'SUPER_ADMIN')) return fail(reply, 403, 'Esta academia está suspendida. Contacta con soporte.');
       startSession(reply, u, !!p.data.remember); logActivity(u, 'inició sesión', 'session', `${u.name} inició sesión`); flush();
+      return { user: publicUser(u) };
+    });
+  });
+
+  // Cambio de contraseña (obligatorio en el primer acceso de un cliente). No usa need(): es justo lo que desbloquea la cuenta.
+  app.post('/api/auth/password', async (req, reply) => {
+    const u = auth(req); if (!u) return fail(reply, 401, 'Sesión no válida o caducada.');
+    const p = passwordBody.safeParse(req.body); if (!p.success) return fail(reply, 400, p.error.issues[0]?.message ?? 'Contraseña no válida');
+    if (demoUser(u)) return fail(reply, 403, 'Las cuentas de demostración no tienen contraseña.');
+    const key = `pw|${req.ip}|${u.id}`; if (loginLimit.blocked(key)) return fail(reply, 429, 'Demasiados intentos. Espera unos minutos.');
+    return serial(async () => {
+      if (!u.pwd || !(await verifyPassword(p.data.current, u.pwd))) { loginLimit(key); return fail(reply, 401, 'La contraseña actual no es correcta.'); }
+      if (p.data.current === p.data.next) return fail(reply, 400, 'La contraseña nueva debe ser distinta de la actual.');
+      u.pwd = await hashPassword(p.data.next); delete u.mustChangePassword; loginLimit.clear(key);
+      store.deleteUserSessions(u.id); startSession(reply, u, false); logActivity(u, 'modificó', 'user', `${u.name} cambió su contraseña`, u.id); flush();
       return { user: publicUser(u) };
     });
   });
@@ -160,6 +202,7 @@ export function buildApp(store: Store) {
   app.get('/api/channels/status', async (req, reply) => { const u = need(req, reply); if (!u) return reply; return { email: mailEnabled(), whatsapp: whatsappEnabled(), webhook: webhookEnabled() }; });
   app.post('/api/notices/test', async (req, reply) => {
     const u = need(req, reply); if (!u) return reply; if (!can(u, 'settings:write')) return fail(reply, 403, 'Sin permiso');
+    if (demoUser(u)) return { email: 'simulado (demo)', whatsapp: 'simulado (demo)', webhook: 'simulado (demo)' }; // las demos nunca envían nada real
     const b = (req.body ?? {}) as { email?: unknown; phone?: unknown }; const email = typeof b.email === 'string' && b.email.length < 200 ? b.email.trim() : undefined; const phone = typeof b.phone === 'string' && b.phone.length < 30 ? b.phone.trim() : undefined;
     return testChannels({ email, phone }, getDatabase().settings.find((s) => s.academyId === u.academyId)?.branding.name ?? 'tu academia');
   });
@@ -169,6 +212,7 @@ export function buildApp(store: Store) {
     const u = need(req, reply); if (!u) return reply;
     const fn = exposed.find(([n]) => n === req.params.name)?.[1]; const schema = RPC[req.params.name];
     if (!fn || !schema) return fail(reply, 404, 'Operación desconocida');
+    if (demoUser(u) && DEMO_BLOCKED_RPC.has(req.params.name)) return fail(reply, 403, 'No disponible en la demostración.');
     const body = req.body as { args?: unknown } | undefined;
     const parsed = schema.safeParse(body?.args ?? []);
     if (!parsed.success) return fail(reply, 400, `Datos no válidos: ${parsed.error.issues[0]?.message ?? 'revisa el formulario'}`);
@@ -186,11 +230,14 @@ export function buildApp(store: Store) {
     });
   });
 
+  const audit = (academyId: string, summary: string, id: string) => getDatabase().activity.unshift({ academyId, id: `${academyId}_log_${Date.now().toString(36)}`, at: new Date().toISOString(), actorId: 'owner', actorName: 'Propietario de la plataforma', action: 'modificó', entityType: 'academy', entityId: id, summary });
+  // Alta de clientes: SOLO con la sesión personal del propietario (panel «Clientes») — o con `npm run client:new` en el servidor.
+  // La contraseña la genera el servidor y se devuelve una única vez; no se guarda en claro.
   app.post('/api/onboarding', async (req, reply) => {
-    if (onboardLimit(req.ip)) return fail(reply, 429, 'Demasiadas altas desde esta red. Inténtalo más tarde.');
-    const p = onboardingBody.safeParse(req.body); if (!p.success) return fail(reply, 400, `Datos no válidos: ${p.error.issues[0]?.message ?? ''}`);
+    if (!personalSession(req)) return fail(reply, 401, 'Solo el propietario puede dar de alta clientes.');
+    const p = newClientBody.safeParse(req.body); if (!p.success) return fail(reply, 400, `Datos no válidos: ${p.error.issues[0]?.message ?? ''}`);
     return serial(async () => {
-      try { await M.createAcademy({ ...p.data, modules: p.data.modules as never }); flush(); return { ok: true }; }
+      try { const r = await createClient(p.data); audit(r.academyId, `Cliente creado (${r.plan})`, r.academyId); flush(); return { ok: true, ...r }; }
       catch (e) { if (e instanceof M.DomainError) return fail(reply, 422, e.message); req.log.error(e); return fail(reply, 500, 'Error interno'); }
     });
   });
@@ -200,17 +247,26 @@ export function buildApp(store: Store) {
     const p = aiBody.safeParse(req.body); if (!p.success) return fail(reply, 400, 'Pregunta no válida');
     // El contexto lo construye el servidor con el alcance y permisos del usuario autenticado (nunca el cliente).
     const snapshot = await createRepos(getDatabase(), u).snapshot();
-    return askClaude({ question: p.data.question, history: p.data.history ?? [], snapshot, user: u });
+    // Las demos usan siempre el motor local: nunca se gasta ANTHROPIC_API_KEY en visitantes anónimos.
+    const req2 = { question: p.data.question, history: p.data.history ?? [], snapshot, user: u };
+    return demoUser(u) ? mockAIProvider.ask(req2) : askClaude(req2);
   });
 
-  const audit = (academyId: string, summary: string, id: string) => getDatabase().activity.unshift({ academyId, id: `${academyId}_log_${Date.now().toString(36)}`, at: new Date().toISOString(), actorId: 'owner', actorName: 'Propietario de la plataforma', action: 'modificó', entityType: 'academy', entityId: id, summary });
   registerPersonal(app, store, loginLimit, fail, {
-    list: () => ({ clients: platformRows(getDatabase()).map((r) => ({ id: r.academy.id, name: r.academy.name, slug: r.academy.slug, type: r.academy.type, plan: r.academy.plan, status: r.academy.status, createdAt: r.academy.createdAt, users: r.users, students: r.students, modules: r.modules, storageKb: r.storageKb, lastActivity: r.lastActivity, waMonth: r.waMonth, waPrev: r.waPrev })) }),
+    list: () => ({ clients: platformRows(getDatabase()).map((r) => ({ id: r.academy.id, name: r.academy.name, slug: r.academy.slug, isDemo: r.academy.isDemo === true, type: r.academy.type, plan: r.academy.plan, status: r.academy.status, createdAt: r.academy.createdAt, users: r.users, students: r.students, modules: r.modules, storageKb: r.storageKb, lastActivity: r.lastActivity, waMonth: r.waMonth, waPrev: r.waPrev })) }),
     setPlan: (id, plan, applyModules) => serial(() => { const r = changeAcademyPlan(getDatabase(), id, plan, applyModules); audit(id, `Plan cambiado a ${plan}${r.disabled.length ? ` (módulos desactivados: ${r.disabled.join(', ')})` : ''}`, id); flush(); return { name: r.academy.name, plan: r.academy.plan, disabled: r.disabled as string[] }; }),
+    makeReal: (id, adminEmail) => serial(async () => {
+      const db = getDatabase(); const a = db.academies.find((x) => x.id === id); if (!a) throw new Error('Negocio no encontrado.'); if (a.isDemo !== true) throw new Error('Ese negocio ya es un cliente.');
+      const adm = db.users.find((u) => u.academyId === id && u.role === 'ADMIN' && u.email.toLowerCase() === adminEmail.trim().toLowerCase()); if (!adm) throw new Error('No hay un administrador con ese correo en ese negocio.');
+      const password = generatePassword(); adm.pwd = await hashPassword(password); adm.mustChangePassword = true; a.isDemo = false; store.deleteAcademySessions(id);
+      audit(id, 'Pasó de demostración a cliente real', id); flush(); return { name: a.name, adminEmail: adm.email, password };
+    }),
+    resetDemos: () => serial(() => { const r = resetDemos(store); flush(); return { restored: r }; }),
     setStatus: (id, status) => serial(() => { const a = getDatabase().academies.find((x) => x.id === id); if (!a) throw new Error('Negocio no encontrado.'); a.status = status; audit(id, status === 'active' ? 'Negocio reactivado' : 'Negocio suspendido', id); flush(); return { name: a.name, status: a.status }; }),
   });
   app.setErrorHandler((err, req, reply) => { req.log.error(err); const code = (err as { statusCode?: number }).statusCode; reply.code(code && code < 500 ? code : 500).send({ error: code && code < 500 ? 'Petición no válida' : 'Error interno' }); });
   app.addHook('onClose', async () => { store.close(); });
   setInterval(() => store.purgeSessions(Date.now()), 3_600_000).unref();
-  return app;
+  // Ejecuta una tarea de mantenimiento en la misma cola que las mutaciones (p. ej. la restauración diaria de las demos).
+  return Object.assign(app, { runExclusive: async (fn: () => void) => { await serial(() => { fn(); flush(); }); } });
 }

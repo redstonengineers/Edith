@@ -3,7 +3,7 @@ const { chromium } = require('playwright'); const U = process.env.APP_URL || 'ht
 let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!c) fails++; };
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-  await p.goto(U + '/acceso/academia'); await p.waitForSelector('#u'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.locator('main h1').first().waitFor();
+  await p.goto(U + '/acceso/academia'); await p.waitForSelector('[aria-label="Entrar como"]'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.locator('main h1').first().waitFor();
   await p.goto(U + '/clases?nuevo=1'); const dlg = p.getByRole('dialog'); await dlg.waitFor();
   const d = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
   await dlg.getByLabel(/^Grupo/).fill('Recuperación de puntos · tarde'); await dlg.getByLabel(/Nombre de la clase/).fill('Curso de recuperación de puntos'); await dlg.getByLabel('Fecha').fill(d); await dlg.getByLabel('Inicio').fill('20:15'); await dlg.getByLabel('Fin').fill('21:15');

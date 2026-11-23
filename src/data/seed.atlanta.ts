@@ -10,7 +10,7 @@ const NAMES = ['Lucía Fernández Mora', 'Pablo Jiménez Ríos', 'Carmen Ortiz L
 /** Autoescuela Atlanta (Córdoba): demo híbrida EDITH + gestión de prácticas. Usuarios @atlanta.demo. */
 export function buildAtlanta(db: Database, today: Date) {
   const A = 'acad_atlanta'; const rng = createRng(4004); const uid = (p: string, i: number) => `${A}_${p}_${String(i + 1).padStart(3, '0')}`; const preset = PRESETS.autoescuela;
-  db.academies.push({ id: A, name: 'Autoescuela Atlanta', type: 'autoescuela', plan: 'pro', status: 'active', createdAt: d(subYears(today, 1)) });
+  db.academies.push({ id: A, name: 'Autoescuela Atlanta', type: 'autoescuela', plan: 'pro', status: 'active', isDemo: true, createdAt: d(subYears(today, 1)) });
   db.settings.push({ academyId: A, branding: { name: 'Autoescuela Atlanta', tagline: 'Prácticas, exámenes y gestión de tu autoescuela', primary: '#f97316', secondary: '#38bdf8', theme: 'dark' }, labels: { ...DEFAULT_LABELS, ...preset.labels }, modules: Object.fromEntries(preset.modules.map((m) => [m, true])), locale: 'es-ES', currency: 'EUR', attendanceAlertThreshold: 75 });
 
   const teachers: Teacher[] = [['David', 'Ruiz'], ['Marta', 'Cano']].map(([f, l], i) => ({ academyId: A, id: uid('tea', i), firstName: f, lastName: l, email: `${f.toLowerCase()}@atlanta.demo`, phone: `6${rng.int(10, 99)} ${rng.int(100, 999)} ${rng.int(100, 999)}`, specialty: 'Permiso B', subjectIds: [], weeklyHoursTarget: 30, active: true, avatarHue: i === 0 ? 205 : 25, availability: [1, 2, 3, 4, 5] }));

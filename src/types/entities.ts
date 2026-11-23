@@ -18,6 +18,8 @@ export interface Academy {
   slug?: string;
   /** Se rellenó con datos ficticios de demostración (no se vuelve a hacer aunque se borren). */
   demoSeeded?: boolean;
+  /** Negocio de demostración abierto (datos ficticios, entra sin contraseña). Explícito: nunca se deduce del slug, del nombre ni del correo. */
+  isDemo?: boolean;
   /** Contador interno (solo lo ve el propietario de la plataforma): WhatsApp automáticos enviados por mes («AAAA-MM» → nº). */
   waUsage?: Record<string, number>;
   createdAt: ISODate;
@@ -30,6 +32,8 @@ export interface User extends Tenant {
   email: string;
   /** Nombre de usuario alternativo al correo para iniciar sesión (p. ej. «director»). */
   username?: string;
+  /** El cliente debe elegir una contraseña nueva antes de usar la aplicación (primer acceso con la contraseña generada). */
+  mustChangePassword?: boolean;
   role: RoleId;
   /** Vincula al usuario con su ficha (profesor/alumno/tutor) para filtrar alcance. */
   teacherId?: ID;

@@ -37,7 +37,7 @@ const valid = (o = {}) => ({ name: 'Marina Ortega Sanz', email: 'marina.ortega@c
   // — Duplicado: misma persona dos veces → una sola solicitud
   r = await api('POST', '/public/apply/atlanta', valid({ name: 'Marina Ortega Sanz' })); ok(r.s === 200, 'duplicado: responde ok');
   // — El equipo lo ve en Matrículas
-  p = await page(); await p.goto(U + '/acceso/atlanta'); await p.waitForSelector('#u'); await p.locator('#u').fill('director'); await p.locator('#p').fill('demo'); await p.getByRole('button', { name: /Entrar/ }).last().click(); await p.waitForURL((u) => !/acceso/.test(u.pathname));
+  p = await page(); await p.goto(U + '/acceso/atlanta'); await p.waitForSelector('[aria-label="Entrar como"]'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.waitForURL((u) => !/acceso/.test(u.pathname));
   await p.goto(U + '/matriculas'); await p.getByRole('heading', { name: 'Matrículas' }).waitFor();
   const col = p.getByRole('region', { name: 'Solicitud' }); ok(await col.getByText('Marina Ortega Sanz').count() === 1, 'Matrículas: la solicitud web aparece una sola vez (sin duplicar)');
   ok(await col.getByText('Web').count() >= 1 && await p.getByText(/clases de tarde/).count() >= 1, 'Matrículas: etiqueta «Web» y mensaje del interesado');

@@ -4,7 +4,7 @@ const U = process.env.APP_URL || 'http://127.0.0.1:4016';
 let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!c) fails++; };
 (async () => {
   const b = await chromium.launch(); const errs = []; const p = await (await b.newContext({ viewport: { width: 1360, height: 1000 } })).newPage(); p.on('pageerror', (e) => errs.push(e.message));
-  await p.goto(U + '/acceso/atlanta'); await p.waitForSelector('#u'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.waitForSelector('main h1');
+  await p.goto(U + '/acceso/atlanta'); await p.waitForSelector('[aria-label="Entrar como"]'); await p.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await p.waitForSelector('main h1');
   await p.goto(U + '/avisos-alumnos'); await p.waitForSelector('[role=tablist]'); ok(await p.getByRole('tab', { name: 'Bandeja' }).count() === 1 && await p.getByRole('tab', { name: 'Configuración' }).count() === 1, 'pestañas Bandeja y Configuración');
   await p.getByRole('tab', { name: 'Configuración' }).click();
   ok(await p.getByRole('switch', { name: /WhatsApp activado/ }).count() === 1 && await p.getByRole('switch', { name: /Correo electrónico activado|Integración/ }).count() === 0, 'solo el canal de WhatsApp');
@@ -17,7 +17,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   await p.getByLabel('Teléfono de prueba').fill('600111222'); await p.getByRole('button', { name: 'Enviar prueba' }).click(); await p.waitForSelector('ul[aria-live=polite] li'); ok(await p.locator('ul[aria-live=polite] li').count() >= 1, 'prueba de canales desde la página (resultado por canal)');
   await p.screenshot({ path: (process.env.SHOT_DIR || '/tmp') + '/avisos-config.png', fullPage: false });
   // Un profesor solo ve la bandeja
-  const t = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage(); await t.goto(U + '/acceso/atlanta'); await t.waitForSelector('#u'); await t.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Profesor' }).click(); await t.waitForSelector('main h1'); await t.goto(U + '/avisos-alumnos'); await t.waitForSelector('main h1'); await t.waitForTimeout(600);
+  const t = await (await b.newContext({ viewport: { width: 1360, height: 900 } })).newPage(); await t.goto(U + '/acceso/atlanta'); await t.waitForSelector('[aria-label="Entrar como"]'); await t.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Profesor' }).click(); await t.waitForSelector('main h1'); await t.goto(U + '/avisos-alumnos'); await t.waitForSelector('main h1'); await t.waitForTimeout(600);
   ok(await t.getByRole('tab', { name: 'Configuración' }).count() === 0, 'el profesor no ve la configuración');
   console.log('ERRORS', JSON.stringify(errs)); console.log(fails ? `${fails} FALLOS` : 'TODO OK'); await b.close(); process.exit(fails ? 1 : 0);
 })().catch((e) => { console.log('CRASH', e.message.split('\n')[0]); process.exit(1); });

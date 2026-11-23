@@ -20,12 +20,12 @@ export const tenantBySlug = (slug: string) => TENANTS.find((t) => t.slug === slu
 /**
  * Garantiza (idempotente) una cuenta por perfil en cada negocio con `slug`: usuario = nombre del perfil, vinculada a una ficha
  * (profesor/alumno/tutor). Reutiliza las cuentas que ya existan con ese rol; crea lo que falte. Devuelve los usuarios nuevos o cambiados.
- * `pwd`: contraseña ya cifrada (el mismo hash para todas las cuentas de demostración); sin ella las cuentas usan la contraseña de demo del modo local.
+ * Las cuentas de demostración NO tienen contraseña: se entra por el acceso demo (`/api/auth/demo`). Solo toca negocios con `isDemo: true`.
  */
-export function applyTenantAccounts(db: Database, pwd?: { salt: string; hash: string }): User[] {
+export function applyTenantAccounts(db: Database): User[] {
   const changed: User[] = [];
   for (const def of TENANTS) {
-    const acad = db.academies.find((a) => a.slug === def.slug); if (!acad) continue; const A = acad.id;
+    const acad = db.academies.find((a) => a.slug === def.slug && a.isDemo === true); if (!acad) continue; const A = acad.id; // solo negocios de demostración (isDemo explícito)
     const mine = () => db.users.filter((u) => u.academyId === A);
     const teachers = () => db.teachers.filter((t) => t.academyId === A); const students = () => db.students.filter((s) => s.academyId === A);
     const hue = (s: string) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
@@ -43,7 +43,7 @@ export function applyTenantAccounts(db: Database, pwd?: { salt: string; hash: st
         if (!kid.guardianId) { const g = { academyId: A, id: `${A}_gua_demo`, name: `Padre de ${kid.firstName}`, phone: '600000003', email: `padre@${def.slug}.demo`, relation: 'Padre' }; db.guardians.push(g); kid.guardianId = g.id; }
         u.guardianOf = [kid.id]; touched = true;
       }
-      if (pwd && !u.pwd) { u.pwd = { ...pwd }; touched = true; }
+      if (u.pwd) { delete u.pwd; touched = true; }
       if (touched) changed.push(u);
     }
     // Cuentas de perfiles que el negocio ya no tiene (p. ej. «padre» en Atlanta): se retiran.
@@ -60,7 +60,7 @@ export interface PublicTenant { slug: TenantDef['slug']; card: string; name: str
 export function publicTenants(db: Database): PublicTenant[] {
   const out: PublicTenant[] = [];
   for (const def of TENANTS) {
-    const a = db.academies.find((x) => x.slug === def.slug && x.status === 'active'); const b = a && db.settings.find((s) => s.academyId === a.id)?.branding; if (!a || !b) continue;
+    const a = db.academies.find((x) => x.slug === def.slug && x.isDemo === true && x.status === 'active'); const b = a && db.settings.find((s) => s.academyId === a.id)?.branding; if (!a || !b) continue;
     out.push({ slug: def.slug, card: def.card, name: b.name, tagline: b.tagline || def.tagline, blurb: def.blurb, type: a.type, primary: b.primary, secondary: b.secondary, theme: b.theme === 'light' ? 'light' : 'dark', logo: b.logoUrl ?? def.logo, profiles: def.profiles });
   }
   return out;

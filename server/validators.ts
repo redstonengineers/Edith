@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { MODULES } from '../src/config/modules';
 import { DEFAULT_LABELS } from '../src/config/presets';
-import { announcementSchema as _a, practiceSchema, vehicleSchema, applicationSchema, brandingSchema, classSchema, convertSchema, examSchema, generalSchema, groupSchema, incidentSchema, labelSchema, markPaidSchema, paymentSchema, studentSchema, subjectSchema, teacherSchema, userSchema, waitlistSchema, onboardingSchema } from '../src/lib/schemas';
+import { announcementSchema as _a, practiceSchema, vehicleSchema, applicationSchema, brandingSchema, classSchema, convertSchema, examSchema, generalSchema, groupSchema, incidentSchema, labelSchema, markPaidSchema, paymentSchema, studentSchema, subjectSchema, teacherSchema, userSchema, waitlistSchema, passwordSchema } from '../src/lib/schemas';
 void _a;
 
 const id = z.string().min(1).max(100);
@@ -69,8 +69,12 @@ export const RPC: Record<string, z.ZodType<unknown[]>> = {
   recordExport: z.tuple([z.string().min(1).max(200)]),
 };
 
-export const onboardingBody = onboardingSchema.extend({
-  type: academyType, logoUrl: dataUrl.optional(), modules: z.array(z.enum(moduleIds)).max(60), primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+/** Alta de un cliente (solo sesión personal): la contraseña NO viene en la petición, la genera el servidor. */
+export const newClientBody = z.object({
+  academyName: z.string().trim().min(2).max(80), type: academyType, plan: z.enum(['trial', 'basic', 'pro', 'premium']), adminEmail: z.string().trim().max(200), adminName: z.string().trim().max(80).optional(),
+  primary: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
-export const loginBody = z.object({ email: z.string().min(1).max(200), password: z.string().min(1).max(200), academy: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(), remember: z.boolean().optional() });
+export const demoBody = z.object({ academy: z.string().min(1).max(60), profile: z.string().min(1).max(200) });
+export const passwordBody = z.object({ current: z.string().min(1).max(200), next: passwordSchema });
+export const loginBody = z.object({ email: z.string().min(1).max(200), password: z.string().min(1).max(200), remember: z.boolean().optional() });
 export const aiBody = z.object({ question: z.string().min(1).max(400), history: z.array(z.object({ role: z.enum(['user', 'ai']), text: z.string().max(500) })).max(20).optional() });

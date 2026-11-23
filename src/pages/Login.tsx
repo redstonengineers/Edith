@@ -6,14 +6,14 @@ import { usePersonal } from '@/store/personal';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { StatusIndicator } from '@/components/ui/primitives';
 import { ROLE_LABELS } from '@/lib/permissions';
-import { DEMO_PASSWORD, listDemoAccounts, listTenants, type DemoAccount } from '@/services/auth';
+import { listDemoAccounts, listTenants, type DemoAccount } from '@/services/auth';
 import type { PublicTenant } from '@/data/tenants';
 import { useSession } from '@/store/session';
 import { RememberMe, useRemember } from '@/components/domain/RememberMe';
 import { useEffect } from 'react';
 
 export default function LoginPage() {
-  const { status, signIn } = useSession(); const navigate = useNavigate(); const personalLogin = usePersonal((x) => x.login);
+  const { status, signIn, signInDemo } = useSession(); const navigate = useNavigate(); const personalLogin = usePersonal((x) => x.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,23 +22,21 @@ export default function LoginPage() {
   useEffect(() => { void listDemoAccounts().then(setAccounts); void listTenants().then(setTenants); }, []);
   const academies = [...new Set(accounts.map((a) => a.academy))];
   useEffect(() => { document.documentElement.dataset.theme = 'dark'; document.documentElement.style.removeProperty('--brand'); document.documentElement.style.removeProperty('--brand-2'); document.documentElement.style.removeProperty('--on-brand'); }, []);
-  if (status === 'auth') return <Navigate to="/" replace />;
+  if (status === 'auth' || status === 'password') return <Navigate to="/" replace />;
 
-  const submit = async (e?: string, p?: string) => {
+  const submit = async () => {
     setBusy(true); setError('');
     try {
-      const id = (e ?? email).trim();
-      // Un identificador sin «@» es el acceso personal (solo existe en el servidor). Los correos van al login de academias.
+      const id = email.trim();
+      // Sin «@» es el acceso personal del propietario (solo existe en el servidor). Los clientes entran siempre con su correo.
       if (id && !id.includes('@')) {
         if (!IS_API) throw new Error('El modo personal solo está disponible en la versión con servidor.');
-        try { await personalLogin(id, p ?? password); navigate('/personal', { replace: true }); return; }
-        catch (pe) { // no es el acceso personal: se prueba como usuario de academia (director, profesor…)
-          try { await signIn(id, p ?? password, undefined, remember); return; } catch (se) { throw /varios negocios/.test((se as Error).message) ? se : pe; }
-        }
+        await personalLogin(id, password); navigate('/personal', { replace: true }); return;
       }
-      await signIn(e ?? email, p ?? password, undefined, remember);
+      await signIn(id, password, remember);
     } catch (err) { setError((err as Error).message); setBusy(false); }
   };
+  const enterDemo = async (a: DemoAccount) => { setBusy(true); setError(''); try { await signInDemo(a.key, a.profile); } catch (err) { setError((err as Error).message); setBusy(false); } };
 
   return (
     <div className="ambient grid min-h-full lg:grid-cols-[1.1fr_1fr]">
@@ -53,7 +51,7 @@ export default function LoginPage() {
       <div className="relative z-10 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <h2 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h2>
-          <p className="mt-1 text-sm text-muted">Accede con tu cuenta o usa un acceso de demostración.</p>
+          <p className="mt-1 text-sm text-muted">Accede con el correo y la contraseña de tu centro, o prueba una demostración sin contraseña.</p>
           <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="mt-6 space-y-4" noValidate>
             <div><label htmlFor="email" className="mb-1.5 block text-sm font-medium">Correo o usuario</label>
               <input id="email" type="text" inputMode="email" autoCapitalize="none" spellCheck={false} autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
@@ -63,7 +61,6 @@ export default function LoginPage() {
             <RememberMe checked={remember} onChange={setRemember} />
             <button type="submit" disabled={busy || !email || !password} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-on-brand hover:brightness-110 disabled:opacity-50">{busy ? <Loader2 size={16} className="animate-spin" /> : <>Entrar <ArrowRight size={16} /></>}</button>
           </form>
-          <p className="mt-5 text-sm text-muted">¿Eres propietario de un centro? <Link to="/onboarding" className="font-medium text-brand-text hover:underline">Crea tu academia</Link></p>
           {tenants.length > 0 && (
             <section className="mt-8" aria-label="Elige tu negocio">
               <p className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Elige tu negocio</p>
@@ -78,14 +75,14 @@ export default function LoginPage() {
               </div>
             </section>)}
           <div className="mt-8">
-            {accounts.length > 0 && <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Acceso demo · contraseña “{DEMO_PASSWORD}”</p>}
+            {accounts.length > 0 && <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Acceso demo · sin contraseña</p>}
             <div className="space-y-4">
               {academies.map((name) => (
                 <div key={name}>
                   <p className="mb-1.5 text-xs text-muted">{name}</p>
                   <div className="flex flex-wrap gap-2">
                     {accounts.filter((u) => u.academy === name).map((u) => (
-                      <button key={u.id} disabled={busy} onClick={() => void submit(u.email, DEMO_PASSWORD)} className="rounded-lg border border-line bg-surface px-3 py-1.5 text-left text-xs hover:border-brand/50">
+                      <button key={u.id} disabled={busy} onClick={() => void enterDemo(u)} className="rounded-lg border border-line bg-surface px-3 py-1.5 text-left text-xs hover:border-brand/50">
                         <span className="block font-medium">{u.name}</span><span className="text-muted">{ROLE_LABELS[u.role as keyof typeof ROLE_LABELS]}</span>
                       </button>))}
                   </div>

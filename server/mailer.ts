@@ -30,6 +30,7 @@ export async function sendMail(to: string[], subject: string, text: string): Pro
 export const emailChannel: ChannelAdapter = {
   id: 'email', label: 'Correo electrónico', live: mailEnabled(),
   async send(msg) {
+    if (getDatabase().academies.find((x) => x.id === msg.academyId)?.isDemo === true) return { delivered: false, note: 'Demostración: el correo se simula, no se envía nada real.' };
     const db = getDatabase(); const addrs = [...new Set(msg.toUserIds.map((id) => db.users.find((u) => u.id === id && u.academyId === msg.academyId && !u.disabled)?.email).filter(Boolean) as string[])];
     if (!addrs.length) return { delivered: false, note: 'Ningún destinatario tiene correo.' };
     const r = await sendMail(addrs, msg.subject, msg.body);

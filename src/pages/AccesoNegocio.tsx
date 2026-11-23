@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { RememberMe, useRemember } from '@/components/domain/RememberMe';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { StatusIndicator } from '@/components/ui/primitives';
@@ -10,22 +9,20 @@ import { useSession } from '@/store/session';
 
 /** Acceso personalizado de un negocio: su logo, sus colores y sus perfiles (director, profesor, paciente…). */
 export default function AccesoNegocio() {
-  const { slug = '' } = useParams(); const { status, signIn } = useSession(); const navigate = useNavigate();
-  const [tenants, setTenants] = useState<PublicTenant[] | null>(null); const [user, setUser] = useState(''); const [password, setPassword] = useState('demo'); const [error, setError] = useState(''); const [remember, setRemember] = useRemember(); const [busy, setBusy] = useState(false);
+  const { slug = '' } = useParams(); const { status, signInDemo } = useSession(); const navigate = useNavigate();
+  const [tenants, setTenants] = useState<PublicTenant[] | null>(null); const [error, setError] = useState(''); const [busy, setBusy] = useState<string | null>(null);
   useEffect(() => { void listTenants().then(setTenants); }, []);
   const t = tenants?.find((x) => x.slug === slug);
   useEffect(() => {
     if (!t) return; const root = document.documentElement; root.dataset.theme = t.theme; root.style.setProperty('--brand', t.primary); root.style.setProperty('--brand-2', t.secondary); root.style.setProperty('--on-brand', onColor(t.primary)); document.title = `${t.name} · EDITH`;
     return () => { root.style.removeProperty('--brand'); root.style.removeProperty('--brand-2'); root.style.removeProperty('--on-brand'); root.dataset.theme = 'dark'; document.title = 'EDITH'; };
   }, [t]);
-  if (status === 'auth') return <Navigate to="/" replace />;
+  if (status === 'auth' || status === 'password') return <Navigate to="/" replace />;
   if (tenants && !t) return <Navigate to="/login" replace />;
   if (!t) return <div className="grid min-h-full place-items-center"><Loader2 className="animate-spin text-muted" aria-label="Cargando" /></div>;
 
-  const submit = async (u = user, p = password) => {
-    setBusy(true); setError('');
-    try { await signIn(u.trim(), p, t.slug, remember); navigate('/', { replace: true }); } catch (e) { setError((e as Error).message); setBusy(false); }
-  };
+  // Demo abierta: pulsar un perfil entra directamente (sin contraseña). El servidor solo lo permite en negocios con isDemo.
+  const enter = async (username: string) => { setBusy(username); setError(''); try { await signInDemo(t.slug, username); navigate('/', { replace: true }); } catch (e) { setError((e as Error).message); setBusy(null); } };
   return (
     <div className="ambient grid min-h-full lg:grid-cols-[1.1fr_1fr]">
       <div className="relative z-10 hidden flex-col justify-between border-r border-line p-12 lg:flex" style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${t.primary} 16%, transparent), transparent 60%)` }}>
@@ -42,19 +39,17 @@ export default function AccesoNegocio() {
         <div className="w-full max-w-md">
           <Link to="/login" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg"><ArrowLeft size={14} aria-hidden />Otros negocios</Link>
           <div className="mb-6 flex items-center gap-3 lg:hidden"><img src={t.logo} alt={`Logo de ${t.name}`} width={48} height={48} className="rounded-xl" /><div><p className="font-semibold">{t.name}</p><p className="text-xs text-muted">{t.tagline}</p></div></div>
-          <h2 className="text-2xl font-semibold tracking-tight">Iniciar sesión</h2>
-          <p className="mt-1 text-sm text-muted">Elige tu perfil o escribe tu usuario. Contraseña: <b className="text-fg">demo</b>.</p>
-          <div className="mt-5" role="group" aria-label="Entrar como">
+          <h2 className="text-2xl font-semibold tracking-tight">Probar {t.card}</h2>
+          <p className="mt-1 text-sm text-muted">Demostración abierta con datos ficticios: elige un perfil y entra, sin contraseña.</p>
+          <div className="mt-6" role="group" aria-label="Entrar como">
             <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Entrar como</p>
-            <div className="flex flex-wrap gap-2">{t.profiles.map((p) => <button key={p.username} type="button" aria-pressed={user === p.username} disabled={busy} onClick={() => { setUser(p.username); setPassword('demo'); void submit(p.username, 'demo'); }} className="rounded-lg border border-line bg-surface px-3.5 py-2 text-sm font-medium transition hover:border-brand aria-pressed:border-brand">{p.label}</button>)}</div>
+            <div className="grid gap-2 sm:grid-cols-2">{t.profiles.map((p) => (
+              <button key={p.username} type="button" disabled={!!busy} onClick={() => void enter(p.username)} className="flex h-12 items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 text-left text-sm font-medium transition hover:border-brand hover:shadow-md disabled:opacity-60">
+                <span>{p.label}</span>{busy === p.username ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ArrowRight size={16} className="text-muted" aria-hidden />}
+              </button>))}</div>
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="mt-6 space-y-4" noValidate>
-            <div><label htmlFor="u" className="mb-1.5 block text-sm font-medium">Usuario</label><input id="u" type="text" autoCapitalize="none" spellCheck={false} autoComplete="username" required value={user} onChange={(e) => setUser(e.target.value)} placeholder={t.profiles[0].username} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
-            <div><label htmlFor="p" className="mb-1.5 block text-sm font-medium">Contraseña</label><input id="p" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none focus:border-brand" /></div>
-            {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-            <RememberMe checked={remember} onChange={setRemember} />
-            <button type="submit" disabled={busy || !user || !password} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-on-brand hover:brightness-110 disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <>Entrar<ArrowRight size={16} aria-hidden /></>}</button>
-          </form>
+          {error && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
+          <p className="mt-6 text-xs text-muted">Los datos de esta demostración son inventados y se restauran cada día. Aquí no se envía ningún correo ni WhatsApp real.</p>
         </div>
       </div>
     </div>

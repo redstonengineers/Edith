@@ -1,5 +1,6 @@
 // Infraestructura de avisos: plantillas y eventos configurables, canales, webhook firmado, horas de descanso, reintentos, recordatorio automático, clases y permisos.
-const http = require('http'); const { createHmac } = require('node:crypto');
+const http = require('http'); const { createHmac } = require('node:crypto'); const { realClient, demoSession } = require('./acceso-lib.cjs');
+// Servidor con PERSONAL_PASSWORD y PROVISION_ADMIN_EMAIL; prueba con PERSONAL_TEST_PASSWORD y ATLANTA_ADMIN_EMAIL (Atlanta se pasa a cliente real: las demos no envían nada real).
 const U = process.env.APP_URL || 'http://127.0.0.1:4016'; const SECRET = 'hook-secret';
 let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!c) fails++; };
 const mails = []; const was = []; const hooks = []; let waStatus = 200;
@@ -10,9 +11,11 @@ const madrid = (d) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en
 (async () => {
   const servers = [await mock(4021, mails), await mock(4022, was, () => waStatus), await mock(4023, hooks)];
   const H = { 'content-type': 'application/json', origin: U, 'x-requested-with': 'edith' };
-  const session = async (email, academy) => { const r = await fetch(U + '/api/auth/login', { method: 'POST', headers: H, body: JSON.stringify({ email, password: 'demo', ...(academy ? { academy } : {}) }) }); if (!r.ok) throw new Error('login ' + email); const cookie = r.headers.get('set-cookie').split(';')[0];
+  // Las demos no envían nada real: el administrador es el de Atlanta ya pasada a cliente real; el resto de perfiles se crean como usuarios con contraseña.
+  const real = await realClient(U); const mkUser = async (name, email, role, extra = {}) => { const pw = 'Perfil2026ok'; const r = await fetch(U + '/api/rpc/createUser', { method: 'POST', headers: { ...H, cookie: real.cookie }, body: JSON.stringify({ args: [{ name, email, role, password: pw, ...extra }] }) }); if (!r.ok) throw new Error('createUser ' + email); const l = await fetch(U + '/api/auth/login', { method: 'POST', headers: H, body: JSON.stringify({ email, password: pw }) }); return l.headers.get('set-cookie').split(';')[0]; };
+  const session = async (who) => { const cookie = who === 'admin' ? real.cookie : who === 'academia' ? await demoSession(U, 'academia', 'director') : await mkUser('Profesor Prueba', 'profesor.prueba@atlanta.test', 'PROFESOR');
     return { call: async (name, args, raw) => { const x = await fetch(U + '/api/rpc/' + name, { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify({ args }) }); const j = await x.json(); if (raw) return { status: x.status, j }; if (!x.ok) throw new Error(name + ': ' + j.error); return j.result; }, snap: async () => (await fetch(U + '/api/snapshot', { headers: { cookie } })).json(), post: async (path, body) => { const x = await fetch(U + path, { method: 'POST', headers: { ...H, cookie }, body: JSON.stringify(body) }); return { status: x.status, j: await x.json() }; } }; };
-  const A = await session('director@atlanta.demo'); let s = await A.snap(); const stu = s.students.find((x) => x.email && x.phone); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo').id;
+  const A = await session('admin'); let s = await A.snap(); const stu = s.students.find((x) => x.email && x.phone); const teacher = s.teachers[0].id; const veh = s.vehicles.find((v) => v.status === 'activo').id;
   const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); }; const base = (n, h = '09:00', e = '10:00') => ({ studentId: stu.id, teacherId: teacher, vehicleId: veh, date: day(n), start: h, end: e });
   const mine = async () => (await A.snap()).outbox.filter((o) => o.studentId === stu.id);
   const cfg = (extra) => A.call('updateNoticeSettings', [{ reminderHours: 0, quiet: { enabled: false }, ...extra }]);
@@ -41,9 +44,9 @@ const madrid = (d) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en
   // 7. Prueba de canales
   const t = await A.post('/api/notices/test', { email: 'prueba@correo.es', phone: '600111222' }); ok(t.status === 200 && t.j.email === 'enviado' && t.j.whatsapp === 'enviado' && t.j.webhook === 'enviado', 'la prueba de canales envía por correo, WhatsApp y webhook');
   // 8. Permisos
-  const P = await session('david@atlanta.demo'); const r = await P.call('updateNoticeSettings', [{ reminderHours: 1 }], true); ok(r.status >= 400, 'un profesor no puede cambiar los ajustes de avisos'); ok((await P.post('/api/notices/test', {})).status === 403, 'un profesor no puede usar la prueba de canales');
+  const P = await session('profesor'); const r = await P.call('updateNoticeSettings', [{ reminderHours: 1 }], true); ok(r.status >= 400, 'un profesor no puede cambiar los ajustes de avisos'); ok((await P.post('/api/notices/test', {})).status === 403, 'un profesor no puede usar la prueba de canales');
   // 9. Clases (academia): cancelar una clase avisa a los alumnos del grupo
-  const Q = await session('director', 'academia'); const qs = await Q.snap(); const today = iso(new Date());
+  const Q = await session('academia'); const qs = await Q.snap(); const today = iso(new Date());
   const cls = qs.classes.find((c) => c.status === 'programada' && c.date > today && qs.students.some((x) => x.groupIds.includes(c.groupId) && (x.email || x.phone) && x.status !== 'baja'));
   if (cls) { await Q.call('cancelClass', [cls.id, true]); await wait(1500); const q2 = await Q.snap(); ok(q2.outbox.some((o) => o.event === 'clase_cancelada' && /cancela/.test(o.body)), 'cancelar una clase avisa a los alumnos de su grupo'); } else ok(false, 'hay una clase futura con alumnos para probar');
   const prefStu = qs.students.find((x) => x.groupIds.length && (x.email || x.phone)); await Q.call('setStudentTraining', [prefStu.id, { notifyVia: 'nada' }]); ok(true, 'preferencia por alumno guardable fuera de autoescuela');

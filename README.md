@@ -10,9 +10,9 @@ npm run build      # typecheck + build de producción
 ```
 
 ## Demo
-Pulsa una cuenta en la pantalla de acceso (contraseña `demo`). Hay 2 academias con marca, vocabulario y módulos distintos
+Pulsa una cuenta de demostración en la pantalla de acceso (sin contraseña). Hay 2 academias con marca, vocabulario y módulos distintos
 (Academia Horizonte — oscuro/azul; Centro Educativo Atlas — claro/ámbar) y los roles Administrador, Secretaría, Profesor,
-Alumno, Tutor y Super Admin. También puedes crear una academia nueva desde **Crea tu academia** (onboarding).
+Alumno, Tutor y Super Admin. En modo servidor, los clientes entran con correo y contraseña y solo el propietario los da de alta (panel Clientes del modo personal).
 
 ## Qué incluye
 Command Center · buscador global y comandos (Ctrl+K) · alumnos, profesores, grupos, asignaturas · calendario (día/semana/mes,

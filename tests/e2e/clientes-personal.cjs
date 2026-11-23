@@ -26,7 +26,7 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'PASS' : 'FAIL', m); if (!
   ok(await p.getByRole('dialog').getByText('Clientes activos').count() === 1 && await p.getByRole('dialog').getByText('Ingreso mensual').count() === 1, 'panel de clientes con resumen');
 
   // Negocio de prueba: el de la autoescuela (director de /acceso/atlanta)
-  const dctx = await b.newContext(); const d = await dctx.newPage(); await d.goto(U + '/acceso/atlanta'); await d.waitForSelector('#u'); await d.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await d.locator('main h1').first().waitFor();
+  const dctx = await b.newContext(); const d = await dctx.newPage(); await d.goto(U + '/acceso/atlanta'); await d.waitForSelector('[aria-label="Entrar como"]'); await d.getByRole('group', { name: 'Entrar como' }).getByRole('button', { name: 'Director' }).click(); await d.locator('main h1').first().waitFor();
   const snap = () => d.evaluate(async () => (await fetch('/api/snapshot', { credentials: 'include' })).json());
   const s0 = await snap(); const id = s0.academy.id; const idx = first.clients.findIndex((c) => c.id === id); ok(idx >= 0, 'el negocio del director aparece en la lista');
   const row = p.getByRole('list', { name: 'Clientes' }).locator('li').nth(idx); const planSel = row.getByLabel(/^Plan de /);

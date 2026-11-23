@@ -49,7 +49,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process
   // ── Platform
   const psa = await login('Super Admin'); await psa.goto(U + '/plataforma'); await psa.waitForSelector('table'); ok(await psa.locator('tbody tr').count() >= 2, 'platform lists academies'); await psa.screenshot({ path: out + 'shot-platform.png' });
   await psa.getByRole('row', { name: /Atlas/ }).getByRole('button', { name: 'Suspender' }).click(); await psa.waitForTimeout(300);
-  const pa2 = await ctx(); await pa2.goto(U + '/login'); await pa2.locator('#email').fill('admin@atlas.demo'); await pa2.locator('#pw').fill('demo'); await pa2.getByRole('button', { name: /Entrar/ }).click(); await pa2.waitForTimeout(400); ok(/suspendida/.test(await pa2.locator('body').innerText()), 'suspended academy cannot log in');
+  const pa2 = await ctx(); await pa2.goto(U + '/login'); await pa2.getByRole('button', { name: /Beatriz Quintana/ }).first().click(); await pa2.waitForTimeout(400); ok(/no está disponible|suspendida/.test(await pa2.locator('body').innerText()), 'suspended academy cannot be entered');
   await psa.getByRole('row', { name: /Atlas/ }).getByRole('button', { name: 'Reactivar' }).click(); await psa.waitForTimeout(300);
   const pad = await login('Pablo Vidal'); await pad.goto(U + '/plataforma'); await pad.waitForTimeout(500); ok(await pad.getByText('Sin permisos').count() === 1, 'admin cannot open platform');
   // ── Onboarding

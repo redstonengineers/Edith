@@ -6,12 +6,14 @@ import { MODULES, type ModuleDef } from '@/config/modules';
 import { isModuleEnabled } from '@/hooks';
 import { can } from '@/lib/permissions';
 import { useSession } from '@/store/session';
+import { IS_API } from '@/services/mode';
 import type { ModuleId } from '@/types';
 import { ForbiddenPage, NotFoundPage } from '@/pages/Status';
 import LoginPage from '@/pages/Login';
 import ModulePlaceholder from '@/pages/ModulePlaceholder';
 
 const OnboardingPage = lazy(() => import('@/pages/onboarding'));
+const ChangePasswordPage = lazy(() => import('@/pages/ChangePassword'));
 const PersonalPage = lazy(() => import('@/pages/personal'));
 const DashboardPage = lazy(() => import('@/pages/DashboardRouter'));
 
@@ -65,6 +67,7 @@ function Protected() {
   const { status, data, dataError, reload } = useSession();
   if (status === 'loading') return <div className="p-8"><LoadingState label="Iniciando sesión…" /></div>;
   if (status === 'anon') return <Navigate to="/login" replace />;
+  if (status === 'password') return <Suspense fallback={<div className="p-8"><LoadingState /></div>}><ChangePasswordPage /></Suspense>;
   if (!data) return <div className="p-8"><p role="alert" className="text-bad">{dataError ?? 'No se pudieron cargar los datos'} <button className="underline" onClick={() => void reload()}>Reintentar</button></p></div>;
   return <AppShell />;
 }
@@ -82,7 +85,8 @@ export default function App() {
         <Route path="/acceso/:slug" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><AccesoNegocio /></Suspense>} />
         <Route path="/matricula/:key" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><Matricula /></Suspense>} />
         <Route path="/personal" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><PersonalPage /></Suspense>} />
-        <Route path="/onboarding" element={<Suspense fallback={<div className="p-8"><LoadingState /></div>}><OnboardingPage /></Suspense>} />
+        {/* El alta pública solo existe en la versión local de pruebas; con servidor, los clientes los da de alta el propietario. */}
+        <Route path="/onboarding" element={IS_API ? <Navigate to="/login" replace /> : <Suspense fallback={<div className="p-8"><LoadingState /></div>}><OnboardingPage /></Suspense>} />
         <Route element={<Protected />}>
           {MODULES.map((m) => (<Route key={m.id} path={m.path === '/' ? undefined : `${m.path}/*`} index={m.path === '/'} element={<Guard m={m} />} />))}
           <Route path="*" element={<NotFoundPage />} />

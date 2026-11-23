@@ -10,12 +10,15 @@ import { get } from '@/services/http';
 import { probe, setOfflineUser, syncOutbox, withPending } from '@/services/offline';
 
 interface SessionState {
-  status: 'loading' | 'anon' | 'auth';
+  /** `password`: el cliente debe cambiar su contraseña generada antes de usar la aplicación. */
+  status: 'loading' | 'anon' | 'auth' | 'password';
   user: User | null;
   data: Snapshot | null;
   dataError: string | null;
   init(): Promise<void>;
-  signIn(email: string, password: string, academy?: string, remember?: boolean): Promise<void>;
+  signIn(email: string, password: string, remember?: boolean): Promise<void>;
+  signInDemo(academy: string, profile: string): Promise<void>;
+  changePassword(current: string, next: string): Promise<void>;
   signOut(): Promise<void>;
   reload(): Promise<void>;
 }
@@ -28,22 +31,28 @@ async function hydrate(user: User): Promise<Snapshot> {
   return snap;
 }
 
-export const useSession = create<SessionState>((set, get) => ({
+export const useSession = create<SessionState>((set, get) => {
+  const enter = async (user: User) => {
+    if (user.mustChangePassword) return set({ status: 'password', user, data: null, dataError: null });
+    if (!IS_API) logActivity(user, 'inició sesión', 'session', `${user.name} inició sesión`);
+    set({ status: 'auth', user, data: await hydrate(user), dataError: null }); void syncOutbox();
+  };
+  return ({
   status: 'loading', user: null, data: null, dataError: null,
   async init() {
     const user = await authProvider.restore();
     if (!user) return set({ status: 'anon' });
+    if (user.mustChangePassword) return set({ status: 'password', user, data: null, dataError: null });
     try { set({ status: 'auth', user, data: await hydrate(user), dataError: null }); void syncOutbox(); }
     catch (e) { set({ status: 'auth', user, data: null, dataError: (e as Error).message }); }
   },
-  async signIn(email, password, academy, remember) {
-    const user = await authProvider.signIn(email, password, academy, remember);
-    if (!IS_API) logActivity(user, 'inició sesión', 'session', `${user.name} inició sesión`);
-    set({ status: 'auth', user, data: await hydrate(user), dataError: null }); void syncOutbox();
-  },
+  async signIn(email, password, remember) { await enter(await authProvider.signIn(email, password, remember)); },
+  async signInDemo(academy, profile) { await enter(await authProvider.signInDemo(academy, profile)); },
+  async changePassword(current, next) { await enter(await authProvider.changePassword(current, next)); },
   async signOut() { await authProvider.signOut(); setOfflineUser(null); set({ status: 'anon', user: null, data: null }); },
   async reload() { const u = get().user; if (u) set({ data: await hydrate(u) }); },
-}));
+  });
+});
 
 /** Si el servidor invalida la sesión (caducada, usuario desactivado, academia suspendida), volvemos al acceso. */
 if (typeof window !== 'undefined') window.addEventListener('ac:unauthorized', () => { if (useSession.getState().status === 'auth') useSession.setState({ status: 'anon', user: null, data: null }); });
